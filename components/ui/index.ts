@@ -1,28 +1,30 @@
 /**
- * UI Component Library
+ * Base UI Components
+ * Extracted from Figma Login and Signup screens
  * 
- * Base components for the resort booking application.
- * All components are built with React Native primitives and support
- * Android, iOS, and Web platforms.
- * 
- * @example
- * import { Button, Input, Card, Text } from '@/components/ui';
+ * All components are built with React Native primitives only
+ * and are compatible with React Native Web
  */
 
+export { Text, Heading1, Heading2, Body, Caption } from './Text';
+export type { TextProps } from './Text';
+
 export { Button } from './Button';
-export type { ButtonProps, ButtonVariant, ButtonSize } from './Button';
+export type { ButtonProps } from './Button';
 
 export { Input } from './Input';
-export type { InputProps, InputVariant } from './Input';
+export type { InputProps } from './Input';
 
 export { Card } from './Card';
-export type { CardProps, CardVariant } from './Card';
-
-export { Text } from './Text';
-export type { TextProps, TextVariant, TextColor } from './Text';
+export type { CardProps } from './Card';
 
 export { IconButton } from './IconButton';
-export type { IconButtonProps, IconButtonVariant, IconButtonSize } from './IconButton';
+export type { IconButtonProps } from './IconButton';
 
 export { Divider } from './Divider';
-export type { DividerProps, DividerOrientation } from './Divider';
+export type { DividerProps } from './Divider';
+
+export { Image } from './Image';
+export type { ImageProps } from './Image';
+
+export { useResponsive } from './useResponsive';

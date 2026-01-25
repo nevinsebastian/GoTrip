@@ -1,185 +1,77 @@
 import React from 'react';
 import { Text as RNText, TextProps as RNTextProps, StyleSheet } from 'react-native';
-import { typography, semanticColors, FontSize, FontWeight } from '@/constants/DesignSystem';
-import { useColorScheme } from '@/components/useColorScheme';
-
-export type TextVariant = 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' | 'body' | 'caption' | 'label';
-export type TextColor = 'primary' | 'secondary' | 'tertiary' | 'inverse' | 'error' | 'success' | 'warning';
+import { typography, colors } from '@/constants/DesignTokens';
 
 export interface TextProps extends RNTextProps {
-  /**
-   * Text variant (predefined typography styles)
-   */
-  variant?: TextVariant;
-  /**
-   * Text color variant
-   * @default 'primary'
-   */
-  color?: TextColor;
-  /**
-   * Font size override
-   */
-  size?: FontSize;
-  /**
-   * Font weight override
-   */
-  weight?: FontWeight;
-  /**
-   * Whether text should be bold
-   * @default false
-   */
-  bold?: boolean;
-  /**
-   * Whether text should be semibold
-   * @default false
-   */
-  semibold?: boolean;
-  /**
-   * Text alignment
-   */
-  align?: 'left' | 'center' | 'right' | 'justify';
-  /**
-   * Number of lines (truncates with ellipsis)
-   */
-  numberOfLines?: number;
+  variant?: 'heading1' | 'heading2' | 'body' | 'bodyMedium' | 'bodySemibold' | 'caption' | 'header' | 'screenTitle' | 'sectionTitle' | 'price' | 'ratingValue' | 'link';
+  color?: 'primary' | 'secondary' | 'caption' | 'placeholder' | 'primaryBrand';
 }
 
 /**
- * Text Component
+ * Text component with typography variants extracted from Figma designs
  * 
- * Enhanced text component with:
- * - Typography variants (h1-h6, body, caption, label)
- * - Semantic color system
- * - Consistent font sizing and weights
- * - Accessibility support
+ * Variants:
+ * - heading1: Large headings (24px, semibold) - "Welcome Back..", "Welcome to gotripholiday"
+ * - heading2: Medium headings (20px, semibold)
+ * - header: Header titles (18px, medium) - "Log in", "Sign up"
+ * - body: Body text (16px, regular) - Input placeholders, button text
+ * - bodyMedium: Medium body text (14px, medium) - "Enter your Phone number."
+ * - bodySemibold: Semibold body text (16px, medium) - Button text
+ * - caption: Small text (12px, regular) - "You'll get OTP...", "OR"
  * 
- * @example
- * <Text variant="h1" color="primary">
- *   Welcome
- * </Text>
+ * Resorts Screen Variants:
+ * - screenTitle: Screen title (24px, bold) - "Resorts" header
+ * - sectionTitle: Section title (18px, bold) - "Suggested for you" etc.
+ * - price: Price text (14px, regular) - "₹1199/night"
+ * - ratingValue: Rating value (14px, regular) - "4.5"
+ * - link: Link text (16px, medium, primary color) - "View all"
  */
-export function Text({
+export const Text: React.FC<TextProps> = ({
   variant = 'body',
   color = 'primary',
-  size,
-  weight,
-  bold = false,
-  semibold = false,
-  align,
-  numberOfLines,
   style,
+  children,
   ...props
-}: TextProps) {
-  const colorScheme = useColorScheme();
-  const colors = semanticColors[colorScheme ?? 'light'];
-
-  const getVariantStyles = () => {
-    switch (variant) {
-      case 'h1':
-        return {
-          fontSize: size ? typography.fontSize[size] : typography.fontSize['4xl'],
-          lineHeight: typography.lineHeight['4xl'],
-          fontWeight: typography.fontWeight.bold,
-        };
-      case 'h2':
-        return {
-          fontSize: size ? typography.fontSize[size] : typography.fontSize['3xl'],
-          lineHeight: typography.lineHeight['3xl'],
-          fontWeight: typography.fontWeight.bold,
-        };
-      case 'h3':
-        return {
-          fontSize: size ? typography.fontSize[size] : typography.fontSize['2xl'],
-          lineHeight: typography.lineHeight['2xl'],
-          fontWeight: typography.fontWeight.bold,
-        };
-      case 'h4':
-        return {
-          fontSize: size ? typography.fontSize[size] : typography.fontSize.xl,
-          lineHeight: typography.lineHeight.xl,
-          fontWeight: typography.fontWeight.semibold,
-        };
-      case 'h5':
-        return {
-          fontSize: size ? typography.fontSize[size] : typography.fontSize.lg,
-          lineHeight: typography.lineHeight.lg,
-          fontWeight: typography.fontWeight.semibold,
-        };
-      case 'h6':
-        return {
-          fontSize: size ? typography.fontSize[size] : typography.fontSize.base,
-          lineHeight: typography.lineHeight.base,
-          fontWeight: typography.fontWeight.semibold,
-        };
-      case 'body':
-        return {
-          fontSize: size ? typography.fontSize[size] : typography.fontSize.base,
-          lineHeight: typography.lineHeight.base,
-          fontWeight: typography.fontWeight.regular,
-        };
-      case 'caption':
-        return {
-          fontSize: size ? typography.fontSize[size] : typography.fontSize.sm,
-          lineHeight: typography.lineHeight.sm,
-          fontWeight: typography.fontWeight.regular,
-        };
-      case 'label':
-        return {
-          fontSize: size ? typography.fontSize[size] : typography.fontSize.sm,
-          lineHeight: typography.lineHeight.sm,
-          fontWeight: typography.fontWeight.medium,
-        };
-      default:
-        return {
-          fontSize: typography.fontSize.base,
-          lineHeight: typography.lineHeight.base,
-          fontWeight: typography.fontWeight.regular,
-        };
-    }
-  };
-
-  const getColor = () => {
-    switch (color) {
-      case 'primary':
-        return colors.text.primary;
-      case 'secondary':
-        return colors.text.secondary;
-      case 'tertiary':
-        return colors.text.tertiary;
-      case 'inverse':
-        return colors.text.inverse;
-      case 'error':
-        return colors.error;
-      case 'success':
-        return colors.success;
-      case 'warning':
-        return colors.warning;
-      default:
-        return colors.text.primary;
-    }
-  };
-
-  const getFontWeight = () => {
-    if (weight) return typography.fontWeight[weight];
-    if (bold) return typography.fontWeight.bold;
-    if (semibold) return typography.fontWeight.semibold;
-    return getVariantStyles().fontWeight;
-  };
+}) => {
+  const variantStyle = typography.styles[variant];
+  const colorValue = color === 'primaryBrand' 
+    ? colors.primary 
+    : colors.text[color];
 
   return (
     <RNText
-      {...props}
       style={[
-        {
-          fontFamily: typography.fontFamily.regular,
-          color: getColor(),
-          ...getVariantStyles(),
-          fontWeight: getFontWeight(),
-          textAlign: align,
-        },
+        styles.base,
+        variantStyle,
+        { color: colorValue },
         style,
       ]}
-      numberOfLines={numberOfLines}
-    />
+      {...props}
+    >
+      {children}
+    </RNText>
   );
-}
+};
+
+const styles = StyleSheet.create({
+  base: {
+    fontFamily: typography.fontFamily.text,
+  },
+});
+
+// Convenience exports for common variants
+export const Heading1: React.FC<Omit<TextProps, 'variant'>> = (props) => (
+  <Text variant="heading1" {...props} />
+);
+
+export const Heading2: React.FC<Omit<TextProps, 'variant'>> = (props) => (
+  <Text variant="heading2" {...props} />
+);
+
+export const Body: React.FC<Omit<TextProps, 'variant'>> = (props) => (
+  <Text variant="body" {...props} />
+);
+
+export const Caption: React.FC<Omit<TextProps, 'variant'>> = (props) => (
+  <Text variant="caption" {...props} />
+);

@@ -1,148 +1,96 @@
 import React from 'react';
-import { View, StyleSheet, ViewStyle, Pressable, Platform } from 'react-native';
-import { componentTokens, semanticColors, shadows, spacing, radius } from '@/constants/DesignSystem';
-import { useColorScheme } from '@/components/useColorScheme';
+import { View, ViewProps, StyleSheet, Platform } from 'react-native';
+import { colors, spacing, borderRadius, components, shadows } from '@/constants/DesignTokens';
+import { useResponsive } from './useResponsive';
 
-export type CardVariant = 'default' | 'elevated' | 'outlined';
-
-export interface CardProps {
-  /**
-   * Card content
-   */
+export interface CardProps extends ViewProps {
   children: React.ReactNode;
-  /**
-   * Card variant style
-   * @default 'default'
-   */
-  variant?: CardVariant;
-  /**
-   * Whether card is pressable
-   * @default false
-   */
-  pressable?: boolean;
-  /**
-   * Callback fired when card is pressed (requires pressable=true)
-   */
-  onPress?: () => void;
-  /**
-   * Additional container styles
-   */
-  style?: ViewStyle;
-  /**
-   * Padding override
-   */
-  padding?: number;
-  /**
-   * Border radius override
-   */
-  borderRadius?: number;
-  /**
-   * Accessibility label
-   */
-  accessibilityLabel?: string;
-  /**
-   * Full width card
-   * @default false
-   */
-  fullWidth?: boolean;
+  padding?: 'default' | 'none' | 'small' | 'large';
+  variant?: 'default' | 'listing'; // Resorts screen: listing variant for resort cards
 }
 
 /**
- * Card Component
+ * Card component extracted from Figma Login and Signup screens
+ * Extended for Resorts screen
  * 
- * A container component for grouping related content:
- * - Multiple variants (default, elevated, outlined)
- * - Optional pressable behavior
- * - Consistent spacing and radius
- * - Accessible touch targets
+ * Variants:
+ * - default: Main content container for forms (Login/Signup screens)
+ * - listing: Resort listing card (Resorts screen)
  * 
- * @example
- * <Card variant="elevated">
- *   <Text>Card content</Text>
- * </Card>
+ * Styling:
+ * - White background
+ * - Large border radius (20-24px for default, 8-12px for listing)
+ * - Subtle drop shadow
+ * - Generous padding (24px horizontal, 32px vertical for default)
+ * - Listing variant: Less padding, more image-focused, responsive width
+ * 
+ * Responsive Behavior:
+ * - Mobile: Fixed maxWidth for horizontal scroll
+ * - Tablet/Desktop: Flexible width (use in grid layouts)
  */
-export function Card({
+export const Card: React.FC<CardProps> = ({
   children,
+  padding = 'default',
   variant = 'default',
-  pressable = false,
-  onPress,
   style,
-  padding,
-  borderRadius,
-  accessibilityLabel,
-  fullWidth = false,
-}: CardProps) {
-  const colorScheme = useColorScheme();
-  const colors = semanticColors[colorScheme ?? 'light'];
+  ...viewProps
+}) => {
+  const isListing = variant === 'listing';
+  const { isMobile } = useResponsive();
+  
+  const paddingStyle = padding === 'none' 
+    ? {} 
+    : padding === 'small'
+    ? { paddingHorizontal: spacing.md, paddingVertical: spacing.lg }
+    : padding === 'large'
+    ? { paddingHorizontal: spacing.xl, paddingVertical: spacing.xxl }
+    : isListing
+    ? { padding: components.resortCard.contentPadding }
+    : {
+        paddingHorizontal: components.card.padding.horizontal,
+        paddingVertical: components.card.padding.vertical,
+      };
 
-  const getVariantStyles = (): ViewStyle => {
-    const baseStyles: ViewStyle = {
-      padding: padding ?? componentTokens.card.padding,
-      borderRadius: borderRadius ?? componentTokens.card.borderRadius,
-      backgroundColor: colors.surface,
-    };
-
-    switch (variant) {
-      case 'elevated':
-        return {
-          ...baseStyles,
-          ...shadows.md,
-        };
-      case 'outlined':
-        return {
-          ...baseStyles,
-          borderWidth: componentTokens.card.borderWidth,
-          borderColor: colors.border,
-        };
-      case 'default':
-      default:
-        return baseStyles;
-    }
-  };
-
-  const containerStyle = [
-    getVariantStyles(),
-    fullWidth && styles.fullWidth,
-    style,
-  ];
-
-  if (pressable) {
-    return (
-      <Pressable
-        onPress={onPress}
-        accessibilityRole="button"
-        accessibilityLabel={accessibilityLabel}
-        style={({ pressed }) => [
-          containerStyle,
-          pressed && {
-            opacity: 0.8,
-          },
-        ]}
-        // Web-specific props
-        {...(Platform.OS === 'web' && {
-          onKeyDown: (e: any) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault();
-              onPress?.();
-            }
-          },
-          tabIndex: 0,
-        })}
-      >
-        {children}
-      </Pressable>
-    );
-  }
+  // Listing cards: fixed maxWidth on mobile, flexible on tablet/desktop
+  const listingStyle = isListing
+    ? [
+        styles.cardListing,
+        isMobile && { maxWidth: components.resortCard.maxWidth },
+        !isMobile && { flex: 1, minWidth: 200 }, // Flexible on larger screens
+      ]
+    : null;
 
   return (
-    <View style={containerStyle} accessibilityLabel={accessibilityLabel}>
+    <View
+      style={[
+        styles.card,
+        listingStyle,
+        paddingStyle,
+        style,
+      ]}
+      {...viewProps}
+    >
       {children}
     </View>
   );
-}
+};
 
 const styles = StyleSheet.create({
-  fullWidth: {
+  card: {
+    backgroundColor: colors.surface.white,
+    borderRadius: components.card.borderRadius,
     width: '100%',
+    ...Platform.select({
+      ios: shadows.card,
+      android: { elevation: shadows.card.elevation },
+      web: {
+        ...shadows.card,
+      },
+    }),
+  },
+  cardListing: {
+    borderRadius: borderRadius.xl, // 8-12px for listing cards
+    overflow: 'hidden', // For image rounded corners
+    // Width handled dynamically based on screen size
   },
 });

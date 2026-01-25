@@ -1,248 +1,100 @@
-import React, { useState } from 'react';
-import {
-  TextInput,
-  View,
-  Text,
-  StyleSheet,
-  Platform,
-  TextInputProps,
-  Pressable,
-} from 'react-native';
-import { componentTokens, semanticColors, spacing, radius } from '@/constants/DesignSystem';
-import { useColorScheme } from '@/components/useColorScheme';
+import React from 'react';
+import { TextInput, TextInputProps, StyleSheet, View, ViewStyle } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { colors, spacing, borderRadius, components } from '@/constants/DesignTokens';
 
-export type InputVariant = 'default' | 'error' | 'success';
-
-export interface InputProps extends Omit<TextInputProps, 'style'> {
-  /**
-   * Input label text
-   */
-  label?: string;
-  /**
-   * Helper text displayed below input
-   */
-  helperText?: string;
-  /**
-   * Error message (overrides helperText when provided)
-   */
-  error?: string;
-  /**
-   * Input variant style
-   * @default 'default'
-   */
-  variant?: InputVariant;
-  /**
-   * Left icon element
-   */
-  leftIcon?: React.ReactNode;
-  /**
-   * Right icon element (e.g., clear button, password toggle)
-   */
-  rightIcon?: React.ReactNode;
-  /**
-   * Whether input is required
-   * @default false
-   */
-  required?: boolean;
-  /**
-   * Container style
-   */
-  containerStyle?: object;
-  /**
-   * Input style override
-   */
-  inputStyle?: object;
-  /**
-   * Full width input
-   * @default true
-   */
-  fullWidth?: boolean;
+export interface InputProps extends TextInputProps {
+  containerStyle?: ViewStyle;
+  error?: boolean;
+  variant?: 'default' | 'search';
+  showSearchIcon?: boolean; // For search variant
 }
 
 /**
- * Input Component
+ * Input component extracted from Figma Login and Signup screens
+ * Extended for Resorts screen
  * 
- * A text input component with:
- * - Label and helper text support
- * - Error state handling
- * - Icon support (left/right)
- * - Accessible touch targets
- * - Web keyboard navigation
+ * Used for: "Phone number", "Full name", "E mail" fields
+ * Resorts screen: "Find resorts, rooms, etc.." search field
  * 
- * @example
- * <Input
- *   label="Email"
- *   placeholder="Enter your email"
- *   keyboardType="email-address"
- *   autoCapitalize="none"
- * />
+ * Variants:
+ * - default: Standard input (Login/Signup screens)
+ * - search: Search input with icon support (Resorts screen)
+ * 
+ * Styling:
+ * - White background
+ * - Light gray border (1px)
+ * - Rounded corners (8-12px)
+ * - Consistent height (48px)
+ * - Placeholder text in light gray
  */
-export function Input({
-  label,
-  helperText,
-  error,
-  variant = 'default',
-  leftIcon,
-  rightIcon,
-  required = false,
+export const Input: React.FC<InputProps> = ({
   containerStyle,
-  inputStyle,
-  fullWidth = true,
-  editable = true,
+  style,
+  error = false,
+  variant = 'default',
+  showSearchIcon = false,
+  placeholderTextColor = colors.text.placeholder,
   ...textInputProps
-}: InputProps) {
-  const colorScheme = useColorScheme();
-  const colors = semanticColors[colorScheme ?? 'light'];
-  const [isFocused, setIsFocused] = useState(false);
-
-  const effectiveVariant: InputVariant = error ? 'error' : variant;
-  const displayHelperText = error || helperText;
-
-  const getBorderColor = () => {
-    if (!editable) return colors.border;
-    if (effectiveVariant === 'error') return colors.error;
-    if (effectiveVariant === 'success') return colors.success;
-    if (isFocused) return colors.primary.main;
-    return colors.border;
-  };
-
-  const getTextColor = () => {
-    if (!editable) return colors.text.tertiary;
-    return colors.text.primary;
-  };
+}) => {
+  const isSearch = variant === 'search' || showSearchIcon;
 
   return (
-    <View style={[styles.container, fullWidth && styles.fullWidth, containerStyle]}>
-      {label && (
-        <View style={styles.labelContainer}>
-          <Text
-            style={[
-              styles.label,
-              {
-                color: colors.text.primary,
-              },
-            ]}
-          >
-            {label}
-            {required && (
-              <Text
-                style={{
-                  color: colors.error,
-                }}
-              >
-                {' '}
-                *
-              </Text>
-            )}
-          </Text>
-        </View>
-      )}
-
-      <View
+    <View style={[styles.container, containerStyle]}>
+      <TextInput
         style={[
-          styles.inputContainer,
-          {
-            borderColor: getBorderColor(),
-            backgroundColor: editable ? colors.background : colors.surface,
-            minHeight: componentTokens.input.minHeight,
-            ...(Platform.OS === 'web' && { outlineStyle: 'none' as any }),
-          },
+          styles.input,
+          isSearch && styles.inputSearch,
+          error && styles.inputError,
+          style,
         ]}
-      >
-        {leftIcon && (
-          <View style={styles.leftIconContainer} pointerEvents="none">
-            {leftIcon}
-          </View>
-        )}
-
-        <TextInput
-          {...textInputProps}
-          editable={editable}
-          style={[
-            styles.input,
-            {
-              color: getTextColor(),
-              fontSize: componentTokens.input.fontSize,
-              paddingLeft: leftIcon ? spacing.sm : spacing.lg,
-              paddingRight: rightIcon ? spacing.sm : spacing.lg,
-              ...(Platform.OS === 'web' && { outlineStyle: 'none' as any }),
-            },
-            inputStyle,
-          ]}
-          placeholderTextColor={colors.text.tertiary}
-          onFocus={(e) => {
-            setIsFocused(true);
-            textInputProps.onFocus?.(e);
-          }}
-          onBlur={(e) => {
-            setIsFocused(false);
-            textInputProps.onBlur?.(e);
-          }}
-          accessibilityLabel={label || textInputProps.accessibilityLabel}
-          accessibilityState={{ disabled: !editable }}
-          // Web-specific props
-          {...(Platform.OS === 'web' && {
-            tabIndex: editable ? 0 : -1,
-          })}
-        />
-
-        {rightIcon && (
-          <View style={styles.rightIconContainer}>{rightIcon}</View>
-        )}
-      </View>
-
-      {displayHelperText && (
-        <Text
-          style={[
-            styles.helperText,
-            {
-              color: error ? colors.error : colors.text.secondary,
-            },
-          ]}
-        >
-          {displayHelperText}
-        </Text>
+        placeholderTextColor={placeholderTextColor}
+        {...textInputProps}
+      />
+      {isSearch && (
+        <View style={styles.searchIconContainer}>
+          <Ionicons 
+            name="search" 
+            size={components.searchInput.iconSize} 
+            color={colors.text.caption}
+          />
+        </View>
       )}
     </View>
   );
-}
+};
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: spacing.md,
-  },
-  fullWidth: {
     width: '100%',
-  },
-  labelContainer: {
-    marginBottom: spacing.xs,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: componentTokens.input.borderWidth,
-    borderRadius: componentTokens.input.borderRadius,
+    position: 'relative',
   },
   input: {
-    flex: 1,
-    paddingVertical: spacing.md,
+    height: components.input.height,
+    backgroundColor: colors.surface.white,
+    borderWidth: components.input.borderWidth,
+    borderColor: colors.border.light,
+    borderRadius: borderRadius.lg,
+    paddingHorizontal: components.input.padding.horizontal,
+    paddingVertical: components.input.padding.vertical,
+    fontSize: 16, // Typography/3
+    fontFamily: 'poppins',
+    fontWeight: '400',
+    color: colors.text.primary,
   },
-  leftIconContainer: {
-    paddingLeft: spacing.md,
+  inputSearch: {
+    borderRadius: borderRadius.xl, // More rounded for search
+    paddingRight: components.searchInput.iconSize + components.searchInput.iconPadding, // Space for icon
+  },
+  inputError: {
+    borderColor: colors.primary,
+  },
+  searchIconContainer: {
+    position: 'absolute',
+    right: components.searchInput.iconPadding,
+    top: 0,
+    bottom: 0,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  rightIconContainer: {
-    paddingRight: spacing.md,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  helperText: {
-    fontSize: 12,
-    marginTop: spacing.xs,
   },
 });

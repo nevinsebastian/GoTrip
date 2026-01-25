@@ -1,365 +1,142 @@
-# UI Component Library
+# Base UI Components
 
-A production-ready, cross-platform component library for the resort booking application. Built with React Native primitives and designed to work seamlessly on Android, iOS, and Web.
-
-## Design Principles
-
-- **Radix UI Principles**: Accessible, composable, consistent primitives
-- **Figma-First**: Design tokens match Figma specifications
-- **Platform Agnostic**: Single codebase for mobile and web
-- **Accessibility First**: WCAG-compliant touch targets and keyboard navigation
-- **Type Safe**: Full TypeScript support with exported types
+This directory contains the base component library extracted directly from the Figma Login and Signup screens.
 
 ## Components
 
-### Button
+### Text
+Typography component with variants matching the design system.
 
-A versatile button component with multiple variants and states.
+```tsx
+import { Text, Heading1, Body, Caption } from '@/components/ui';
+
+<Heading1>Welcome Back..</Heading1>
+<Body color="secondary">Enter your Phone number.</Body>
+<Caption color="caption">You'll get OTP to this number.</Caption>
+```
+
+**Variants:**
+- `heading1` - 24px, semibold
+- `heading2` - 20px, semibold
+- `header` - 18px, medium
+- `body` - 16px, regular
+- `bodyMedium` - 14px, medium
+- `bodySemibold` - 16px, medium
+- `caption` - 12px, regular
+
+### Button
+Button component with primary and outline variants.
 
 ```tsx
 import { Button } from '@/components/ui';
 
-// Primary button
-<Button variant="primary" onPress={handlePress}>
-  Book Now
+<Button variant="primary" onPress={handleSubmit}>
+  Get OTP
 </Button>
 
-// Secondary button with loading state
-<Button variant="secondary" loading={isLoading} onPress={handleSubmit}>
-  Submit
-</Button>
-
-// Outline button with icons
-<Button 
-  variant="outline" 
-  leftIcon={<Icon name="calendar" />}
-  rightIcon={<Icon name="arrow-right" />}
-  onPress={handleDateSelect}
->
-  Select Date
-</Button>
-
-// Ghost button (minimal style)
-<Button variant="ghost" onPress={handleCancel}>
-  Cancel
-</Button>
-
-// Full width button
-<Button variant="primary" fullWidth onPress={handleCheckout}>
-  Proceed to Checkout
+<Button variant="outline" onPress={handleSocialLogin}>
+  Continue with Google
 </Button>
 ```
 
+**Variants:**
+- `primary` - Solid red background, white text
+- `outline` - White background, red text, red border
+
 **Props:**
-- `variant`: `'primary' | 'secondary' | 'outline' | 'ghost'` (default: `'primary'`)
-- `size`: `'sm' | 'md' | 'lg'` (default: `'md'`)
-- `disabled`: `boolean` (default: `false`)
-- `loading`: `boolean` (default: `false`)
-- `fullWidth`: `boolean` (default: `false`)
-- `leftIcon`: `React.ReactNode`
-- `rightIcon`: `React.ReactNode`
+- `loading` - Shows loading spinner
+- `disabled` - Disables button interaction
+- `size` - `default` (48px) or `large` (56px)
 
 ### Input
-
-A text input component with label, helper text, and error states.
+Text input component matching the design system.
 
 ```tsx
 import { Input } from '@/components/ui';
 
-// Basic input
-<Input
-  label="Email"
-  placeholder="Enter your email"
-  keyboardType="email-address"
-  autoCapitalize="none"
-/>
-
-// Input with helper text
-<Input
-  label="Password"
-  placeholder="Enter password"
-  secureTextEntry
-  helperText="Must be at least 8 characters"
-/>
-
-// Input with error
-<Input
-  label="Email"
-  value={email}
-  onChangeText={setEmail}
-  error="Please enter a valid email address"
-/>
-
-// Input with icons
-<Input
-  label="Search"
-  leftIcon={<Icon name="search" />}
-  rightIcon={<Icon name="clear" onPress={handleClear} />}
-  placeholder="Search resorts..."
-/>
-
-// Required input
-<Input
-  label="Full Name"
-  required
-  value={name}
-  onChangeText={setName}
+<Input 
+  placeholder="Phone number"
+  keyboardType="phone-pad"
 />
 ```
 
 **Props:**
-- `label`: `string`
-- `helperText`: `string`
-- `error`: `string` (overrides helperText)
-- `variant`: `'default' | 'error' | 'success'` (default: `'default'`)
-- `leftIcon`: `React.ReactNode`
-- `rightIcon`: `React.ReactNode`
-- `required`: `boolean` (default: `false`)
-- All standard `TextInput` props are supported
+- `error` - Shows error state with red border
+- Standard React Native `TextInput` props
 
 ### Card
-
-A container component for grouping related content.
+Container component for main content areas.
 
 ```tsx
-import { Card, Text } from '@/components/ui';
+import { Card } from '@/components/ui';
 
-// Default card
 <Card>
-  <Text variant="h3">Resort Name</Text>
-  <Text>Beautiful beachfront resort</Text>
-</Card>
-
-// Elevated card (with shadow)
-<Card variant="elevated">
-  <Text variant="h4">Special Offer</Text>
-  <Text>Book now and save 20%</Text>
-</Card>
-
-// Outlined card
-<Card variant="outlined">
-  <Text>Card content</Text>
-</Card>
-
-// Pressable card
-<Card 
-  variant="elevated" 
-  pressable 
-  onPress={handleCardPress}
-  accessibilityLabel="View resort details"
->
-  <Text variant="h3">Resort Details</Text>
+  {/* Your content */}
 </Card>
 ```
 
-**Props:**
-- `variant`: `'default' | 'elevated' | 'outlined'` (default: `'default'`)
-- `pressable`: `boolean` (default: `false`)
-- `onPress`: `() => void` (requires `pressable={true}`)
-- `padding`: `number` (override default padding)
-- `borderRadius`: `number` (override default radius)
-- `fullWidth`: `boolean` (default: `false`)
-
-### Text
-
-An enhanced text component with typography variants and semantic colors.
-
-```tsx
-import { Text } from '@/components/ui';
-
-// Heading variants
-<Text variant="h1">Welcome</Text>
-<Text variant="h2">Resort Booking</Text>
-<Text variant="h3">Available Rooms</Text>
-
-// Body text
-<Text variant="body">This is body text</Text>
-
-// Caption text
-<Text variant="caption" color="secondary">
-  Last updated 2 hours ago
-</Text>
-
-// Label text
-<Text variant="label">Room Type</Text>
-
-// Custom styling
-<Text 
-  variant="body" 
-  size="lg" 
-  weight="semibold" 
-  color="primary"
-  align="center"
->
-  Custom styled text
-</Text>
-
-// Truncated text
-<Text variant="body" numberOfLines={2}>
-  Long text that will be truncated after 2 lines...
-</Text>
-```
-
-**Props:**
-- `variant`: `'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' | 'body' | 'caption' | 'label'` (default: `'body'`)
-- `color`: `'primary' | 'secondary' | 'tertiary' | 'inverse' | 'error' | 'success' | 'warning'` (default: `'primary'`)
-- `size`: Font size key (overrides variant default)
-- `weight`: `'regular' | 'medium' | 'semibold' | 'bold'`
-- `bold`: `boolean` (shorthand for bold weight)
-- `semibold`: `boolean` (shorthand for semibold weight)
-- `align`: `'left' | 'center' | 'right' | 'justify'`
-- `numberOfLines`: `number` (truncates with ellipsis)
-- All standard `Text` props are supported
+**Padding Options:**
+- `default` - 24px horizontal, 32px vertical
+- `small` - 16px horizontal, 24px vertical
+- `large` - 32px horizontal, 40px vertical
+- `none` - No padding
 
 ### IconButton
-
-An icon-only button with accessible touch targets.
+Icon button for navigation and actions.
 
 ```tsx
 import { IconButton } from '@/components/ui';
-import { Ionicons } from '@expo/vector-icons';
 
-// Ghost variant (minimal)
-<IconButton
-  icon={<Ionicons name="heart" size={24} />}
-  variant="ghost"
-  accessibilityLabel="Add to favorites"
-  onPress={handleFavorite}
-/>
-
-// Primary variant
-<IconButton
-  icon={<Ionicons name="share" size={24} />}
-  variant="primary"
-  accessibilityLabel="Share"
-  onPress={handleShare}
-/>
-
-// Outline variant
-<IconButton
-  icon={<Ionicons name="close" size={24} />}
-  variant="outline"
-  size="sm"
-  accessibilityLabel="Close"
-  onPress={handleClose}
-/>
-
-// With loading state
-<IconButton
-  icon={<Ionicons name="refresh" size={24} />}
-  variant="secondary"
-  loading={isRefreshing}
-  accessibilityLabel="Refresh"
-  onPress={handleRefresh}
+<IconButton 
+  icon="arrow-back" 
+  onPress={handleBack}
 />
 ```
 
-**Props:**
-- `icon`: `React.ReactNode` (required)
-- `variant`: `'primary' | 'secondary' | 'outline' | 'ghost'` (default: `'ghost'`)
-- `size`: `'sm' | 'md' | 'lg'` (default: `'md'`)
-- `disabled`: `boolean` (default: `false`)
-- `loading`: `boolean` (default: `false`)
-- `accessibilityLabel`: `string` (required)
-- `iconColor`: `string` (override icon color)
-
 ### Divider
-
-A simple divider/separator component.
+Horizontal divider with optional text.
 
 ```tsx
 import { Divider } from '@/components/ui';
 
-// Horizontal divider
-<Divider />
-
-// With custom spacing
-<Divider spacing={24} />
-
-// Vertical divider
-<View style={{ flexDirection: 'row', height: 100 }}>
-  <Text>Left</Text>
-  <Divider orientation="vertical" horizontalSpacing={16} />
-  <Text>Right</Text>
-</View>
-
-// Custom thickness and color
-<Divider thickness={2} color="#e5e5e5" spacing={16} />
+<Divider text="OR" />
 ```
 
-**Props:**
-- `orientation`: `'horizontal' | 'vertical'` (default: `'horizontal'`)
-- `thickness`: `number` (default: `1`)
-- `spacing`: `number` (margin on both sides)
-- `verticalSpacing`: `number` (for horizontal dividers)
-- `horizontalSpacing`: `number` (for vertical dividers)
-- `color`: `string` (override default color)
-- `fullLength`: `boolean` (default: `true`)
+## Design Tokens
 
-## Design System
-
-All components use design tokens from `@/constants/DesignSystem`. Update these values to match your Figma specifications:
-
-- **Colors**: Primary, neutral, semantic (error, success, warning)
-- **Typography**: Font sizes, line heights, weights
-- **Spacing**: Consistent 4px-based scale
-- **Radius**: Border radius scale
-- **Shadows**: Elevation system for cards
-
-## Customization
-
-### Updating Design Tokens
-
-Edit `/constants/DesignSystem.ts` to match your Figma design system:
+All design tokens are available from `@/constants/DesignTokens`:
 
 ```tsx
-// Update colors to match Figma
-export const colors = {
-  primary: {
-    500: '#your-primary-color',
-    // ...
-  },
-  // ...
-};
+import { colors, spacing, borderRadius, typography } from '@/constants/DesignTokens';
 
-// Update spacing scale
-export const spacing = {
-  xs: 4,
-  sm: 8,
-  // ...
-};
+// Use tokens directly
+<View style={{ padding: spacing.md, backgroundColor: colors.primary }}>
+  <Text style={{ fontSize: typography.fontSize['3'] }}>Hello</Text>
+</View>
 ```
 
-### Theming
+## Responsive Design
 
-Components automatically adapt to light/dark mode using the `useColorScheme` hook. The design system includes semantic color mappings for both themes.
+Components are built with flexible layouts and will adapt to different screen sizes. For responsive behavior, use the breakpoints from `DesignTokens`:
+
+```tsx
+import { breakpoints } from '@/constants/DesignTokens';
+import { useWindowDimensions } from 'react-native';
+
+const { width } = useWindowDimensions();
+const isTablet = width >= breakpoints.tablet;
+```
+
+## Platform Compatibility
+
+All components are built with React Native primitives and work on:
+- ✅ iOS
+- ✅ Android  
+- ✅ Web (React Native Web)
 
 ## Accessibility
 
-All components follow accessibility best practices:
-
-- **Touch Targets**: Minimum 44x44px (iOS/Android guidelines)
-- **Keyboard Navigation**: Full support on web (Enter/Space keys)
-- **Screen Readers**: Proper accessibility labels and roles
-- **Color Contrast**: Meets WCAG AA standards
-- **Focus States**: Visible focus indicators on web
-
-## Platform Support
-
-- ✅ Android
-- ✅ iOS
-- ✅ Web (React Native Web)
-
-All components use React Native primitives only and work seamlessly across all platforms.
-
-## Best Practices
-
-1. **Always provide accessibility labels** for icon-only buttons
-2. **Use semantic variants** (error, success) for better UX
-3. **Leverage the design system** - don't hardcode colors/spacing
-4. **Keep components composable** - combine simple components for complex UIs
-5. **Test on all platforms** - especially touch targets on mobile
-
-## Examples
-
-See the component files for detailed implementation examples and TypeScript types.
+Components follow React Native accessibility best practices:
+- Touch targets meet minimum 44x44px requirement
+- Proper semantic roles where applicable
+- Support for accessibility labels
