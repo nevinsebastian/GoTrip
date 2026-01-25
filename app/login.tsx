@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, StyleSheet, ScrollView, SafeAreaView } from 'react-native';
+import { View, StyleSheet, ScrollView } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card, Text, Input, Button, IconButton, Divider } from '@/components/ui';
 import { colors, spacing } from '@/constants/DesignTokens';
 import { useResponsive } from '@/components/ui/useResponsive';
