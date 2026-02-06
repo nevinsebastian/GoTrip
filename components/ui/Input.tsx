@@ -28,7 +28,7 @@ export interface InputProps extends TextInputProps {
  * - Consistent height (48px)
  * - Placeholder text in light gray
  */
-export const Input: React.FC<InputProps> = ({
+export const Input = React.forwardRef<TextInput, InputProps>(({
   containerStyle,
   style,
   error = false,
@@ -38,7 +38,7 @@ export const Input: React.FC<InputProps> = ({
   onFocus,
   onBlur,
   ...textInputProps
-}) => {
+}, ref) => {
   const [focused, setFocused] = useState(false);
   const isSearch = variant === 'search' || showSearchIcon;
 
@@ -55,6 +55,7 @@ export const Input: React.FC<InputProps> = ({
   return (
     <View style={[styles.container, containerStyle]}>
       <TextInput
+        ref={ref}
         style={[
           styles.input,
           isSearch && styles.inputSearch,
@@ -78,7 +79,9 @@ export const Input: React.FC<InputProps> = ({
       )}
     </View>
   );
-};
+});
+
+Input.displayName = 'Input';
 
 const styles = StyleSheet.create({
   container: {

@@ -1,28 +1,66 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   StyleSheet,
   Platform,
   Keyboard,
   TouchableWithoutFeedback,
+  TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Card, Text, Input, Button, IconButton } from '@/components/ui';
-import { colors, spacing, borderRadius } from '@/constants/DesignTokens';
+import { colors, spacing, borderRadius, components } from '@/constants/DesignTokens';
+
+import Logo from '@/assets/images/logogotrip.svg';
 
 const isIOS = Platform.OS === 'ios';
+const OTP_LENGTH = 4;
 
 export default function OtpScreen() {
-  const [code, setCode] = useState('');
+  const [digits, setDigits] = useState<string[]>(['', '', '', '']);
+  const inputRefs = useRef<(TextInput | null)[]>([]);
 
   const handleBack = () => {
     router.back();
   };
 
-  const handleContinue = () => {
-    // TODO: verify OTP and navigate to main app
+  const handleDigitChange = (index: number, value: string) => {
+    const num = value.replace(/\D/g, '');
+    if (num.length > 1) {
+      const chars = num.slice(0, OTP_LENGTH).split('');
+      const next = [...digits];
+      chars.forEach((c, i) => {
+        if (index + i < OTP_LENGTH) next[index + i] = c;
+      });
+      setDigits(next);
+      const nextFocus = Math.min(index + chars.length, OTP_LENGTH - 1);
+      inputRefs.current[nextFocus]?.focus();
+      return;
+    }
+    const next = [...digits];
+    next[index] = num;
+    setDigits(next);
+    if (num && index < OTP_LENGTH - 1) {
+      inputRefs.current[index + 1]?.focus();
+    }
   };
+
+  const handleKeyPress = (index: number, key: string) => {
+    if (key === 'Backspace' && !digits[index] && index > 0) {
+      inputRefs.current[index - 1]?.focus();
+    }
+  };
+
+  const handleConfirm = () => {
+    const code = digits.join('');
+    if (code.length === OTP_LENGTH) {
+      // TODO: verify OTP and navigate to main app
+    }
+  };
+
+  const code = digits.join('');
+  const canConfirm = code.length === OTP_LENGTH;
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -36,41 +74,58 @@ export default function OtpScreen() {
               onPress={handleBack}
             />
             <Text variant="header" color="primaryBrand" style={styles.headerTitle}>
-              Enter OTP
+              Sign up
             </Text>
           </View>
 
           <View style={styles.screen}>
             <Card padding="none" style={styles.card}>
               <View style={styles.cardInner}>
-                <View style={styles.copyBlock}>
-                  <Text variant="bodySemibold" style={styles.title}>
-                    Verify your number
-                  </Text>
-                  <Text variant="caption" style={styles.subtitle}>
-                    We&apos;ve sent a verification code to your phone. Enter it below to continue.
-                  </Text>
+                <View style={styles.logoWrap}>
+                  <Logo width={isIOS ? 120 : 100} height={isIOS ? 44 : 38} />
                 </View>
 
-                <View style={styles.otpBlock}>
-                  <Input
-                    placeholder="••••"
-                    keyboardType="number-pad"
-                    maxLength={4}
-                    value={code}
-                    onChangeText={setCode}
-                    style={styles.otpInput}
-                    textAlign="center"
-                  />
+                <Text variant="bodySemibold" style={styles.enterOtpTitle}>
+                  Enter OTP
+                </Text>
+                <Text variant="caption" style={styles.subtitle}>
+                  OTP sent to +91 97******10 via SMS
+                </Text>
+
+                <View style={styles.otpRow}>
+                  {digits.map((d, i) => (
+                    <Input
+                      key={i}
+                      ref={(el) => {
+                        inputRefs.current[i] = el;
+                      }}
+                      value={d}
+                      onChangeText={(v) => handleDigitChange(i, v)}
+                      onKeyPress={({ nativeEvent }) =>
+                        handleKeyPress(i, nativeEvent.key)
+                      }
+                      keyboardType="number-pad"
+                      maxLength={1}
+                      placeholder="0"
+                      placeholderTextColor={colors.neutral.alpha['9']}
+                      style={styles.otpDigit}
+                      containerStyle={styles.otpDigitContainer}
+                    />
+                  ))}
                 </View>
+
+                <Text variant="caption" style={styles.helper}>
+                  You&apos;ll get OTP in this number.
+                </Text>
 
                 <Button
                   variant="primary"
                   size="default"
-                  style={styles.continueButton}
-                  onPress={handleContinue}
+                  style={styles.confirmButton}
+                  onPress={handleConfirm}
+                  disabled={!canConfirm}
                 >
-                  Continue
+                  Confirm
                 </Button>
 
                 <Button
@@ -126,24 +181,32 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: spacing['5'],
     paddingHorizontal: spacing['5'],
-    gap: spacing['5'],
+    gap: spacing['4'],
   },
-  copyBlock: {
-    width: '100%',
-    gap: spacing['2'],
+  logoWrap: {
+    marginBottom: spacing['2'],
   },
-  title: {
+  enterOtpTitle: {
     color: colors.text.primary,
+    alignSelf: 'flex-start',
   },
   subtitle: {
     color: colors.neutral.alpha['9'],
+    alignSelf: 'flex-start',
+    marginTop: spacing['1'],
   },
-  otpBlock: {
+  otpRow: {
+    flexDirection: 'row',
     width: '100%',
-    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing['2'],
+    marginTop: spacing['3'],
   },
-  otpInput: {
-    width: '60%',
+  otpDigitContainer: {
+    flex: 1,
+    minWidth: 0,
+  },
+  otpDigit: {
     ...Platform.select({
       ios: { height: 48 },
       default: { height: 44 },
@@ -152,14 +215,20 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.neutral.alpha['5'],
     borderRadius: borderRadius['3'],
+    paddingHorizontal: 0,
     fontSize: 20,
-    letterSpacing: 8,
+    textAlign: 'center',
   },
-  continueButton: {
+  helper: {
+    color: colors.neutral.alpha['9'],
+    alignSelf: 'flex-start',
+    marginTop: spacing['2'],
+  },
+  confirmButton: {
     width: '100%',
     borderRadius: borderRadius.lg,
     backgroundColor: colors.primary,
     borderWidth: 0,
+    marginTop: spacing['2'],
   },
 });
-
