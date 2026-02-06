@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { TextInput, TextInputProps, StyleSheet, View, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, borderRadius, components } from '@/constants/DesignTokens';
@@ -35,9 +35,22 @@ export const Input: React.FC<InputProps> = ({
   variant = 'default',
   showSearchIcon = false,
   placeholderTextColor = colors.text.placeholder,
+  onFocus,
+  onBlur,
   ...textInputProps
 }) => {
+  const [focused, setFocused] = useState(false);
   const isSearch = variant === 'search' || showSearchIcon;
+
+  const handleFocus = (e: any) => {
+    setFocused(true);
+    onFocus?.(e);
+  };
+
+  const handleBlur = (e: any) => {
+    setFocused(false);
+    onBlur?.(e);
+  };
 
   return (
     <View style={[styles.container, containerStyle]}>
@@ -47,8 +60,11 @@ export const Input: React.FC<InputProps> = ({
           isSearch && styles.inputSearch,
           error && styles.inputError,
           style,
+          focused && styles.inputFocused,
         ]}
         placeholderTextColor={placeholderTextColor}
+        onFocus={handleFocus}
+        onBlur={handleBlur}
         {...textInputProps}
       />
       {isSearch && (
@@ -87,6 +103,10 @@ const styles = StyleSheet.create({
     paddingRight: components.searchInput.iconSize + components.searchInput.iconPadding, // Space for icon
   },
   inputError: {
+    borderColor: colors.primary,
+  },
+  inputFocused: {
+    borderWidth: 2,
     borderColor: colors.primary,
   },
   searchIconContainer: {

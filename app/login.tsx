@@ -1,37 +1,57 @@
-import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import React, { useState } from 'react';
+import { View, StyleSheet, Platform, Keyboard, TouchableWithoutFeedback } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card, Text, Input, Button, IconButton, Divider } from '@/components/ui';
 import { colors, spacing, borderRadius } from '@/constants/DesignTokens';
 
 import Logo from '@/assets/images/logogotrip.svg';
 import MailIcon from '@/assets/images/mail.svg';
+import MobileIcon from '@/assets/images/mobile.svg';
 import GoogleIcon from '@/assets/images/google.svg';
 import AppleIcon from '@/assets/images/apple.svg';
 import FacebookIcon from '@/assets/images/facebook.svg';
 
-const SocialIconSize = 20;
+const isWeb = Platform.OS === 'web';
+const isIOS = Platform.OS === 'ios';
+
+const logoWidth = isIOS ? 150 : 130;
+const logoHeight = isIOS ? 69 : 60;
+const socialIconSize = isIOS ? 22 : 20;
+
+type LoginMode = 'phone' | 'email';
 
 export default function LoginScreen() {
+  const [loginMode, setLoginMode] = useState<LoginMode>('phone');
+  const [inputValue, setInputValue] = useState('');
+
+  const isEmailMode = loginMode === 'email';
+
+  const switchMode = () => {
+    setInputValue('');
+    setLoginMode((prev) => (prev === 'phone' ? 'email' : 'phone'));
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={styles.header}>
-        <IconButton
-          icon="chevron-back"
-          size={20}
-          color={colors.primary}
-          onPress={() => {}}
-        />
-        <Text variant="header" color="primaryBrand" style={styles.headerTitle}>
-          Log in
-        </Text>
-      </View>
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+        <View style={styles.touchableWrap}>
+          <View style={styles.header}>
+            <IconButton
+              icon="chevron-back"
+              size={isIOS ? 24 : 20}
+              color={colors.primary}
+              onPress={() => {}}
+            />
+            <Text variant="header" color="primaryBrand" style={styles.headerTitle}>
+              Log in
+            </Text>
+          </View>
 
-      <View style={styles.screen}>
+          <View style={styles.screen}>
         <Card padding="none" style={styles.card}>
-          <View style={styles.cardInner}>
+          <View style={[styles.cardInner, !isWeb && styles.cardInnerNative, isIOS && styles.cardInnerIos]}>
             <View style={styles.logoWrap}>
-              <Logo width={130} height={60} />
+              <Logo width={logoWidth} height={logoHeight} />
             </View>
 
             <View style={styles.copyBlock}>
@@ -39,30 +59,30 @@ export default function LoginScreen() {
                 Welcome Back..
               </Text>
               <Text variant="caption" style={styles.subtitle}>
-                Enter your Phone number.
+                {isEmailMode ? 'Enter your Email.' : 'Enter your Phone number.'}
               </Text>
             </View>
 
             <View style={styles.form}>
               <View>
                 <Input
-                  placeholder="Phone number"
-                  keyboardType="phone-pad"
+                  placeholder={isEmailMode ? 'Email' : 'Phone number'}
+                  keyboardType={isEmailMode ? 'email-address' : 'phone-pad'}
                   placeholderTextColor={colors.neutral.alpha['9']}
                   style={styles.phoneInput}
+                  value={inputValue}
+                  onChangeText={setInputValue}
                 />
                 <Text variant="caption" style={styles.helper}>
-                  You’ll get OTP to this number.
+                  {isEmailMode ? "You'll get OTP to this email." : "You'll get OTP to this number."}
                 </Text>
               </View>
 
               <Button
                 variant="primary"
-                size="compact"
+                size="default"
                 style={styles.getOtpButton}
-                onPress={() => {
-                  // TODO: handle OTP
-                }}
+                onPress={() => {}}
               >
                 Get OTP
               </Button>
@@ -73,16 +93,22 @@ export default function LoginScreen() {
                 <Button
                   variant="outlineSoft"
                   size="compact"
-                  leftAdornment={<MailIcon width={SocialIconSize} height={SocialIconSize} />}
-                  onPress={() => {}}
+                  leftAdornment={
+                    isEmailMode ? (
+                      <MobileIcon width={socialIconSize} height={socialIconSize} />
+                    ) : (
+                      <MailIcon width={socialIconSize} height={socialIconSize} />
+                    )
+                  }
+                  onPress={switchMode}
                 >
-                  Log in with mail
+                  {isEmailMode ? 'Login with phone' : 'Log in with mail'}
                 </Button>
 
                 <Button
                   variant="outlineSoft"
                   size="compact"
-                  leftAdornment={<GoogleIcon width={SocialIconSize} height={SocialIconSize} />}
+                  leftAdornment={<GoogleIcon width={socialIconSize} height={socialIconSize} />}
                   onPress={() => {}}
                 >
                   Continue with Google
@@ -91,7 +117,7 @@ export default function LoginScreen() {
                 <Button
                   variant="outlineSoft"
                   size="compact"
-                  leftAdornment={<AppleIcon width={SocialIconSize} height={SocialIconSize} />}
+                  leftAdornment={<AppleIcon width={socialIconSize} height={socialIconSize} />}
                   onPress={() => {}}
                 >
                   Continue with Apple
@@ -100,7 +126,7 @@ export default function LoginScreen() {
                 <Button
                   variant="outlineSoft"
                   size="compact"
-                  leftAdornment={<FacebookIcon width={SocialIconSize} height={SocialIconSize} />}
+                  leftAdornment={<FacebookIcon width={socialIconSize} height={socialIconSize} />}
                   onPress={() => {}}
                 >
                   Continue with Facebook
@@ -109,7 +135,9 @@ export default function LoginScreen() {
             </View>
           </View>
         </Card>
-      </View>
+          </View>
+        </View>
+      </TouchableWithoutFeedback>
     </SafeAreaView>
   );
 }
@@ -118,6 +146,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.gray['2'],
+  },
+  touchableWrap: {
+    flex: 1,
   },
   header: {
     flexDirection: 'row',
@@ -133,24 +164,30 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     paddingHorizontal: spacing['4'],
+    paddingTop: spacing['6'],
     paddingBottom: spacing['4'],
     alignItems: 'center',
-    minHeight: 0,
+    alignSelf: 'stretch',
   },
   card: {
     width: '100%',
     maxWidth: 400,
-    flex: 1,
-    minHeight: 0,
     backgroundColor: colors.gray['1'],
     borderRadius: borderRadius['6'],
   },
   cardInner: {
-    flex: 1,
     alignItems: 'center',
     paddingVertical: spacing['5'],
     paddingHorizontal: spacing['5'],
     gap: spacing['4'],
+  },
+  cardInnerNative: {
+    paddingBottom: spacing['8'],
+  },
+  cardInnerIos: {
+    paddingVertical: spacing['6'],
+    paddingHorizontal: spacing['6'],
+    gap: spacing['5'],
   },
   logoWrap: {
     marginBottom: spacing['2'],
@@ -167,13 +204,14 @@ const styles = StyleSheet.create({
     color: colors.neutral.alpha['9'],
   },
   form: {
-    flex: 1,
     width: '100%',
     gap: spacing['3'],
-    minHeight: 0,
   },
   phoneInput: {
-    height: 40,
+    ...Platform.select({
+      ios: { height: 44 },
+      default: { height: 40 },
+    }),
     backgroundColor: colors.surface.card,
     borderWidth: 1,
     borderColor: colors.neutral.alpha['5'],
@@ -188,10 +226,9 @@ const styles = StyleSheet.create({
   },
   getOtpButton: {
     width: '100%',
-    borderRadius: borderRadius['2'],
-    backgroundColor: colors.accent.main,
-    borderWidth: 1,
-    borderColor: colors.accent.main,
+    borderRadius: borderRadius.lg,
+    backgroundColor: colors.primary,
+    borderWidth: 0,
   },
   divider: {
     marginVertical: spacing['2'],
