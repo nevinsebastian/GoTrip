@@ -6,8 +6,8 @@ import { colors, spacing, borderRadius, components, shadows } from '@/constants/
 import { useResponsive } from './useResponsive';
 
 export interface ButtonProps extends Omit<PressableProps, 'style'> {
-  variant?: 'primary' | 'outline' | 'link' | 'category' | 'navSelected' | 'navUnselected';
-  size?: 'default' | 'large';
+  variant?: 'primary' | 'outline' | 'outlineSoft' | 'link' | 'category' | 'navSelected' | 'navUnselected';
+  size?: 'compact' | 'default' | 'large';
   children: React.ReactNode;
   style?: ViewStyle;
   loading?: boolean;
@@ -16,6 +16,7 @@ export interface ButtonProps extends Omit<PressableProps, 'style'> {
   icon?: keyof typeof Ionicons.glyphMap; // For link variant (right icon) and nav variants
   iconPosition?: 'left' | 'right'; // For link variant
   categoryIcon?: React.ReactNode; // For category variant (image/icon component)
+  leftAdornment?: React.ReactNode; // For outline/outlineSoft buttons (Login social icons)
 }
 
 /**
@@ -44,11 +45,17 @@ export const Button: React.FC<ButtonProps> = ({
   icon,
   iconPosition = 'right',
   categoryIcon,
+  leftAdornment,
   ...pressableProps
 }) => {
   const isDisabled = disabled || loading;
   const { isMobile } = useResponsive();
-  const height = size === 'large' ? components.button.height.large : components.button.height.default;
+  const height =
+    size === 'compact'
+      ? components.button.height['2']
+      : size === 'large'
+        ? components.button.height.large
+        : components.button.height.default;
 
   // Special handling for variants that don't use standard height
   const useStandardHeight = !['link', 'category', 'navSelected', 'navUnselected'].includes(variant);
@@ -132,14 +139,22 @@ export const Button: React.FC<ButtonProps> = ({
         ) : null;
 
       default:
-        const textVariant = 'bodySemibold';
-        const textColor = variant === 'primary' 
+        const textVariant = size === 'compact' ? 'bodyMedium' : 'bodySemibold';
+        const isSolid = variant === 'primary' || variant === 'navSelected';
+        const textColor = isSolid
           ? (isDisabled ? colors.text.secondary : colors.surface.white)
           : (isDisabled ? colors.text.caption : colors.primary);
+
+        // Outline buttons in Login have left icons and tighter height.
+        const withLeftAdornment = (variant === 'outline' || variant === 'outlineSoft') && leftAdornment;
+
         return (
-          <Text variant={textVariant} style={{ color: textColor }}>
-            {children}
-          </Text>
+          <View style={withLeftAdornment ? styles.rowContent : undefined}>
+            {withLeftAdornment ? <View style={styles.leftAdornment}>{leftAdornment}</View> : null}
+            <Text variant={textVariant} style={{ color: textColor }}>
+              {children}
+            </Text>
+          </View>
         );
     }
   };
@@ -194,6 +209,16 @@ const styles = StyleSheet.create({
       web: shadows.button,
     }),
   },
+  // Login/Signup social buttons (from Figma): accent-surface bg, accent-alpha border, radius 4, height 32.
+  outlineSoft: {
+    borderRadius: borderRadius['2'],
+    paddingHorizontal: spacing['3'],
+    paddingVertical: 0,
+    minHeight: components.button.height['2'],
+    backgroundColor: colors.accent.surface,
+    borderWidth: 1,
+    borderColor: colors.accent.alpha['7'],
+  },
   link: {
     backgroundColor: 'transparent',
     paddingHorizontal: 0,
@@ -231,6 +256,13 @@ const styles = StyleSheet.create({
   },
   pressed: {
     opacity: 0.8,
+  },
+  rowContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  leftAdornment: {
+    marginRight: spacing['2'],
   },
   // Link variant styles
   linkContent: {
