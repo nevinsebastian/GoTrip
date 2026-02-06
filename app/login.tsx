@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, Platform, Keyboard, TouchableWithoutFeedback } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { router } from 'expo-router';
 import { Card, Text, Input, Button, IconButton, Divider } from '@/components/ui';
 import { colors, spacing, borderRadius } from '@/constants/DesignTokens';
 
@@ -40,7 +41,7 @@ export default function LoginScreen() {
               icon="chevron-back"
               size={isIOS ? 24 : 20}
               color={colors.primary}
-              onPress={() => {}}
+              onPress={() => router.replace('/signup')}
             />
             <Text variant="header" color="primaryBrand" style={styles.headerTitle}>
               Log in
