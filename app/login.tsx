@@ -1,34 +1,38 @@
 import React from 'react';
-import { View, StyleSheet, Image } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card, Text, Input, Button, IconButton, Divider } from '@/components/ui';
 import { colors, spacing, borderRadius } from '@/constants/DesignTokens';
 
 import Logo from '@/assets/images/logogotrip.svg';
+import MailIcon from '@/assets/images/mail.svg';
+import GoogleIcon from '@/assets/images/google.svg';
+import AppleIcon from '@/assets/images/apple.svg';
+import FacebookIcon from '@/assets/images/facebook.svg';
+
+const SocialIconSize = 20;
 
 export default function LoginScreen() {
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.screen}>
-        {/* Header (chevron-left + title, left aligned) */}
-        <View style={styles.header}>
-          <IconButton
-            icon="chevron-back"
-            size={16}
-            color={colors.accent.main}
-            onPress={() => {
-              // TODO: wire navigation
-            }}
-          />
-          <Text variant="bodySemibold" style={styles.headerTitle}>
-            Log in
-          </Text>
-        </View>
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <View style={styles.header}>
+        <IconButton
+          icon="chevron-back"
+          size={20}
+          color={colors.primary}
+          onPress={() => {}}
+        />
+        <Text variant="header" color="primaryBrand" style={styles.headerTitle}>
+          Log in
+        </Text>
+      </View>
 
-        {/* Main content card */}
+      <View style={styles.screen}>
         <Card padding="none" style={styles.card}>
           <View style={styles.cardInner}>
-            <Logo width={65} height={30} />
+            <View style={styles.logoWrap}>
+              <Logo width={130} height={60} />
+            </View>
 
             <View style={styles.copyBlock}>
               <Text variant="bodySemibold" style={styles.welcome}>
@@ -69,7 +73,7 @@ export default function LoginScreen() {
                 <Button
                   variant="outlineSoft"
                   size="compact"
-                  leftAdornment={<Image source={{ uri: 'https://www.figma.com/api/mcp/asset/9dbcf19b-9c52-45bf-9bfa-9761f181ec9f' }} style={styles.icon16} />}
+                  leftAdornment={<MailIcon width={SocialIconSize} height={SocialIconSize} />}
                   onPress={() => {}}
                 >
                   Log in with mail
@@ -78,7 +82,7 @@ export default function LoginScreen() {
                 <Button
                   variant="outlineSoft"
                   size="compact"
-                  leftAdornment={<Image source={{ uri: 'https://www.figma.com/api/mcp/asset/f4d17cfe-afb9-4971-aeb8-be70ad02b40b' }} style={styles.icon16} />}
+                  leftAdornment={<GoogleIcon width={SocialIconSize} height={SocialIconSize} />}
                   onPress={() => {}}
                 >
                   Continue with Google
@@ -87,7 +91,7 @@ export default function LoginScreen() {
                 <Button
                   variant="outlineSoft"
                   size="compact"
-                  leftAdornment={<Image source={{ uri: 'https://www.figma.com/api/mcp/asset/9adda6dd-5997-4ea7-8226-84ecb6e7d591' }} style={styles.icon24} />}
+                  leftAdornment={<AppleIcon width={SocialIconSize} height={SocialIconSize} />}
                   onPress={() => {}}
                 >
                   Continue with Apple
@@ -96,7 +100,7 @@ export default function LoginScreen() {
                 <Button
                   variant="outlineSoft"
                   size="compact"
-                  leftAdornment={<Image source={{ uri: 'https://www.figma.com/api/mcp/asset/154b7da3-4e63-4650-a2c2-a7a8cf353bb1' }} style={styles.icon24} />}
+                  leftAdornment={<FacebookIcon width={SocialIconSize} height={SocialIconSize} />}
                   onPress={() => {}}
                 >
                   Continue with Facebook
@@ -115,43 +119,46 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.gray['2'],
   },
-  screen: {
-    flex: 1,
-    // Figma: px 17, py 45, gap 32, centered
-    paddingHorizontal: 17,
-    paddingVertical: 45,
-    alignItems: 'center',
-  },
   header: {
-    width: '100%',
-    maxWidth: 340,
-    height: 40,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingLeft: spacing['4'],
-    marginBottom: spacing['6'],
-    gap: spacing['3'],
+    paddingHorizontal: spacing['2'],
+    paddingVertical: spacing['2'],
+    minHeight: 48,
+    backgroundColor: colors.gray['2'],
   },
   headerTitle: {
-    color: colors.accent.main,
+    marginLeft: spacing['2'],
+  },
+  screen: {
+    flex: 1,
+    paddingHorizontal: spacing['4'],
+    paddingBottom: spacing['4'],
+    alignItems: 'center',
+    minHeight: 0,
   },
   card: {
     width: '100%',
-    maxWidth: 340,
+    maxWidth: 400,
+    flex: 1,
+    minHeight: 0,
     backgroundColor: colors.gray['1'],
     borderRadius: borderRadius['6'],
-    // Card shadow in Figma is subtle; keep Card's existing shadow behavior.
   },
   cardInner: {
+    flex: 1,
     alignItems: 'center',
-    paddingTop: spacing['8'],
-    paddingBottom: spacing['7'],
-    paddingHorizontal: spacing['4'],
-    gap: spacing['8'],
+    paddingVertical: spacing['5'],
+    paddingHorizontal: spacing['5'],
+    gap: spacing['4'],
+  },
+  logoWrap: {
+    marginBottom: spacing['2'],
   },
   copyBlock: {
     width: '100%',
     gap: 2,
+    marginBottom: spacing['2'],
   },
   welcome: {
     color: colors.text.primary,
@@ -160,8 +167,10 @@ const styles = StyleSheet.create({
     color: colors.neutral.alpha['9'],
   },
   form: {
+    flex: 1,
     width: '100%',
-    gap: spacing['4'],
+    gap: spacing['3'],
+    minHeight: 0,
   },
   phoneInput: {
     height: 40,
@@ -170,7 +179,6 @@ const styles = StyleSheet.create({
     borderColor: colors.neutral.alpha['5'],
     borderRadius: borderRadius['3'],
     paddingHorizontal: spacing['2'],
-    // keep RN TextInput baseline padding minimal to match Figma
     paddingVertical: 0,
   },
   helper: {
@@ -186,20 +194,10 @@ const styles = StyleSheet.create({
     borderColor: colors.accent.main,
   },
   divider: {
-    marginVertical: 0,
+    marginVertical: spacing['2'],
   },
   socialStack: {
     width: '100%',
-    gap: spacing['4'],
-  },
-  icon16: {
-    width: 16,
-    height: 16,
-    resizeMode: 'contain',
-  },
-  icon24: {
-    width: 24,
-    height: 24,
-    resizeMode: 'contain',
+    gap: spacing['3'],
   },
 });
