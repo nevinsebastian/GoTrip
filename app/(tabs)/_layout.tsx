@@ -1,59 +1,103 @@
 import React from 'react';
-import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { Link, Tabs } from 'expo-router';
-import { Pressable } from 'react-native';
+import { Tabs } from 'expo-router';
+import { View, StyleSheet, Platform } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { colors, borderRadius, components, spacing } from '@/constants/DesignTokens';
 
-import Colors from '@/constants/Colors';
-import { useColorScheme } from '@/components/useColorScheme';
-import { useClientOnlyValue } from '@/components/useClientOnlyValue';
-
-// You can explore the built-in icon families and icons on the web at https://icons.expo.fyi/
-function TabBarIcon(props: {
-  name: React.ComponentProps<typeof FontAwesome>['name'];
+function TabBarIcon({
+  name,
+  color,
+  size = components.bottomNav.iconSize,
+}: {
+  name: keyof typeof Ionicons.glyphMap;
   color: string;
+  size?: number;
 }) {
-  return <FontAwesome size={28} style={{ marginBottom: -3 }} {...props} />;
+  return <Ionicons name={name} size={size} color={color} />;
 }
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
-
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
-        // Disable the static render of the header on web
-        // to prevent a hydration error in React Navigation v6.
-        headerShown: useClientOnlyValue(false, true),
-      }}>
+        headerShown: false,
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.primary,
+        tabBarStyle: {
+          backgroundColor: colors.surface.white,
+          borderTopWidth: 1,
+          borderTopColor: colors.border.light,
+          height: Platform.OS === 'ios' ? 88 : 64,
+          paddingTop: spacing['2'],
+        },
+        tabBarShowLabel: true,
+        tabBarLabelStyle: {
+          fontSize: components.bottomNav.textSize,
+          fontWeight: '500',
+        },
+      }}
+    >
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Tab One',
-          tabBarIcon: ({ color }) => <TabBarIcon name="code" color={color} />,
-          headerRight: () => (
-            <Link href="/modal" asChild>
-              <Pressable>
-                {({ pressed }) => (
-                  <FontAwesome
-                    name="info-circle"
-                    size={25}
-                    color={Colors[colorScheme ?? 'light'].text}
-                    style={{ marginRight: 15, opacity: pressed ? 0.5 : 1 }}
-                  />
-                )}
-              </Pressable>
-            </Link>
+          title: 'Home',
+          tabBarIcon: ({ color, focused }) => (
+            <View
+              style={[
+                styles.iconWrap,
+                focused && styles.iconWrapActive,
+              ]}
+            >
+              <TabBarIcon
+                name="home"
+                color={focused ? colors.surface.white : color}
+              />
+            </View>
           ),
+          tabBarLabel: 'Home',
         }}
       />
       <Tabs.Screen
         name="two"
         options={{
-          title: 'Tab Two',
-          tabBarIcon: ({ color }) => <TabBarIcon name="code" color={color} />,
+          title: 'Wishlist',
+          tabBarIcon: ({ color }) => (
+            <TabBarIcon name="heart-outline" color={color} />
+          ),
+          tabBarLabel: '',
+        }}
+      />
+      <Tabs.Screen
+        name="three"
+        options={{
+          title: 'Bookings',
+          tabBarIcon: ({ color }) => (
+            <TabBarIcon name="calendar-outline" color={color} />
+          ),
+          tabBarLabel: '',
+        }}
+      />
+      <Tabs.Screen
+        name="four"
+        options={{
+          title: 'Profile',
+          tabBarIcon: ({ color }) => (
+            <TabBarIcon name="person-outline" color={color} />
+          ),
+          tabBarLabel: '',
         }}
       />
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  iconWrap: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: borderRadius.pill,
+  },
+  iconWrapActive: {
+    backgroundColor: colors.primary,
+  },
+});

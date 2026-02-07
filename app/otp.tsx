@@ -76,9 +76,12 @@ export default function OtpScreen() {
 
   const handleConfirm = () => {
     const code = digits.join('');
-    if (code.length === OTP_LENGTH) {
-      // TODO: verify OTP and navigate to main app
+    if (code.length !== OTP_LENGTH) return;
+    // Authenticate with magic OTP for demo; then show home
+    if (code === '5595') {
+      router.replace('/(tabs)');
     }
+    // TODO: otherwise call API to verify OTP
   };
 
   const code = digits.join('');
