@@ -8,7 +8,7 @@ import {
   TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { Card, Text, Input, Button, IconButton } from '@/components/ui';
 import { colors, spacing, borderRadius, components } from '@/constants/DesignTokens';
 
@@ -17,9 +17,31 @@ import Logo from '@/assets/images/logogotrip.svg';
 const isIOS = Platform.OS === 'ios';
 const OTP_LENGTH = 4;
 
+function maskContact(value: string, isEmail: boolean): string {
+  if (!value.trim()) return isEmail ? 'your email' : '+91 97******10';
+  if (isEmail) {
+    const at = value.indexOf('@');
+    if (at <= 0) return value.charAt(0) + '***';
+    return value.charAt(0) + '***' + value.slice(at);
+  }
+  const digits = value.replace(/\D/g, '').slice(-10);
+  if (digits.length < 2) return '+91 ******' + digits;
+  const first2 = digits.slice(0, 2);
+  const last2 = digits.slice(-2);
+  return '+91 ' + first2 + '******' + last2;
+}
+
 export default function OtpScreen() {
+  const { contact = '', isEmail = '0' } = useLocalSearchParams<{
+    contact?: string;
+    isEmail?: string;
+  }>();
   const [digits, setDigits] = useState<string[]>(['', '', '', '']);
   const inputRefs = useRef<(TextInput | null)[]>([]);
+
+  const isEmailMode = isEmail === '1';
+  const sentToLabel = maskContact(contact, isEmailMode);
+  const sentVia = isEmailMode ? 'via email' : 'via SMS';
 
   const handleBack = () => {
     router.back();
@@ -89,7 +111,7 @@ export default function OtpScreen() {
                   Enter OTP
                 </Text>
                 <Text variant="caption" style={styles.subtitle}>
-                  OTP sent to +91 97******10 via SMS
+                  OTP sent to {sentToLabel} {sentVia}
                 </Text>
 
                 <View style={styles.otpRow}>

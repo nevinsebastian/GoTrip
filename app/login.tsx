@@ -83,7 +83,15 @@ export default function LoginScreen() {
                 variant="primary"
                 size="default"
                 style={styles.getOtpButton}
-                onPress={() => {}}
+                onPress={() =>
+                  router.push({
+                    pathname: '/otp',
+                    params: {
+                      contact: inputValue,
+                      isEmail: isEmailMode ? '1' : '0',
+                    },
+                  })
+                }
               >
                 Get OTP
               </Button>
