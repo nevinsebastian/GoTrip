@@ -1,7 +1,7 @@
-import React from 'react';
-import { View, StyleSheet } from 'react-native';
 import { Text } from '@/components/ui';
 import { colors } from '@/constants/DesignTokens';
+import React from 'react';
+import { StyleSheet, View } from 'react-native';
 
 export default function ProfileScreen() {
   return (
@@ -24,3 +24,5 @@ const styles = StyleSheet.create({
     color: colors.text.primary,
   },
 });
+
+
