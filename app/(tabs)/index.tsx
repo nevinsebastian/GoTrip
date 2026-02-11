@@ -1,28 +1,27 @@
-import React from 'react';
 import {
-  View,
-  StyleSheet,
-  ScrollView,
-  Pressable,
-  Dimensions,
-  Platform,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+  Button,
+  Card,
+  Input,
+  Text
+} from '@/components/ui';
+import { useResponsive } from '@/components/ui/useResponsive';
+import { borderRadius, colors, components, spacing } from '@/constants/DesignTokens';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import React from 'react';
 import {
-  Text,
-  Input,
-  Card,
-  Button,
-  Image,
-} from '@/components/ui';
-import { colors, spacing, borderRadius, components } from '@/constants/DesignTokens';
-import { useResponsive } from '@/components/ui/useResponsive';
+  Dimensions,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-import Logo from '@/assets/images/logogotrip.svg';
 import BellIcon from '@/assets/images/bell.svg';
 import HeartIcon from '@/assets/images/heart.svg';
+import Logo from '@/assets/images/logogotrip.svg';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -159,21 +158,27 @@ export default function HomeScreen() {
         colors={[colors.surface.lightPink, colors.surface.background]}
         style={styles.gradient}
       >
-        <View
-          style={[
-            styles.header,
-            { paddingHorizontal: contentPadding },
-          ]}
-        >
-          <View style={styles.logoWrap}>
-            <Logo width={100} height={36} />
-            <Text variant="caption" style={styles.logoSub}>
-              holiday
-            </Text>
+        <View style={[styles.topFixed, { paddingHorizontal: contentPadding }]}>
+          <View style={styles.header}>
+            <View style={styles.logoWrap}>
+              <Logo width={100} height={36} />
+              <Text variant="caption" style={styles.logoSub}>
+                holiday
+              </Text>
+            </View>
+            <Pressable onPress={() => {}} style={styles.bellWrap}>
+              <BellIcon width={24} height={24} />
+            </Pressable>
           </View>
-          <Pressable onPress={() => {}} style={styles.bellWrap}>
-            <BellIcon width={24} height={24} />
-          </Pressable>
+
+          <View style={styles.searchWrap}>
+            <Input
+              variant="search"
+              showSearchIcon
+              placeholder="Search"
+              placeholderTextColor={colors.text.placeholder}
+            />
+          </View>
         </View>
 
         <ScrollView
@@ -184,14 +189,6 @@ export default function HomeScreen() {
           ]}
           showsVerticalScrollIndicator={false}
         >
-          <View style={styles.searchWrap}>
-            <Input
-              variant="search"
-              showSearchIcon
-              placeholder="Search"
-              placeholderTextColor={colors.text.placeholder}
-            />
-          </View>
 
           <View style={styles.categoryGrid}>
             {CATEGORIES.map((cat) => (
@@ -250,10 +247,13 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.gray['2'],
+    backgroundColor: colors.surface.lightPink,
   },
   gradient: {
     flex: 1,
+  },
+  topFixed: {
+    paddingTop: spacing['6'],
   },
   scroll: {
     flex: 1,
@@ -266,7 +266,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: spacing['4'],
+    marginBottom: spacing['3'],
   },
   logoWrap: {
     flexDirection: 'column',
@@ -277,6 +277,10 @@ const styles = StyleSheet.create({
   },
   bellWrap: {
     padding: spacing['2'],
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: colors.border.light,
+    backgroundColor: colors.surface.white,
   },
   searchWrap: {
     width: '100%',
