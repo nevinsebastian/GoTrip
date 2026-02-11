@@ -162,9 +162,7 @@ export default function HomeScreen() {
           <View style={styles.header}>
             <View style={styles.logoWrap}>
               <Logo width={100} height={36} />
-              <Text variant="caption" style={styles.logoSub}>
-                holiday
-              </Text>
+             
             </View>
             <Pressable onPress={() => {}} style={styles.bellWrap}>
               <BellIcon width={24} height={24} />
@@ -279,8 +277,8 @@ const styles = StyleSheet.create({
     padding: spacing['2'],
     borderRadius: borderRadius.lg,
     borderWidth: 1,
-    borderColor: colors.border.light,
-    backgroundColor: colors.surface.white,
+    borderColor: colors.primary,
+    backgroundColor: 'transparent',
   },
   searchWrap: {
     width: '100%',
