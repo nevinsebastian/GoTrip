@@ -106,7 +106,7 @@ const styles = StyleSheet.create({
     } as Record<string, unknown>),
   },
   inputSearch: {
-    borderRadius: borderRadius.xl, // More rounded for search
+    borderRadius: borderRadius.pill, // Pill/radix curved edges (Figma go-man search bar)
     paddingRight: components.searchInput.iconSize + components.searchInput.iconPadding, // Space for icon
   },
   inputError: {
