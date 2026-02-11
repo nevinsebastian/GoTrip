@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import {
   Text,
   Input,
@@ -154,12 +155,16 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={[styles.scrollContent, { paddingHorizontal: contentPadding }]}
-        showsVerticalScrollIndicator={false}
+      <LinearGradient
+        colors={[colors.surface.lightPink, colors.surface.background]}
+        style={styles.gradient}
       >
-        <View style={styles.header}>
+        <View
+          style={[
+            styles.header,
+            { paddingHorizontal: contentPadding },
+          ]}
+        >
           <View style={styles.logoWrap}>
             <Logo width={100} height={36} />
             <Text variant="caption" style={styles.logoSub}>
@@ -171,64 +176,73 @@ export default function HomeScreen() {
           </Pressable>
         </View>
 
-        <View style={styles.searchWrap}>
-          <Input
-            variant="search"
-            showSearchIcon
-            placeholder="Search"
-            placeholderTextColor={colors.text.placeholder}
-          />
-        </View>
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingHorizontal: contentPadding },
+          ]}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.searchWrap}>
+            <Input
+              variant="search"
+              showSearchIcon
+              placeholder="Search"
+              placeholderTextColor={colors.text.placeholder}
+            />
+          </View>
 
-        <View style={styles.categoryGrid}>
-          {CATEGORIES.map((cat, i) => (
-            <View key={cat.title} style={styles.categoryCell}>
-              <CategoryCard
-                title={cat.title}
-                subtitle={cat.subtitle}
-                bg={cat.bg}
+          <View style={styles.categoryGrid}>
+            {CATEGORIES.map((cat) => (
+              <View key={cat.title} style={styles.categoryCell}>
+                <CategoryCard
+                  title={cat.title}
+                  subtitle={cat.subtitle}
+                  bg={cat.bg}
+                  onPress={() => {}}
+                />
+              </View>
+            ))}
+          </View>
+
+          <SectionRow title="Suggested for you" onViewAll={() => {}} />
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={[styles.horizontalList, { paddingHorizontal: 0 }]}
+          >
+            {STAYS.map((stay, i) => (
+              <StayCard
+                key={i}
+                title={stay.title}
+                price={stay.price}
+                rating={stay.rating}
                 onPress={() => {}}
               />
-            </View>
-          ))}
-        </View>
+            ))}
+          </ScrollView>
 
-        <SectionRow title="Suggested for you" onViewAll={() => {}} />
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={[styles.horizontalList, { paddingHorizontal: 0 }]}
-        >
-          {STAYS.map((stay, i) => (
-            <StayCard
-              key={i}
-              title={stay.title}
-              price={stay.price}
-              rating={stay.rating}
-              onPress={() => {}}
-            />
-          ))}
+          <SectionRow title="Top rated stays" onViewAll={() => {}} />
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={[styles.horizontalList, { paddingHorizontal: 0 }]}
+          >
+            {STAYS.map((stay, i) => (
+              <StayCard
+                key={`top-${i}`}
+                title={stay.title}
+                price={stay.price}
+                rating={stay.rating}
+                onPress={() => {}}
+              />
+            ))}
+          </ScrollView>
+
+          <View style={styles.bottomSpacer} />
         </ScrollView>
-
-        <SectionRow title="Top rated stays" onViewAll={() => {}} />
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={[styles.horizontalList, { paddingHorizontal: 0 }]}
-        >
-          {STAYS.map((stay, i) => (
-            <StayCard
-              key={`top-${i}`}
-              title={stay.title}
-              price={stay.price}
-              rating={stay.rating}
-              onPress={() => {}}
-            />
-          ))}
-        </ScrollView>
-
-        <View style={styles.bottomSpacer} />
-      </ScrollView>
+      </LinearGradient>
     </SafeAreaView>
   );
 }
@@ -237,6 +251,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.gray['2'],
+  },
+  gradient: {
+    flex: 1,
   },
   scroll: {
     flex: 1,
