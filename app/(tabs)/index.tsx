@@ -17,34 +17,43 @@ import {
   StyleSheet,
   View,
 } from 'react-native';
+import type { SvgProps } from 'react-native-svg';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import BellIcon from '@/assets/images/bell.svg';
 import HeartIcon from '@/assets/images/heart.svg';
 import Logo from '@/assets/images/logogotrip.svg';
+import BagIll from '@/assets/images/bag ill 1.svg';
+import HillIll from '@/assets/images/hill ill 1.svg';
+import RoomsIll from '@/assets/images/Rooms ill 1.svg';
+import ArrowTopRight from '@/assets/images/arrow-top-right.svg';
 
 const { width: screenWidth } = Dimensions.get('window');
 
 const CATEGORIES = [
   {
+    title: 'Rooms/hotels',
+    subtitle: 'Book Resorts & Stays',
+    bg: '#F3E5F5',
+    Illustration: RoomsIll,
+  },
+  {
     title: 'Packages',
     subtitle: 'Travel with Gotrip',
     bg: colors.surface.lightPink,
+    Illustration: BagIll,
   },
   {
     title: 'Glamping',
     subtitle: 'Glamorous camping',
     bg: '#E8F5E9',
-  },
-  {
-    title: 'Rooms/hotels',
-    subtitle: 'Book Resorts & Stays',
-    bg: '#F3E5F5',
+    Illustration: HillIll,
   },
   {
     title: 'Activities',
     subtitle: 'Other experiences',
     bg: '#FFE0B2',
+    Illustration: ArrowTopRight,
   },
 ];
 
@@ -59,11 +68,13 @@ function CategoryCard({
   subtitle,
   bg,
   onPress,
+  Illustration,
 }: {
   title: string;
   subtitle: string;
   bg: string;
   onPress: () => void;
+  Illustration: React.ComponentType<SvgProps>;
 }) {
   return (
     <Pressable
@@ -74,12 +85,17 @@ function CategoryCard({
         pressed && styles.categoryPressed,
       ]}
     >
-      <Text variant="bodySemibold" style={styles.categoryTitle}>
-        {title}
-      </Text>
-      <Text variant="caption" style={styles.categorySubtitle}>
-        {subtitle}
-      </Text>
+      <View style={styles.categoryIllustrationWrap} pointerEvents="none">
+        <Illustration width={72} height={72} />
+      </View>
+      <View style={styles.categoryTextWrap}>
+        <Text variant="bodySemibold" style={styles.categoryTitle}>
+          {title}
+        </Text>
+        <Text variant="caption" style={styles.categorySubtitle}>
+          {subtitle}
+        </Text>
+      </View>
     </Pressable>
   );
 }
@@ -188,17 +204,47 @@ export default function HomeScreen() {
           showsVerticalScrollIndicator={false}
         >
 
-          <View style={styles.categoryGrid}>
-            {CATEGORIES.map((cat) => (
-              <View key={cat.title} style={styles.categoryCell}>
+          <View style={styles.bentoGrid}>
+            <View style={styles.bentoRow}>
+              <View style={styles.bentoCell2}>
                 <CategoryCard
-                  title={cat.title}
-                  subtitle={cat.subtitle}
-                  bg={cat.bg}
+                  title={CATEGORIES[0].title}
+                  subtitle={CATEGORIES[0].subtitle}
+                  bg={CATEGORIES[0].bg}
+                  Illustration={CATEGORIES[0].Illustration}
                   onPress={() => {}}
                 />
               </View>
-            ))}
+              <View style={styles.bentoCell1}>
+                <CategoryCard
+                  title={CATEGORIES[1].title}
+                  subtitle={CATEGORIES[1].subtitle}
+                  bg={CATEGORIES[1].bg}
+                  Illustration={CATEGORIES[1].Illustration}
+                  onPress={() => {}}
+                />
+              </View>
+            </View>
+            <View style={styles.bentoRow}>
+              <View style={styles.bentoCell1}>
+                <CategoryCard
+                  title={CATEGORIES[2].title}
+                  subtitle={CATEGORIES[2].subtitle}
+                  bg={CATEGORIES[2].bg}
+                  Illustration={CATEGORIES[2].Illustration}
+                  onPress={() => {}}
+                />
+              </View>
+              <View style={styles.bentoCell2}>
+                <CategoryCard
+                  title={CATEGORIES[3].title}
+                  subtitle={CATEGORIES[3].subtitle}
+                  bg={CATEGORIES[3].bg}
+                  Illustration={CATEGORIES[3].Illustration}
+                  onPress={() => {}}
+                />
+              </View>
+            </View>
           </View>
 
           <SectionRow title="Suggested for you" onViewAll={() => {}} />
@@ -284,22 +330,46 @@ const styles = StyleSheet.create({
     width: '100%',
     marginBottom: spacing['5'],
   },
-  categoryGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginHorizontal: -spacing['1'],
+  bentoGrid: {
+    flexDirection: 'column',
+    gap: spacing['3'],
     marginBottom: spacing['6'],
   },
-  categoryCell: {
-    width: '50%',
-    padding: spacing['1'],
-    aspectRatio: 1.2,
+  bentoRow: {
+    flexDirection: 'row',
+    gap: spacing['3'],
+    minHeight: 100,
+  },
+  bentoCell1: {
+    flex: 1,
+    minWidth: 0,
+  },
+  bentoCell2: {
+    flex: 2,
+    minWidth: 0,
   },
   categoryCard: {
     flex: 1,
-    borderRadius: borderRadius.xl,
+    borderRadius: borderRadius['2xl'],
     padding: spacing['4'],
     justifyContent: 'flex-end',
+    overflow: 'hidden',
+    position: 'relative',
+    minHeight: 100,
+  },
+  categoryIllustrationWrap: {
+    position: 'absolute',
+    right: 0,
+    bottom: 0,
+    width: 72,
+    height: 72,
+    justifyContent: 'flex-end',
+    alignItems: 'flex-end',
+    opacity: 0.9,
+  },
+  categoryTextWrap: {
+    position: 'relative',
+    zIndex: 1,
   },
   categoryPressed: {
     opacity: 0.9,
