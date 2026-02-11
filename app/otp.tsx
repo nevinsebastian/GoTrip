@@ -7,6 +7,8 @@ import {
   TouchableWithoutFeedback,
   TextInput,
 } from 'react-native';
+
+const isWeb = Platform.OS === 'web';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Card, Text, Input, Button, IconButton } from '@/components/ui';
@@ -87,10 +89,19 @@ export default function OtpScreen() {
   const code = digits.join('');
   const canConfirm = code.length === OTP_LENGTH;
 
+  const wrap = (content: React.ReactNode) =>
+    isWeb ? (
+      <View style={styles.touchableWrap}>{content}</View>
+    ) : (
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+        <View style={styles.touchableWrap}>{content}</View>
+      </TouchableWithoutFeedback>
+    );
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-        <View style={styles.touchableWrap}>
+      {wrap(
+        <>
           <View style={styles.header}>
             <IconButton
               icon="chevron-back"
@@ -163,8 +174,8 @@ export default function OtpScreen() {
               </View>
             </Card>
           </View>
-        </View>
-      </TouchableWithoutFeedback>
+        </>
+      )}
     </SafeAreaView>
   );
 }

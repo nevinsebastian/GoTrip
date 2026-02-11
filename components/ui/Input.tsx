@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { TextInput, TextInputProps, StyleSheet, View, ViewStyle } from 'react-native';
+import { TextInput, TextInputProps, StyleSheet, View, ViewStyle, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, borderRadius, components } from '@/constants/DesignTokens';
 
@@ -100,6 +100,10 @@ const styles = StyleSheet.create({
     fontFamily: 'poppins',
     fontWeight: '400',
     color: colors.text.primary,
+    ...(Platform.OS === 'web' && {
+      cursor: 'text',
+      outlineStyle: 'none',
+    } as Record<string, unknown>),
   },
   inputSearch: {
     borderRadius: borderRadius.xl, // More rounded for search

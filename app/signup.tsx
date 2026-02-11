@@ -50,10 +50,19 @@ export default function SignupScreen() {
     router.replace('/login');
   };
 
+  const wrap = (content: React.ReactNode) =>
+    isWeb ? (
+      <View style={styles.touchableWrap}>{content}</View>
+    ) : (
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+        <View style={styles.touchableWrap}>{content}</View>
+      </TouchableWithoutFeedback>
+    );
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-        <View style={styles.touchableWrap}>
+      {wrap(
+        <>
           <View style={styles.header}>
             <IconButton
               icon="chevron-back"
@@ -203,8 +212,8 @@ export default function SignupScreen() {
               </View>
             </Card>
           </View>
-        </View>
-      </TouchableWithoutFeedback>
+        </>
+      )}
     </SafeAreaView>
   );
 }

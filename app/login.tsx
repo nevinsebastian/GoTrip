@@ -32,10 +32,19 @@ export default function LoginScreen() {
     setLoginMode((prev) => (prev === 'phone' ? 'email' : 'phone'));
   };
 
+  const wrap = (content: React.ReactNode) =>
+    isWeb ? (
+      <View style={styles.touchableWrap}>{content}</View>
+    ) : (
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+        <View style={styles.touchableWrap}>{content}</View>
+      </TouchableWithoutFeedback>
+    );
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-        <View style={styles.touchableWrap}>
+      {wrap(
+        <>
           <View style={styles.header}>
             <IconButton
               icon="chevron-back"
@@ -49,104 +58,104 @@ export default function LoginScreen() {
           </View>
 
           <View style={styles.screen}>
-        <Card padding="none" style={styles.card}>
-          <View style={[styles.cardInner, !isWeb && styles.cardInnerNative, isIOS && styles.cardInnerIos]}>
-            <View style={styles.logoWrap}>
-              <Logo width={logoWidth} height={logoHeight} />
-            </View>
+            <Card padding="none" style={styles.card}>
+              <View style={[styles.cardInner, !isWeb && styles.cardInnerNative, isIOS && styles.cardInnerIos]}>
+                <View style={styles.logoWrap}>
+                  <Logo width={logoWidth} height={logoHeight} />
+                </View>
 
-            <View style={styles.copyBlock}>
-              <Text variant="bodySemibold" style={styles.welcome}>
-                Welcome Back..
-              </Text>
-              <Text variant="caption" style={styles.subtitle}>
-                {isEmailMode ? 'Enter your Email.' : 'Enter your Phone number.'}
-              </Text>
-            </View>
+                <View style={styles.copyBlock}>
+                  <Text variant="bodySemibold" style={styles.welcome}>
+                    Welcome Back..
+                  </Text>
+                  <Text variant="caption" style={styles.subtitle}>
+                    {isEmailMode ? 'Enter your Email.' : 'Enter your Phone number.'}
+                  </Text>
+                </View>
 
-            <View style={styles.form}>
-              <View>
-                <Input
-                  placeholder={isEmailMode ? 'Email' : 'Phone number'}
-                  keyboardType={isEmailMode ? 'email-address' : 'phone-pad'}
-                  placeholderTextColor={colors.neutral.alpha['9']}
-                  style={styles.phoneInput}
-                  value={inputValue}
-                  onChangeText={setInputValue}
-                />
-                <Text variant="caption" style={styles.helper}>
-                  {isEmailMode ? "You'll get OTP to this email." : "You'll get OTP to this number."}
-                </Text>
+                <View style={styles.form}>
+                  <View>
+                    <Input
+                      placeholder={isEmailMode ? 'Email' : 'Phone number'}
+                      keyboardType={isEmailMode ? 'email-address' : 'phone-pad'}
+                      placeholderTextColor={colors.neutral.alpha['9']}
+                      style={styles.phoneInput}
+                      value={inputValue}
+                      onChangeText={setInputValue}
+                    />
+                    <Text variant="caption" style={styles.helper}>
+                      {isEmailMode ? "You'll get OTP to this email." : "You'll get OTP to this number."}
+                    </Text>
+                  </View>
+
+                  <Button
+                    variant="primary"
+                    size="default"
+                    style={styles.getOtpButton}
+                    onPress={() =>
+                      router.push({
+                        pathname: '/otp',
+                        params: {
+                          contact: inputValue,
+                          isEmail: isEmailMode ? '1' : '0',
+                        },
+                      })
+                    }
+                  >
+                    Get OTP
+                  </Button>
+
+                  <Divider style={styles.divider} />
+
+                  <View style={styles.socialStack}>
+                    <Button
+                      variant="outlineSoft"
+                      size="compact"
+                      leftAdornment={
+                        isEmailMode ? (
+                          <MobileIcon width={socialIconSize} height={socialIconSize} />
+                        ) : (
+                          <MailIcon width={socialIconSize} height={socialIconSize} />
+                        )
+                      }
+                      onPress={switchMode}
+                    >
+                      {isEmailMode ? 'Login with phone' : 'Log in with mail'}
+                    </Button>
+
+                    <Button
+                      variant="outlineSoft"
+                      size="compact"
+                      leftAdornment={<GoogleIcon width={socialIconSize} height={socialIconSize} />}
+                      onPress={() => {}}
+                    >
+                      Continue with Google
+                    </Button>
+
+                    <Button
+                      variant="outlineSoft"
+                      size="compact"
+                      leftAdornment={<AppleIcon width={socialIconSize} height={socialIconSize} />}
+                      onPress={() => {}}
+                    >
+                      Continue with Apple
+                    </Button>
+
+                    <Button
+                      variant="outlineSoft"
+                      size="compact"
+                      leftAdornment={<FacebookIcon width={socialIconSize} height={socialIconSize} />}
+                      onPress={() => {}}
+                    >
+                      Continue with Facebook
+                    </Button>
+                  </View>
+                </View>
               </View>
-
-              <Button
-                variant="primary"
-                size="default"
-                style={styles.getOtpButton}
-                onPress={() =>
-                  router.push({
-                    pathname: '/otp',
-                    params: {
-                      contact: inputValue,
-                      isEmail: isEmailMode ? '1' : '0',
-                    },
-                  })
-                }
-              >
-                Get OTP
-              </Button>
-
-              <Divider style={styles.divider} />
-
-              <View style={styles.socialStack}>
-                <Button
-                  variant="outlineSoft"
-                  size="compact"
-                  leftAdornment={
-                    isEmailMode ? (
-                      <MobileIcon width={socialIconSize} height={socialIconSize} />
-                    ) : (
-                      <MailIcon width={socialIconSize} height={socialIconSize} />
-                    )
-                  }
-                  onPress={switchMode}
-                >
-                  {isEmailMode ? 'Login with phone' : 'Log in with mail'}
-                </Button>
-
-                <Button
-                  variant="outlineSoft"
-                  size="compact"
-                  leftAdornment={<GoogleIcon width={socialIconSize} height={socialIconSize} />}
-                  onPress={() => {}}
-                >
-                  Continue with Google
-                </Button>
-
-                <Button
-                  variant="outlineSoft"
-                  size="compact"
-                  leftAdornment={<AppleIcon width={socialIconSize} height={socialIconSize} />}
-                  onPress={() => {}}
-                >
-                  Continue with Apple
-                </Button>
-
-                <Button
-                  variant="outlineSoft"
-                  size="compact"
-                  leftAdornment={<FacebookIcon width={socialIconSize} height={socialIconSize} />}
-                  onPress={() => {}}
-                >
-                  Continue with Facebook
-                </Button>
-              </View>
-            </View>
+            </Card>
           </View>
-        </Card>
-          </View>
-        </View>
-      </TouchableWithoutFeedback>
+        </>
+      )}
     </SafeAreaView>
   );
 }
