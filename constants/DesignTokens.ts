@@ -68,6 +68,7 @@ export const colors = {
     light: '#E0E0E0', // Input borders, divider lines
     lightAlt: '#E5E7EB', // Alternative light border
     primary: 'rgba(235, 87, 87, 0.4)', // Light red border for social buttons
+    gray6: '#E5E7EB', // Gray 6 border for category cards (from Figma)
   },
 
   // Gray Scale

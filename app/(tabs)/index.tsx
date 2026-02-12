@@ -430,6 +430,8 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     position: 'relative',
     minHeight: 100, // Base min height, will be overridden responsively
+    borderWidth: 1,
+    borderColor: colors.border.gray6,
   },
   categoryIllustrationWrap: {
     position: 'absolute',
