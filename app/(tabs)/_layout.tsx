@@ -1,19 +1,57 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
-import { View, StyleSheet, Platform } from 'react-native';
+import { View, StyleSheet, Platform, Pressable, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, borderRadius, components, spacing } from '@/constants/DesignTokens';
+
+import TicketsIcon from '@/assets/images/tickets.svg';
+
+const iconSize = components.bottomNav.iconSize;
+const labelSize = components.bottomNav.textSize;
 
 function TabBarIcon({
   name,
   color,
-  size = components.bottomNav.iconSize,
+  filled = false,
 }: {
   name: keyof typeof Ionicons.glyphMap;
   color: string;
-  size?: number;
+  filled?: boolean;
 }) {
-  return <Ionicons name={name} size={size} color={color} />;
+  return (
+    <Ionicons
+      name={filled ? (name.replace('-outline', '') as keyof typeof Ionicons.glyphMap) : name}
+      size={iconSize}
+      color={color}
+    />
+  );
+}
+
+function TabButtonWithPill({
+  focused,
+  icon,
+  label,
+  style,
+  ...pressableProps
+}: {
+  focused: boolean;
+  icon: React.ReactNode;
+  label: string;
+  style?: unknown;
+  [key: string]: unknown;
+}) {
+  return (
+    <Pressable {...pressableProps} style={[styles.tabButton, style]}>
+      {focused ? (
+        <View style={styles.pill}>
+          {icon}
+          <Text style={styles.pillLabel}>{label}</Text>
+        </View>
+      ) : (
+        icon
+      )}
+    </Pressable>
+  );
 }
 
 export default function TabLayout() {
@@ -30,11 +68,7 @@ export default function TabLayout() {
           height: Platform.OS === 'ios' ? 88 : 64,
           paddingTop: spacing['2'],
         },
-        tabBarShowLabel: true,
-        tabBarLabelStyle: {
-          fontSize: components.bottomNav.textSize,
-          fontWeight: '500',
-        },
+        tabBarShowLabel: false,
       }}
     >
       <Tabs.Screen
@@ -42,49 +76,123 @@ export default function TabLayout() {
         options={{
           title: 'Home',
           tabBarIcon: ({ color, focused }) => (
-            <View
-              style={[
-                styles.iconWrap,
-                focused && styles.iconWrapActive,
-              ]}
-            >
-              <TabBarIcon
-                name="home"
-                color={focused ? colors.surface.white : color}
-              />
-            </View>
+            <TabBarIcon
+              name="home-outline"
+              color={focused ? colors.surface.white : color}
+              filled={focused}
+            />
           ),
-          tabBarLabel: 'Home',
+          tabBarButton: (props) => {
+            const focused = props.accessibilityState?.selected ?? false;
+            const icon = (
+              <TabBarIcon
+                name="home-outline"
+                color={focused ? colors.surface.white : colors.primary}
+                filled={focused}
+              />
+            );
+            return (
+              <TabButtonWithPill
+                {...props}
+                focused={focused}
+                icon={icon}
+                label="Home"
+              />
+            );
+          },
         }}
       />
       <Tabs.Screen
         name="two"
         options={{
           title: 'Wishlist',
-          tabBarIcon: ({ color }) => (
-            <TabBarIcon name="heart-outline" color={color} />
+          tabBarIcon: ({ color, focused }) => (
+            <TabBarIcon
+              name="heart-outline"
+              color={focused ? colors.surface.white : color}
+              filled={focused}
+            />
           ),
-          tabBarLabel: '',
+          tabBarButton: (props) => {
+            const focused = props.accessibilityState?.selected ?? false;
+            const icon = (
+              <TabBarIcon
+                name="heart-outline"
+                color={focused ? colors.surface.white : colors.primary}
+                filled={focused}
+              />
+            );
+            return (
+              <TabButtonWithPill
+                {...props}
+                focused={focused}
+                icon={icon}
+                label="Wishlist"
+              />
+            );
+          },
         }}
       />
       <Tabs.Screen
         name="three"
         options={{
-          title: 'Bookings',
-          tabBarIcon: ({ color }) => (
-            <TabBarIcon name="calendar-outline" color={color} />
+          title: 'Tickets',
+          tabBarIcon: ({ color, focused }) => (
+            <TicketsIcon
+              width={iconSize}
+              height={iconSize}
+              color={focused ? colors.surface.white : color}
+            />
           ),
-          tabBarLabel: '',
+          tabBarButton: (props) => {
+            const focused = props.accessibilityState?.selected ?? false;
+            const icon = (
+              <TicketsIcon
+                width={iconSize}
+                height={iconSize}
+                color={focused ? colors.surface.white : colors.primary}
+              />
+            );
+            return (
+              <TabButtonWithPill
+                {...props}
+                focused={focused}
+                icon={icon}
+                label="Tickets"
+              />
+            );
+          },
         }}
       />
       <Tabs.Screen
         name="four"
         options={{
           title: 'Profile',
-          tabBarIcon: ({ color }) => (
-            <TabBarIcon name="person-outline" color={color} />
+          tabBarIcon: ({ color, focused }) => (
+            <TabBarIcon
+              name="person-outline"
+              color={focused ? colors.surface.white : color}
+              filled={focused}
+            />
           ),
-          tabBarLabel: '',
+          tabBarButton: (props) => {
+            const focused = props.accessibilityState?.selected ?? false;
+            const icon = (
+              <TabBarIcon
+                name="person-outline"
+                color={focused ? colors.surface.white : colors.primary}
+                filled={focused}
+              />
+            );
+            return (
+              <TabButtonWithPill
+                {...props}
+                focused={focused}
+                icon={icon}
+                label="Profile"
+              />
+            );
+          },
         }}
       />
     </Tabs>
@@ -92,12 +200,23 @@ export default function TabLayout() {
 }
 
 const styles = StyleSheet.create({
-  iconWrap: {
+  tabButton: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pill: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: borderRadius.pill,
-  },
-  iconWrapActive: {
     backgroundColor: colors.primary,
+    gap: 6,
+  },
+  pillLabel: {
+    fontSize: labelSize,
+    fontWeight: '500',
+    color: colors.surface.white,
   },
 });

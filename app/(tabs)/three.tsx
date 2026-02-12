@@ -3,11 +3,11 @@ import { View, StyleSheet } from 'react-native';
 import { Text } from '@/components/ui';
 import { colors } from '@/constants/DesignTokens';
 
-export default function BookingsScreen() {
+export default function TicketsScreen() {
   return (
     <View style={styles.container}>
       <Text variant="sectionTitle" style={styles.title}>
-        Bookings
+        Tickets
       </Text>
     </View>
   );
