@@ -194,10 +194,11 @@ export const typography = {
       lineHeight: 32,
       letterSpacing: 0,
     },
+    // "Suggested for you" section title - from Figma node 61-2205
     sectionTitle: {
-      fontSize: 18, // Typography/Font size/4
-      fontWeight: '700', // Bold for "Suggested for you" etc.
-      lineHeight: 24,
+      fontSize: 20, // Figma section title size
+      fontWeight: '600', // Semibold
+      lineHeight: 28,
       letterSpacing: 0,
     },
     price: {
