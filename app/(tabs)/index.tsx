@@ -487,17 +487,17 @@ const styles = StyleSheet.create({
   stayCard: {
     width: '100%',
     overflow: 'hidden',
+    borderRadius: borderRadius.xl, // 12px border radius matching Figma
   },
   stayImageWrap: {
     position: 'relative',
     width: '100%',
     aspectRatio: components.resortCard.imageAspectRatio,
+    overflow: 'hidden',
   },
   stayImagePlaceholder: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: colors.neutral.alpha['4'],
-    borderTopLeftRadius: borderRadius.xl,
-    borderTopRightRadius: borderRadius.xl,
   },
   favoriteBadge: {
     position: 'absolute',
@@ -512,6 +512,7 @@ const styles = StyleSheet.create({
   },
   stayContent: {
     padding: components.resortCard.contentPadding,
+    backgroundColor: colors.surface.white,
   },
   stayTitle: {
     color: colors.text.primary,

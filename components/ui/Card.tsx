@@ -89,8 +89,9 @@ const styles = StyleSheet.create({
     }),
   },
   cardListing: {
-    borderRadius: borderRadius.xl, // 8-12px for listing cards
+    borderRadius: borderRadius.xl, // 12px for listing cards matching Figma
     overflow: 'hidden', // For image rounded corners
+    backgroundColor: colors.surface.white,
     // Width handled dynamically based on screen size
   },
 });
