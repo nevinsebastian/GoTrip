@@ -119,6 +119,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface.white,
     borderTopWidth: 1,
     borderTopColor: colors.border.light,
+    borderTopLeftRadius: borderRadius.xl,
+    borderTopRightRadius: borderRadius.xl,
     paddingTop: spacing['2'],
     paddingBottom: Platform.OS === 'ios' ? 28 : 12,
     paddingHorizontal: spacing['2'],
