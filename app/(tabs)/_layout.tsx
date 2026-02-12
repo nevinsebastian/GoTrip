@@ -2,12 +2,20 @@ import React from 'react';
 import { Tabs } from 'expo-router';
 import { View, StyleSheet, Platform, Pressable, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { colors, borderRadius, components, spacing } from '@/constants/DesignTokens';
 
 import TicketsIcon from '@/assets/images/tickets.svg';
 
 const iconSize = components.bottomNav.iconSize;
 const labelSize = components.bottomNav.textSize;
+
+const TAB_CONFIG = [
+  { name: 'index', label: 'Home', icon: 'home-outline', isSvg: false },
+  { name: 'two', label: 'Wishlist', icon: 'heart-outline', isSvg: false },
+  { name: 'three', label: 'Tickets', icon: null, isSvg: true },
+  { name: 'four', label: 'Profile', icon: 'person-outline', isSvg: false },
+] as const;
 
 function TabBarIcon({
   name,
@@ -27,183 +35,105 @@ function TabBarIcon({
   );
 }
 
-function TabButtonWithPill({
-  focused,
-  icon,
-  label,
-  style,
-  ...pressableProps
-}: {
-  focused: boolean;
-  icon: React.ReactNode;
-  label: string;
-  style?: unknown;
-  [key: string]: unknown;
-}) {
+function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   return (
-    <Pressable {...pressableProps} style={[styles.tabButton, style]}>
-      {focused ? (
-        <View style={styles.pill}>
-          {icon}
-          <Text style={styles.pillLabel}>{label}</Text>
-        </View>
-      ) : (
-        icon
-      )}
-    </Pressable>
+    <View style={styles.tabBarContainer}>
+      <View style={styles.tabBar}>
+        {state.routes.map((route, index) => {
+          const { options } = descriptors[route.key];
+          const focused = state.index === index;
+          const config = TAB_CONFIG[index];
+          const label = config?.label ?? options.title ?? route.name;
+
+          const onPress = () => {
+            if (focused) return;
+            const event = navigation.emit({
+              type: 'tabPress',
+              target: route.key,
+              canPreventDefault: true,
+            });
+            if (!event.defaultPrevented) {
+              navigation.navigate(route.name, route.params);
+            }
+          };
+
+          const iconColor = focused ? colors.surface.white : colors.primary;
+
+          const icon =
+            config?.isSvg ? (
+              <TicketsIcon width={iconSize} height={iconSize} color={iconColor} />
+            ) : config?.icon ? (
+              <TabBarIcon
+                name={config.icon}
+                color={iconColor}
+                filled={focused}
+              />
+            ) : null;
+
+          return (
+            <Pressable
+              key={route.key}
+              onPress={onPress}
+              style={styles.tabButton}
+              accessibilityRole="button"
+              accessibilityState={focused ? { selected: true } : {}}
+              accessibilityLabel={options.tabBarAccessibilityLabel ?? label}
+            >
+              {focused ? (
+                <View style={styles.pill}>
+                  {icon}
+                  <Text style={styles.pillLabel}>{label}</Text>
+                </View>
+              ) : (
+                icon
+              )}
+            </Pressable>
+          );
+        })}
+      </View>
+    </View>
   );
 }
 
 export default function TabLayout() {
   return (
     <Tabs
+      initialRouteName="index"
+      tabBar={(props) => <CustomTabBar {...props} />}
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.primary,
-        tabBarStyle: {
-          backgroundColor: colors.surface.white,
-          borderTopWidth: 1,
-          borderTopColor: colors.border.light,
-          height: Platform.OS === 'ios' ? 88 : 64,
-          paddingTop: spacing['2'],
-        },
-        tabBarShowLabel: false,
       }}
     >
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Home',
-          tabBarIcon: ({ color, focused }) => (
-            <TabBarIcon
-              name="home-outline"
-              color={focused ? colors.surface.white : color}
-              filled={focused}
-            />
-          ),
-          tabBarButton: (props) => {
-            const focused = props.accessibilityState?.selected ?? false;
-            const icon = (
-              <TabBarIcon
-                name="home-outline"
-                color={focused ? colors.surface.white : colors.primary}
-                filled={focused}
-              />
-            );
-            return (
-              <TabButtonWithPill
-                {...props}
-                focused={focused}
-                icon={icon}
-                label="Home"
-              />
-            );
-          },
-        }}
-      />
-      <Tabs.Screen
-        name="two"
-        options={{
-          title: 'Wishlist',
-          tabBarIcon: ({ color, focused }) => (
-            <TabBarIcon
-              name="heart-outline"
-              color={focused ? colors.surface.white : color}
-              filled={focused}
-            />
-          ),
-          tabBarButton: (props) => {
-            const focused = props.accessibilityState?.selected ?? false;
-            const icon = (
-              <TabBarIcon
-                name="heart-outline"
-                color={focused ? colors.surface.white : colors.primary}
-                filled={focused}
-              />
-            );
-            return (
-              <TabButtonWithPill
-                {...props}
-                focused={focused}
-                icon={icon}
-                label="Wishlist"
-              />
-            );
-          },
-        }}
-      />
-      <Tabs.Screen
-        name="three"
-        options={{
-          title: 'Tickets',
-          tabBarIcon: ({ color, focused }) => (
-            <TicketsIcon
-              width={iconSize}
-              height={iconSize}
-              color={focused ? colors.surface.white : color}
-            />
-          ),
-          tabBarButton: (props) => {
-            const focused = props.accessibilityState?.selected ?? false;
-            const icon = (
-              <TicketsIcon
-                width={iconSize}
-                height={iconSize}
-                color={focused ? colors.surface.white : colors.primary}
-              />
-            );
-            return (
-              <TabButtonWithPill
-                {...props}
-                focused={focused}
-                icon={icon}
-                label="Tickets"
-              />
-            );
-          },
-        }}
-      />
-      <Tabs.Screen
-        name="four"
-        options={{
-          title: 'Profile',
-          tabBarIcon: ({ color, focused }) => (
-            <TabBarIcon
-              name="person-outline"
-              color={focused ? colors.surface.white : color}
-              filled={focused}
-            />
-          ),
-          tabBarButton: (props) => {
-            const focused = props.accessibilityState?.selected ?? false;
-            const icon = (
-              <TabBarIcon
-                name="person-outline"
-                color={focused ? colors.surface.white : colors.primary}
-                filled={focused}
-              />
-            );
-            return (
-              <TabButtonWithPill
-                {...props}
-                focused={focused}
-                icon={icon}
-                label="Profile"
-              />
-            );
-          },
-        }}
-      />
+      <Tabs.Screen name="index" options={{ title: 'Home' }} />
+      <Tabs.Screen name="two" options={{ title: 'Wishlist' }} />
+      <Tabs.Screen name="three" options={{ title: 'Tickets' }} />
+      <Tabs.Screen name="four" options={{ title: 'Profile' }} />
     </Tabs>
   );
 }
 
 const styles = StyleSheet.create({
+  tabBarContainer: {
+    backgroundColor: colors.surface.white,
+    borderTopWidth: 1,
+    borderTopColor: colors.border.light,
+    paddingTop: spacing['2'],
+    paddingBottom: Platform.OS === 'ios' ? 28 : 12,
+    paddingHorizontal: spacing['2'],
+  },
+  tabBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    minHeight: 48,
+  },
   tabButton: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingVertical: 8,
   },
   pill: {
     flexDirection: 'row',

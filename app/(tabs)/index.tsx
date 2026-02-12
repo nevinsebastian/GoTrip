@@ -15,7 +15,6 @@ import {
   StyleSheet,
   View,
 } from 'react-native';
-import type { SvgProps } from 'react-native-svg';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import BellIcon from '@/assets/images/bell.svg';
@@ -28,31 +27,28 @@ import ArrowTopRight from '@/assets/images/arrow-top-right.svg';
 
 const ResortImage = require('../../assets/images/resort.png');
 
-const CATEGORIES = [
-  {
-    title: 'Rooms/hotels',
-    subtitle: 'Book Resorts & Stays',
-    bg: '#F3E5F5',
-    Illustration: RoomsIll,
-  },
-  {
-    title: 'Packages',
-    subtitle: 'Travel with Gotrip',
-    bg: colors.surface.lightPink,
-    Illustration: BagIll,
-  },
-  {
-    title: 'Glamping',
-    subtitle: 'Glamorous camping',
-    bg: '#E8F5E9',
-    Illustration: HillIll,
-  },
-  {
-    title: 'Activities',
-    subtitle: 'Other experiences',
-    bg: '#FFE0B2',
-    Illustration: ArrowTopRight,
-  },
+type CategoryIconKey = 'rooms' | 'packages' | 'glamping' | 'activities';
+
+function CategoryIcon({ iconKey, size }: { iconKey: CategoryIconKey; size: number }) {
+  switch (iconKey) {
+    case 'rooms':
+      return <RoomsIll width={size} height={size} />;
+    case 'packages':
+      return <BagIll width={size} height={size} />;
+    case 'glamping':
+      return <HillIll width={size} height={size} />;
+    case 'activities':
+      return <ArrowTopRight width={size} height={size} />;
+    default:
+      return null;
+  }
+}
+
+const CATEGORIES: Array<{ title: string; subtitle: string; bg: string; iconKey: CategoryIconKey }> = [
+  { title: 'Rooms/hotels', subtitle: 'Book Resorts & Stays', bg: '#F3E5F5', iconKey: 'rooms' },
+  { title: 'Packages', subtitle: 'Travel with Gotrip', bg: colors.surface.lightPink, iconKey: 'packages' },
+  { title: 'Glamping', subtitle: 'Glamorous camping', bg: '#E8F5E9', iconKey: 'glamping' },
+  { title: 'Activities', subtitle: 'Other experiences', bg: '#FFE0B2', iconKey: 'activities' },
 ];
 
 const STAYS = [
@@ -66,17 +62,16 @@ function CategoryCard({
   subtitle,
   bg,
   onPress,
-  Illustration,
+  iconKey,
 }: {
   title: string;
   subtitle: string;
   bg: string;
   onPress: () => void;
-  Illustration: React.ComponentType<SvgProps>;
+  iconKey: CategoryIconKey;
 }) {
   const { width, isMobile, isTablet } = useResponsive();
   
-  // Responsive illustration size based on screen width
   const illustrationSize = isMobile 
     ? Math.min(72, width * 0.18) 
     : isTablet 
@@ -93,7 +88,7 @@ function CategoryCard({
       ]}
     >
       <View style={[styles.categoryIllustrationWrap, { width: illustrationSize, height: illustrationSize }]} pointerEvents="none">
-        <Illustration width={illustrationSize} height={illustrationSize} />
+        <CategoryIcon iconKey={iconKey} size={illustrationSize} />
       </View>
       <View style={styles.categoryTextWrap}>
         <Text variant="bodySemibold" style={styles.categoryTitle}>
@@ -257,7 +252,7 @@ export default function HomeScreen() {
                   title={CATEGORIES[0].title}
                   subtitle={CATEGORIES[0].subtitle}
                   bg={CATEGORIES[0].bg}
-                  Illustration={CATEGORIES[0].Illustration}
+                  iconKey={CATEGORIES[0].iconKey}
                   onPress={() => {}}
                 />
               </View>
@@ -266,7 +261,7 @@ export default function HomeScreen() {
                   title={CATEGORIES[1].title}
                   subtitle={CATEGORIES[1].subtitle}
                   bg={CATEGORIES[1].bg}
-                  Illustration={CATEGORIES[1].Illustration}
+                  iconKey={CATEGORIES[1].iconKey}
                   onPress={() => {}}
                 />
               </View>
@@ -277,7 +272,7 @@ export default function HomeScreen() {
                   title={CATEGORIES[2].title}
                   subtitle={CATEGORIES[2].subtitle}
                   bg={CATEGORIES[2].bg}
-                  Illustration={CATEGORIES[2].Illustration}
+                  iconKey={CATEGORIES[2].iconKey}
                   onPress={() => {}}
                 />
               </View>
@@ -286,7 +281,7 @@ export default function HomeScreen() {
                   title={CATEGORIES[3].title}
                   subtitle={CATEGORIES[3].subtitle}
                   bg={CATEGORIES[3].bg}
-                  Illustration={CATEGORIES[3].Illustration}
+                  iconKey={CATEGORIES[3].iconKey}
                   onPress={() => {}}
                 />
               </View>
