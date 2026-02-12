@@ -56,6 +56,8 @@ export const Text: React.FC<TextProps> = ({
 const styles = StyleSheet.create({
   base: {
     fontFamily: typography.fontFamily.text,
+    // React Native will automatically use the correct font weight variant
+    // based on the fontWeight property set in variantStyle
   },
 });
 

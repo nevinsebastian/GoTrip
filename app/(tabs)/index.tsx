@@ -10,7 +10,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
 import {
-  Dimensions,
   Platform,
   Pressable,
   ScrollView,
@@ -27,8 +26,6 @@ import BagIll from '@/assets/images/bag ill 1.svg';
 import HillIll from '@/assets/images/hill ill 1.svg';
 import RoomsIll from '@/assets/images/Rooms ill 1.svg';
 import ArrowTopRight from '@/assets/images/arrow-top-right.svg';
-
-const { width: screenWidth } = Dimensions.get('window');
 
 const CATEGORIES = [
   {
@@ -76,6 +73,15 @@ function CategoryCard({
   onPress: () => void;
   Illustration: React.ComponentType<SvgProps>;
 }) {
+  const { width, isMobile, isTablet } = useResponsive();
+  
+  // Responsive illustration size based on screen width
+  const illustrationSize = isMobile 
+    ? Math.min(72, width * 0.18) 
+    : isTablet 
+    ? Math.min(80, width * 0.12)
+    : Math.min(96, width * 0.1);
+  
   return (
     <Pressable
       onPress={onPress}
@@ -85,8 +91,8 @@ function CategoryCard({
         pressed && styles.categoryPressed,
       ]}
     >
-      <View style={styles.categoryIllustrationWrap} pointerEvents="none">
-        <Illustration width={72} height={72} />
+      <View style={[styles.categoryIllustrationWrap, { width: illustrationSize, height: illustrationSize }]} pointerEvents="none">
+        <Illustration width={illustrationSize} height={illustrationSize} />
       </View>
       <View style={styles.categoryTextWrap}>
         <Text variant="bodySemibold" style={styles.categoryTitle}>
@@ -105,23 +111,44 @@ function StayCard({
   price,
   rating,
   onPress,
+  cardStyle,
+  containerPadding = 0,
 }: {
   title: string;
   price: string;
   rating: string;
   onPress: () => void;
+  cardStyle?: any;
+  containerPadding?: number;
 }) {
-  const cardWidth = Math.min(
-    components.resortCard.maxWidth,
-    screenWidth * 0.45
-  );
+  const { width, isMobile, isTablet } = useResponsive();
+  
+  // Calculate card width to show 2 cards at once
+  // Account for container padding and gap between cards
+  const gap = spacing['3']; // 12px gap between cards
+  const availableWidth = width - (containerPadding * 2);
+  
+  // For mobile: ensure 2 cards fit with spacing
+  // Each card = (available width - gap) / 2, capped at maxWidth
+  const calculatedWidth = isMobile
+    ? Math.floor((availableWidth - gap) / 2)
+    : isTablet
+    ? Math.floor((availableWidth - gap * 2) / 3) // 3 cards on tablet
+    : Math.floor((availableWidth - gap * 3) / 4); // 4 cards on desktop
+  
+  const cardWidth = Math.min(components.resortCard.maxWidth, calculatedWidth);
+  
+  // Responsive icon sizes
+  const heartIconSize = isMobile ? 20 : 24;
+  const starIconSize = isMobile ? 14 : 16;
+  
   return (
-    <Pressable onPress={onPress} style={[styles.stayCardWrap, { width: cardWidth }]}>
+    <Pressable onPress={onPress} style={[styles.stayCardWrap, { width: cardWidth }, cardStyle]}>
       <Card variant="listing" padding="none" style={styles.stayCard}>
         <View style={styles.stayImageWrap}>
           <View style={styles.stayImagePlaceholder} />
           <View style={styles.favoriteBadge}>
-            <HeartIcon width={20} height={20} />
+            <HeartIcon width={heartIconSize} height={heartIconSize} />
           </View>
         </View>
         <View style={styles.stayContent}>
@@ -133,7 +160,7 @@ function StayCard({
               {price}
             </Text>
             <View style={styles.ratingRow}>
-              <Ionicons name="star-outline" size={14} color={colors.rating.star} />
+              <Ionicons name="star-outline" size={starIconSize} color={colors.rating.star} />
               <Text variant="ratingValue" style={styles.stayRating}>
                 {rating}
               </Text>
@@ -165,8 +192,24 @@ function SectionRow({
 }
 
 export default function HomeScreen() {
-  const { isMobile } = useResponsive();
-  const contentPadding = isMobile ? spacing['4'] : spacing['6'];
+  const { isMobile, isTablet, isDesktop, width } = useResponsive();
+  
+  // Responsive padding based on screen size
+  const contentPadding = isMobile 
+    ? spacing['4'] 
+    : isTablet 
+    ? spacing['5'] 
+    : spacing['6'];
+  
+  // Responsive logo size
+  const logoWidth = isMobile ? Math.min(100, width * 0.25) : isTablet ? 120 : 140;
+  const logoHeight = logoWidth * 0.36; // Maintain aspect ratio
+  
+  // Responsive icon sizes
+  const bellIconSize = isMobile ? 24 : isTablet ? 26 : 28;
+  
+  // Responsive category card min height
+  const categoryMinHeight = isMobile ? 100 : isTablet ? 120 : 140;
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -177,11 +220,10 @@ export default function HomeScreen() {
         <View style={[styles.topFixed, { paddingHorizontal: contentPadding }]}>
           <View style={styles.header}>
             <View style={styles.logoWrap}>
-              <Logo width={100} height={36} />
-             
+              <Logo width={logoWidth} height={logoHeight} />
             </View>
             <Pressable onPress={() => {}} style={styles.bellWrap}>
-              <BellIcon width={24} height={24} />
+              <BellIcon width={bellIconSize} height={bellIconSize} />
             </Pressable>
           </View>
 
@@ -203,7 +245,6 @@ export default function HomeScreen() {
           ]}
           showsVerticalScrollIndicator={false}
         >
-
           <View style={styles.bentoGrid}>
             <View style={styles.bentoRow}>
               <View style={styles.bentoCell2}>
@@ -248,38 +289,72 @@ export default function HomeScreen() {
           </View>
 
           <SectionRow title="Suggested for you" onViewAll={() => {}} />
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={[styles.horizontalList, { paddingHorizontal: 0 }]}
-          >
-            {STAYS.map((stay, i) => (
-              <StayCard
-                key={i}
-                title={stay.title}
-                price={stay.price}
-                rating={stay.rating}
-                onPress={() => {}}
-              />
-            ))}
-          </ScrollView>
+          {isMobile ? (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={[styles.horizontalList, { paddingHorizontal: 0 }]}
+            >
+              {STAYS.map((stay, i) => (
+                <StayCard
+                  key={i}
+                  title={stay.title}
+                  price={stay.price}
+                  rating={stay.rating}
+                  onPress={() => {}}
+                  containerPadding={contentPadding}
+                />
+              ))}
+            </ScrollView>
+          ) : (
+            <View style={styles.staysGrid}>
+              {STAYS.map((stay, i) => (
+                <StayCard
+                  key={i}
+                  title={stay.title}
+                  price={stay.price}
+                  rating={stay.rating}
+                  onPress={() => {}}
+                  cardStyle={styles.stayCardGrid}
+                  containerPadding={contentPadding}
+                />
+              ))}
+            </View>
+          )}
 
           <SectionRow title="Top rated stays" onViewAll={() => {}} />
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={[styles.horizontalList, { paddingHorizontal: 0 }]}
-          >
-            {STAYS.map((stay, i) => (
-              <StayCard
-                key={`top-${i}`}
-                title={stay.title}
-                price={stay.price}
-                rating={stay.rating}
-                onPress={() => {}}
-              />
-            ))}
-          </ScrollView>
+          {isMobile ? (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={[styles.horizontalList, { paddingHorizontal: 0 }]}
+            >
+              {STAYS.map((stay, i) => (
+                <StayCard
+                  key={`top-${i}`}
+                  title={stay.title}
+                  price={stay.price}
+                  rating={stay.rating}
+                  onPress={() => {}}
+                  containerPadding={contentPadding}
+                />
+              ))}
+            </ScrollView>
+          ) : (
+            <View style={styles.staysGrid}>
+              {STAYS.map((stay, i) => (
+                <StayCard
+                  key={`top-${i}`}
+                  title={stay.title}
+                  price={stay.price}
+                  rating={stay.rating}
+                  onPress={() => {}}
+                  cardStyle={styles.stayCardGrid}
+                  containerPadding={contentPadding}
+                />
+              ))}
+            </View>
+          )}
 
           <View style={styles.bottomSpacer} />
         </ScrollView>
@@ -338,7 +413,6 @@ const styles = StyleSheet.create({
   bentoRow: {
     flexDirection: 'row',
     gap: spacing['3'],
-    minHeight: 100,
   },
   bentoCell1: {
     flex: 1,
@@ -355,14 +429,12 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     overflow: 'hidden',
     position: 'relative',
-    minHeight: 100,
+    minHeight: 100, // Base min height, will be overridden responsively
   },
   categoryIllustrationWrap: {
     position: 'absolute',
     right: 0,
     bottom: 0,
-    width: 72,
-    height: 72,
     justifyContent: 'flex-end',
     alignItems: 'flex-end',
     opacity: 0.9,
@@ -392,11 +464,23 @@ const styles = StyleSheet.create({
   },
   horizontalList: {
     paddingBottom: spacing['4'],
-    gap: spacing['4'],
-    paddingRight: spacing['4'],
+    gap: spacing['3'],
+    paddingRight: spacing['4'], // Right padding to match container padding
   },
   stayCardWrap: {
-    marginRight: spacing['4'],
+    marginRight: spacing['3'],
+  },
+  staysGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing['4'],
+    marginBottom: spacing['4'],
+  },
+  stayCardGrid: {
+    marginRight: 0,
+    flex: 1,
+    minWidth: 200,
+    maxWidth: '100%',
   },
   stayCard: {
     width: '100%',

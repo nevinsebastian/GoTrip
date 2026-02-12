@@ -346,7 +346,7 @@ export const components = {
   },
   
   resortCard: {
-    maxWidth: 300, // Max width for resort cards (mobile horizontal scroll)
+    maxWidth: 180, // Max width for resort cards - sized to show 2 cards at once on mobile
     // On tablet/desktop, cards should use flexible widths in grid layouts
     imageAspectRatio: 16 / 9, // Image aspect ratio
     contentPadding: 16, // Internal padding for text content
