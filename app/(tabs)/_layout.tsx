@@ -1,9 +1,9 @@
-import React from 'react';
-import { Tabs } from 'expo-router';
-import { View, StyleSheet, Platform, Pressable, Text } from 'react-native';
+import { borderRadius, colors, components, spacing } from '@/constants/DesignTokens';
 import { Ionicons } from '@expo/vector-icons';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
-import { colors, borderRadius, components, spacing } from '@/constants/DesignTokens';
+import { Tabs } from 'expo-router';
+import React from 'react';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import TicketsIcon from '@/assets/images/tickets.svg';
 
@@ -119,8 +119,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface.white,
     borderTopWidth: 1,
     borderTopColor: colors.border.light,
-    borderTopLeftRadius: borderRadius.xl,
-    borderTopRightRadius: borderRadius.xl,
     paddingTop: spacing['2'],
     paddingBottom: Platform.OS === 'ios' ? 28 : 12,
     paddingHorizontal: spacing['2'],
