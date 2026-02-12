@@ -1,6 +1,5 @@
 import {
   Button,
-  Card,
   Input,
   Text
 } from '@/components/ui';
@@ -10,7 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
 import {
-  Platform,
+  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -26,6 +25,8 @@ import BagIll from '@/assets/images/bag ill 1.svg';
 import HillIll from '@/assets/images/hill ill 1.svg';
 import RoomsIll from '@/assets/images/Rooms ill 1.svg';
 import ArrowTopRight from '@/assets/images/arrow-top-right.svg';
+
+const ResortImage = require('../../assets/images/resort.png');
 
 const CATEGORIES = [
   {
@@ -144,30 +145,34 @@ function StayCard({
   
   return (
     <Pressable onPress={onPress} style={[styles.stayCardWrap, { width: cardWidth }, cardStyle]}>
-      <Card variant="listing" padding="none" style={styles.stayCard}>
-        <View style={styles.stayImageWrap}>
-          <View style={styles.stayImagePlaceholder} />
-          <View style={styles.favoriteBadge}>
-            <HeartIcon width={heartIconSize} height={heartIconSize} />
-          </View>
+      {/* Image: rectangle with all sides rounded (separate from text) */}
+      <View style={styles.stayImageWrap}>
+        <Image
+          source={ResortImage}
+          style={styles.stayImage}
+          resizeMode="cover"
+        />
+        <View style={styles.favoriteBadge}>
+          <HeartIcon width={heartIconSize} height={heartIconSize} />
         </View>
-        <View style={styles.stayContent}>
-          <Text variant="bodySemibold" numberOfLines={2} style={styles.stayTitle}>
-            {title}
+      </View>
+      {/* Text below the image - not in the same card */}
+      <View style={styles.stayContent}>
+        <Text variant="bodySemibold" numberOfLines={2} style={styles.stayTitle}>
+          {title}
+        </Text>
+        <View style={styles.stayMeta}>
+          <Text variant="price" style={styles.stayPrice}>
+            {price}
           </Text>
-          <View style={styles.stayMeta}>
-            <Text variant="price" style={styles.stayPrice}>
-              {price}
+          <View style={styles.ratingRow}>
+            <Ionicons name="star-outline" size={starIconSize} color={colors.rating.star} />
+            <Text variant="ratingValue" style={styles.stayRating}>
+              {rating}
             </Text>
-            <View style={styles.ratingRow}>
-              <Ionicons name="star-outline" size={starIconSize} color={colors.rating.star} />
-              <Text variant="ratingValue" style={styles.stayRating}>
-                {rating}
-              </Text>
-            </View>
           </View>
         </View>
-      </Card>
+      </View>
     </Pressable>
   );
 }
@@ -356,7 +361,74 @@ export default function HomeScreen() {
             </View>
           )}
 
-          <View style={styles.bottomSpacer} />
+          <SectionRow title="Budget options" onViewAll={() => {}} />
+          {isMobile ? (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={[styles.horizontalList, { paddingHorizontal: 0 }]}
+            >
+              {STAYS.map((stay, i) => (
+                <StayCard
+                  key={`budget-${i}`}
+                  title={stay.title}
+                  price={stay.price}
+                  rating={stay.rating}
+                  onPress={() => {}}
+                  containerPadding={contentPadding}
+                />
+              ))}
+            </ScrollView>
+          ) : (
+            <View style={styles.staysGrid}>
+              {STAYS.map((stay, i) => (
+                <StayCard
+                  key={`budget-${i}`}
+                  title={stay.title}
+                  price={stay.price}
+                  rating={stay.rating}
+                  onPress={() => {}}
+                  cardStyle={styles.stayCardGrid}
+                  containerPadding={contentPadding}
+                />
+              ))}
+            </View>
+          )}
+
+          <SectionRow title="Luxury resorts" onViewAll={() => {}} />
+          {isMobile ? (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={[styles.horizontalList, { paddingHorizontal: 0 }]}
+            >
+              {STAYS.map((stay, i) => (
+                <StayCard
+                  key={`luxury-${i}`}
+                  title={stay.title}
+                  price={stay.price}
+                  rating={stay.rating}
+                  onPress={() => {}}
+                  containerPadding={contentPadding}
+                />
+              ))}
+            </ScrollView>
+          ) : (
+            <View style={styles.staysGrid}>
+              {STAYS.map((stay, i) => (
+                <StayCard
+                  key={`luxury-${i}`}
+                  title={stay.title}
+                  price={stay.price}
+                  rating={stay.rating}
+                  onPress={() => {}}
+                  cardStyle={styles.stayCardGrid}
+                  containerPadding={contentPadding}
+                />
+              ))}
+            </View>
+          )}
+
         </ScrollView>
       </LinearGradient>
     </SafeAreaView>
@@ -379,7 +451,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingTop: spacing['4'],
-    paddingBottom: spacing['8'],
+    paddingBottom: spacing['4'], // Minimal padding so content ends at Luxury resorts, no gap before navbar
   },
   header: {
     flexDirection: 'row',
@@ -484,20 +556,16 @@ const styles = StyleSheet.create({
     minWidth: 200,
     maxWidth: '100%',
   },
-  stayCard: {
-    width: '100%',
-    overflow: 'hidden',
-    borderRadius: borderRadius.xl, // 12px border radius matching Figma
-  },
   stayImageWrap: {
     position: 'relative',
     width: '100%',
     aspectRatio: components.resortCard.imageAspectRatio,
     overflow: 'hidden',
+    borderRadius: borderRadius.xl, // All sides rounded
   },
-  stayImagePlaceholder: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: colors.neutral.alpha['4'],
+  stayImage: {
+    width: '100%',
+    height: '100%',
   },
   favoriteBadge: {
     position: 'absolute',
@@ -511,8 +579,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   stayContent: {
-    padding: components.resortCard.contentPadding,
-    backgroundColor: colors.surface.white,
+    paddingTop: spacing['2'],
+    paddingHorizontal: 0,
   },
   stayTitle: {
     color: colors.text.primary,
@@ -533,8 +601,5 @@ const styles = StyleSheet.create({
   },
   stayRating: {
     color: colors.text.primary,
-  },
-  bottomSpacer: {
-    height: Platform.OS === 'ios' ? 100 : 80,
   },
 });
