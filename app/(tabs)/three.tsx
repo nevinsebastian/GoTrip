@@ -1,16 +1,16 @@
+import BellIcon from '@/assets/images/bell.svg';
+import { IconButton, Input, Text } from '@/components/ui';
+import { useResponsive } from '@/components/ui/useResponsive';
+import { borderRadius, colors, spacing } from '@/constants/DesignTokens';
 import React, { useState } from 'react';
 import {
-  View,
-  StyleSheet,
-  Pressable,
-  ScrollView,
-  useWindowDimensions,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    useWindowDimensions,
+    View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Text, Input, IconButton } from '@/components/ui';
-import { useResponsive } from '@/components/ui/useResponsive';
-import { colors, spacing } from '@/constants/DesignTokens';
-import BellIcon from '@/assets/images/bell.svg';
 
 // Light peach/orange background from Figma Ticket details screen
 const TICKETS_BG = '#FFF8F6';
@@ -151,6 +151,9 @@ const styles = StyleSheet.create({
     minHeight: 44,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.primary,
+    borderRadius: borderRadius.lg,
   },
   searchWrap: {
     marginBottom: spacing['4'],

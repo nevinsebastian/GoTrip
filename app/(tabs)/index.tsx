@@ -1,7 +1,7 @@
 import {
-  Button,
-  Input,
-  Text
+    Button,
+    Input,
+    Text
 } from '@/components/ui';
 import { useResponsive } from '@/components/ui/useResponsive';
 import { borderRadius, colors, components, spacing } from '@/constants/DesignTokens';
@@ -9,21 +9,21 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
 import {
-  Image,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  View,
+    Image,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import ArrowTopRight from '@/assets/images/arrow-top-right.svg';
+import BagIll from '@/assets/images/bag ill 1.svg';
 import BellIcon from '@/assets/images/bell.svg';
 import HeartIcon from '@/assets/images/heart.svg';
-import Logo from '@/assets/images/logogotrip.svg';
-import BagIll from '@/assets/images/bag ill 1.svg';
 import HillIll from '@/assets/images/hill ill 1.svg';
+import Logo from '@/assets/images/logogotrip.svg';
 import RoomsIll from '@/assets/images/Rooms ill 1.svg';
-import ArrowTopRight from '@/assets/images/arrow-top-right.svg';
 
 const ResortImage = require('../../assets/images/resort.png');
 

@@ -99,11 +99,13 @@ const styles = StyleSheet.create({
   },
   headerTitle: {},
   bellWrap: {
-    padding: spacing['2'],
-    borderRadius: borderRadius.lg,
+    minWidth: 44,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
     borderWidth: 1,
-    borderColor: colors.border.light,
-    backgroundColor: colors.surface.white,
+    borderColor: colors.primary,
+    borderRadius: borderRadius.lg,
   },
   content: {
     flex: 1,
@@ -118,7 +120,7 @@ const styles = StyleSheet.create({
     width: '100%',
     ...Platform.select({
       ios: shadows.card,
-      android: { elevation: shadows.card.elevation },
+      android: shadows.card,
       web: shadows.card,
     }),
   },
