@@ -100,7 +100,7 @@ export default function ProfileScreen() {
         <View style={styles.profileCard}>
           <View style={styles.avatarWrap}>
             <Image
-              source={require('@/assets/images/resort.png')}
+              source={require('@/assets/images/resort.jpg')}
               style={styles.avatarImage}
               resizeMode="cover"
             />
