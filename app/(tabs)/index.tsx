@@ -8,7 +8,7 @@ import { borderRadius, colors, components, spacing } from '@/constants/DesignTok
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Image,
   Pressable,
@@ -25,8 +25,13 @@ import HeartIcon from '@/assets/images/heart.svg';
 import HillIll from '@/assets/images/hill ill 1.svg';
 import Logo from '@/assets/images/logogotrip.svg';
 import RoomsIll from '@/assets/images/Rooms ill 1.svg';
+import TypeIcon from '@/assets/images/type.svg';
 
 const ResortImage = require('../../assets/images/resort.jpg');
+
+const TYPE_ICON_BG = '#FFD49A';
+const TYPE_LABEL_COLOR = '#545454';
+const TYPE_ICON_SIZE = 56;
 
 type CategoryIconKey = 'rooms' | 'packages' | 'glamping' | 'activities';
 
@@ -50,6 +55,15 @@ const CATEGORIES: Array<{ title: string; subtitle: string; bg: string; iconKey: 
   { title: 'Packages', subtitle: 'Travel with Gotrip', bg: colors.surface.lightPink, iconKey: 'packages' },
   { title: 'Glamping', subtitle: 'Glamorous camping', bg: '#E8F5E9', iconKey: 'glamping' },
   { title: 'Activities', subtitle: 'Other experiences', bg: '#FFE0B2', iconKey: 'activities' },
+];
+
+// Room type cards (Figma 110-801): icon type.svg + label, same icon for all.
+const ROOM_TYPES: Array<{ id: string; label: string }> = [
+  { id: 'budget', label: 'Budget' },
+  { id: 'private', label: 'Private' },
+  { id: 'luxury', label: 'Luxury' },
+  { id: 'beach', label: 'Beach' },
+  { id: 'hillstation', label: 'Hill station' },
 ];
 
 const STAYS = [
@@ -194,7 +208,9 @@ function SectionRow({
 
 export default function HomeScreen() {
   const { isMobile, isTablet, isDesktop, width } = useResponsive();
-  
+  const [roomsMode, setRoomsMode] = useState(false);
+  const [selectedRoomType, setSelectedRoomType] = useState<string | null>(null); // id of selected type
+
   // Responsive padding based on screen size
   const contentPadding = isMobile 
     ? spacing['4'] 
@@ -220,9 +236,20 @@ export default function HomeScreen() {
       >
         <View style={[styles.topFixed, { paddingHorizontal: contentPadding }]}>
           <View style={styles.header}>
-            <View style={styles.logoWrap}>
-              <Logo width={logoWidth} height={logoHeight} />
-            </View>
+            {roomsMode ? (
+              <Pressable
+                style={styles.backButton}
+                onPress={() => { setRoomsMode(false); setSelectedRoomType(null); }}
+                hitSlop={12}
+                accessibilityLabel="Back to categories"
+              >
+                <Ionicons name="chevron-back" size={24} color={colors.primary} />
+              </Pressable>
+            ) : (
+              <View style={styles.logoWrap}>
+                <Logo width={logoWidth} height={logoHeight} />
+              </View>
+            )}
             <Pressable onPress={() => {}} style={styles.bellWrap}>
               <BellIcon width={bellIconSize} height={bellIconSize} />
             </Pressable>
@@ -246,6 +273,42 @@ export default function HomeScreen() {
           ]}
           showsVerticalScrollIndicator={false}
         >
+          {roomsMode ? (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.roomTypesScroll}
+              contentContainerStyle={[styles.roomTypesContent, { paddingRight: contentPadding }]}
+            >
+              {ROOM_TYPES.map((type) => {
+                const isSelected = selectedRoomType === type.id;
+                return (
+                  <Pressable
+                    key={type.id}
+                    style={[
+                      styles.roomTypeCard,
+                      isSelected && styles.roomTypeCardSelected,
+                    ]}
+                    onPress={() => setSelectedRoomType(isSelected ? null : type.id)}
+                  >
+                    <View style={styles.roomTypeIconWrap}>
+                      <TypeIcon width={TYPE_ICON_SIZE} height={TYPE_ICON_SIZE} />
+                    </View>
+                    <Text
+                      variant="body"
+                      style={[
+                        styles.roomTypeLabel,
+                        isSelected && styles.roomTypeLabelSelected,
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {type.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          ) : (
           <View style={styles.bentoGrid}>
             <View style={styles.bentoRow}>
               <View style={styles.bentoCell2}>
@@ -254,7 +317,7 @@ export default function HomeScreen() {
                   subtitle={CATEGORIES[0].subtitle}
                   bg={CATEGORIES[0].bg}
                   iconKey={CATEGORIES[0].iconKey}
-                  onPress={() => {}}
+                  onPress={() => setRoomsMode(true)}
                 />
               </View>
               <View style={styles.bentoCell1}>
@@ -288,6 +351,9 @@ export default function HomeScreen() {
               </View>
             </View>
           </View>
+          )}
+
+          {roomsMode && <View style={styles.roomTypesBottomSpacer} />}
 
           <SectionRow title="Suggested for you" onViewAll={() => {}} />
           {isMobile ? (
@@ -495,6 +561,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: spacing['3'],
   },
+  backButton: {
+    padding: spacing['2'],
+    marginLeft: -spacing['2'],
+  },
   logoWrap: {
     flexDirection: 'column',
   },
@@ -512,6 +582,43 @@ const styles = StyleSheet.create({
   searchWrap: {
     width: '100%',
     marginBottom: spacing['5'],
+  },
+  roomTypesScroll: {
+    marginBottom: spacing['4'],
+  },
+  roomTypesContent: {
+    flexDirection: 'row',
+    gap: spacing['3'],
+    paddingRight: spacing['4'],
+  },
+  roomTypeCard: {
+    width: 88,
+    alignItems: 'center',
+    borderRadius: borderRadius.xl,
+  },
+  roomTypeCardSelected: {
+    opacity: 1,
+  },
+  roomTypeIconWrap: {
+    width: TYPE_ICON_SIZE + 16,
+    height: TYPE_ICON_SIZE + 16,
+    borderRadius: borderRadius.xl,
+    backgroundColor: TYPE_ICON_BG,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing['2'],
+  },
+  roomTypeLabel: {
+    color: TYPE_LABEL_COLOR,
+    fontSize: 13,
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+  roomTypeLabelSelected: {
+    color: TYPE_LABEL_COLOR,
+  },
+  roomTypesBottomSpacer: {
+    height: spacing['2'],
   },
   bentoGrid: {
     flexDirection: 'column',
