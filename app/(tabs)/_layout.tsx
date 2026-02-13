@@ -2,7 +2,7 @@ import { borderRadius, colors, components, spacing } from '@/constants/DesignTok
 import { Ionicons } from '@expo/vector-icons';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { Tabs } from 'expo-router';
-import React from 'react';
+import React, { createContext, useContext, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import TicketsIcon from '@/assets/images/tickets.svg';
@@ -16,6 +16,20 @@ const TAB_CONFIG = [
   { name: 'three', label: 'Tickets', icon: null, isSvg: true },
   { name: 'four', label: 'Profile', icon: 'person-outline', isSvg: false },
 ] as const;
+
+type TabRouteName = (typeof TAB_CONFIG)[number]['name'];
+
+type PreviousTabContextValue = {
+  previousTab: TabRouteName;
+  setPreviousTab: (name: TabRouteName) => void;
+};
+
+const PreviousTabContext = createContext<PreviousTabContextValue | null>(null);
+
+export function usePreviousTab() {
+  const ctx = useContext(PreviousTabContext);
+  return ctx ?? { previousTab: 'index' as TabRouteName, setPreviousTab: () => {} };
+}
 
 function TabBarIcon({
   name,
@@ -35,7 +49,18 @@ function TabBarIcon({
   );
 }
 
-function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
+function CustomTabBar({
+  state,
+  descriptors,
+  navigation,
+  setPreviousTab,
+}: BottomTabBarProps & { setPreviousTab: (name: TabRouteName) => void }) {
+  const isProfileActive = state.routes[state.index].name === 'four';
+
+  if (isProfileActive) {
+    return null;
+  }
+
   return (
     <View style={styles.tabBarContainer}>
       <View style={styles.tabBar}>
@@ -47,6 +72,10 @@ function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
 
           const onPress = () => {
             if (focused) return;
+            if (route.name === 'four') {
+              const currentTab = state.routes[state.index].name as TabRouteName;
+              setPreviousTab(currentTab);
+            }
             const event = navigation.emit({
               type: 'tabPress',
               target: route.key,
@@ -96,21 +125,25 @@ function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
 }
 
 export default function TabLayout() {
+  const [previousTab, setPreviousTab] = useState<TabRouteName>('index');
+
   return (
-    <Tabs
-      initialRouteName="index"
-      tabBar={(props) => <CustomTabBar {...props} />}
-      screenOptions={{
-        headerShown: false,
-        tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.primary,
-      }}
-    >
-      <Tabs.Screen name="index" options={{ title: 'Home' }} />
-      <Tabs.Screen name="two" options={{ title: 'Wishlist' }} />
-      <Tabs.Screen name="three" options={{ title: 'Tickets' }} />
-      <Tabs.Screen name="four" options={{ title: 'Profile' }} />
-    </Tabs>
+    <PreviousTabContext.Provider value={{ previousTab, setPreviousTab }}>
+      <Tabs
+        initialRouteName="index"
+        tabBar={(props) => <CustomTabBar {...props} setPreviousTab={setPreviousTab} />}
+        screenOptions={{
+          headerShown: false,
+          tabBarActiveTintColor: colors.primary,
+          tabBarInactiveTintColor: colors.primary,
+        }}
+      >
+        <Tabs.Screen name="index" options={{ title: 'Home' }} />
+        <Tabs.Screen name="two" options={{ title: 'Wishlist' }} />
+        <Tabs.Screen name="three" options={{ title: 'Tickets' }} />
+        <Tabs.Screen name="four" options={{ title: 'Profile' }} />
+      </Tabs>
+    </PreviousTabContext.Provider>
   );
 }
 
