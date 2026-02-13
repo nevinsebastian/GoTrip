@@ -1,17 +1,17 @@
-import { IconButton, Text } from '@/components/ui';
-import { usePreviousTab } from './_layout';
+import { Text } from '@/components/ui';
+import { useResponsive } from '@/components/ui/useResponsive';
 import {
   borderRadius,
   colors,
   shadows,
   spacing,
 } from '@/constants/DesignTokens';
-import { useResponsive } from '@/components/ui/useResponsive';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Image,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -19,8 +19,9 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { usePreviousTab } from './_layout';
 
-import HeartIcon from '@/assets/images/heart.svg';
+
 
 const PROFILE_MENU_ITEMS = [
   { id: 'account', label: 'Account settings', icon: 'settings-outline' as const },
@@ -36,9 +37,14 @@ export default function ProfileScreen() {
   const { previousTab } = usePreviousTab();
   const { isMobile, isTablet } = useResponsive();
   const contentPadding = isMobile ? spacing['4'] : isTablet ? spacing['5'] : spacing['6'];
+  const [logoutModalVisible, setLogoutModalVisible] = useState(false);
 
   const handleBack = () => {
-    router.replace(`/(tabs)/${previousTab}`);
+    if (previousTab === 'index') {
+      router.replace('/(tabs)');
+    } else {
+      router.replace(`/(tabs)/${previousTab}` as '/(tabs)/two');
+    }
   };
 
   const handleWishlist = () => {
@@ -47,10 +53,20 @@ export default function ProfileScreen() {
 
   const handleMenuItem = (id: string) => {
     if (id === 'logout') {
-      // TODO: sign out, then e.g. router.replace('/login')
+      setLogoutModalVisible(true);
       return;
     }
     // TODO: navigate to respective screens
+  };
+
+  const handleLogoutConfirm = () => {
+    setLogoutModalVisible(false);
+    // TODO: clear auth state / token if you have auth
+    router.replace('/login');
+  };
+
+  const handleLogoutCancel = () => {
+    setLogoutModalVisible(false);
   };
 
   return (
@@ -69,11 +85,9 @@ export default function ProfileScreen() {
           </Text>
         </Pressable>
         <Pressable
-          style={styles.heartWrap}
           onPress={handleWishlist}
           accessibilityLabel="Wishlist"
         >
-          <HeartIcon width={22} height={22} />
         </Pressable>
       </View>
 
@@ -141,6 +155,54 @@ export default function ProfileScreen() {
           ))}
         </View>
       </ScrollView>
+
+      {/* Log Out confirmation modal with dimmed/blurred overlay */}
+      <Modal
+        visible={logoutModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={handleLogoutCancel}
+      >
+        <Pressable style={styles.modalOverlay} onPress={handleLogoutCancel}>
+          <Pressable style={styles.modalDialogWrap} onPress={(e) => e.stopPropagation()}>
+            <View style={styles.logoutDialog}>
+              <View style={styles.logoutIconWrap}>
+                <Ionicons name="log-out-outline" size={32} color={colors.primary} />
+              </View>
+              <Text variant="heading2" style={styles.logoutDialogTitle}>
+                Log Out
+              </Text>
+              <Text variant="body" style={styles.logoutDialogMessage}>
+                Do you actually want to logout now?
+              </Text>
+              <View style={styles.logoutDialogButtons}>
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.logoutCancelBtn,
+                    pressed && styles.logoutBtnPressed,
+                  ]}
+                  onPress={handleLogoutCancel}
+                >
+                  <Text variant="bodySemibold" style={styles.logoutCancelBtnText}>
+                    Cancel
+                  </Text>
+                </Pressable>
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.logoutConfirmBtn,
+                    pressed && styles.logoutBtnPressed,
+                  ]}
+                  onPress={handleLogoutConfirm}
+                >
+                  <Text variant="bodySemibold" style={styles.logoutConfirmBtnText}>
+                    Confirm
+                  </Text>
+                </Pressable>
+              </View>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -266,5 +328,71 @@ const styles = StyleSheet.create({
   menuLabelLogout: {
     color: colors.primary,
     fontWeight: '600',
+  },
+  // Log out modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing['5'],
+  },
+  modalDialogWrap: {
+    width: '100%',
+    maxWidth: 340,
+  },
+  logoutDialog: {
+    backgroundColor: colors.surface.white,
+    borderRadius: borderRadius['2xl'],
+    paddingVertical: spacing['6'],
+    paddingHorizontal: spacing['5'],
+    alignItems: 'center',
+    ...Platform.select({
+      ios: shadows.card,
+      android: shadows.card,
+      web: shadows.card,
+    }),
+  },
+  logoutIconWrap: {
+    marginBottom: spacing['4'],
+  },
+  logoutDialogTitle: {
+    color: colors.text.primary,
+    marginBottom: spacing['2'],
+  },
+  logoutDialogMessage: {
+    color: colors.text.secondary,
+    textAlign: 'center',
+    marginBottom: spacing['5'],
+  },
+  logoutDialogButtons: {
+    flexDirection: 'row',
+    gap: spacing['3'],
+    width: '100%',
+  },
+  logoutCancelBtn: {
+    flex: 1,
+    paddingVertical: spacing['3'],
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    backgroundColor: colors.surface.white,
+    alignItems: 'center',
+  },
+  logoutCancelBtnText: {
+    color: colors.primary,
+  },
+  logoutConfirmBtn: {
+    flex: 1,
+    paddingVertical: spacing['3'],
+    borderRadius: borderRadius.lg,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+  },
+  logoutConfirmBtnText: {
+    color: colors.surface.white,
+  },
+  logoutBtnPressed: {
+    opacity: 0.8,
   },
 });
