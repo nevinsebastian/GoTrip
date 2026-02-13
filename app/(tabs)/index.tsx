@@ -4,7 +4,7 @@ import {
   Text
 } from '@/components/ui';
 import { useResponsive } from '@/components/ui/useResponsive';
-import { borderRadius, colors, components, spacing } from '@/constants/DesignTokens';
+import { borderRadius, colors, components, spacing, typography } from '@/constants/DesignTokens';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
@@ -32,6 +32,13 @@ const ResortImage = require('../../assets/images/resort.jpg');
 const TYPE_ICON_BG = '#FFD49A';
 const TYPE_LABEL_COLOR = '#545454';
 const TYPE_ICON_SIZE = 56;
+// Gradient for types section (Figma 110-792): blend from screen bg, lighter → darker below types
+const TYPES_GRADIENT_TOP = '#FFFBF9';
+const TYPES_GRADIENT_BOTTOM = '#FFE8E0';
+const TYPES_GRADIENT_BLUR_RADIUS = 10; // soft edge at bottom (height of fade strip ≈ 2× radius)
+// 3-stop gradient so top blends with screen (no visible start line)
+const TYPES_GRADIENT_COLORS = [colors.surface.lightPink, TYPES_GRADIENT_TOP, TYPES_GRADIENT_BOTTOM] as const;
+const TYPES_GRADIENT_LOCATIONS = [0, 0.25, 1] as const;
 
 type CategoryIconKey = 'rooms' | 'packages' | 'glamping' | 'activities';
 
@@ -234,27 +241,90 @@ export default function HomeScreen() {
         colors={[colors.surface.lightPink, colors.surface.background]}
         style={styles.gradient}
       >
+        {roomsMode ? (
+          <View style={styles.typesSectionWrap}>
+            <LinearGradient
+              colors={TYPES_GRADIENT_COLORS}
+              locations={TYPES_GRADIENT_LOCATIONS}
+              style={styles.typesSectionGradient}
+            >
+              <View style={[styles.topFixed, { paddingHorizontal: contentPadding }]}>
+                <View style={styles.header}>
+                  <View style={styles.headerLeft}>
+                    <Pressable
+                      style={styles.backButton}
+                      onPress={() => { setRoomsMode(false); setSelectedRoomType(null); }}
+                      hitSlop={12}
+                      accessibilityLabel="Back to categories"
+                    >
+                      <Ionicons name="chevron-back" size={24} color={colors.primary} />
+                    </Pressable>
+                    <Text variant="header" style={styles.resortTitle}>Resorts</Text>
+                  </View>
+                  <Pressable onPress={() => {}} style={styles.bellWrap}>
+                    <BellIcon width={bellIconSize} height={bellIconSize} />
+                  </Pressable>
+                </View>
+                <View style={styles.searchWrap}>
+                  <Input
+                    variant="search"
+                    showSearchIcon
+                    placeholder="Search"
+                    placeholderTextColor={colors.text.placeholder}
+                  />
+                </View>
+              </View>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.roomTypesScroll}
+                contentContainerStyle={[styles.roomTypesContent, { paddingRight: contentPadding, paddingHorizontal: contentPadding }]}
+              >
+                {ROOM_TYPES.map((type) => {
+                  const isSelected = selectedRoomType === type.id;
+                  return (
+                    <Pressable
+                      key={type.id}
+                      style={[
+                        styles.roomTypeCard,
+                        isSelected && styles.roomTypeCardSelected,
+                      ]}
+                      onPress={() => setSelectedRoomType(isSelected ? null : type.id)}
+                    >
+                      <View style={styles.roomTypeIconWrap}>
+                        <TypeIcon width={TYPE_ICON_SIZE} height={TYPE_ICON_SIZE} />
+                      </View>
+                      <Text
+                        variant="body"
+                        style={[
+                          styles.roomTypeLabel,
+                          isSelected && styles.roomTypeLabelSelected,
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {type.label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+            </LinearGradient>
+            <LinearGradient
+              colors={[TYPES_GRADIENT_BOTTOM, colors.surface.lightPink]}
+              style={[styles.typesSectionBlurEdge, { height: TYPES_GRADIENT_BLUR_RADIUS * 2 }]}
+              pointerEvents="none"
+            />
+          </View>
+        ) : (
         <View style={[styles.topFixed, { paddingHorizontal: contentPadding }]}>
           <View style={styles.header}>
-            {roomsMode ? (
-              <Pressable
-                style={styles.backButton}
-                onPress={() => { setRoomsMode(false); setSelectedRoomType(null); }}
-                hitSlop={12}
-                accessibilityLabel="Back to categories"
-              >
-                <Ionicons name="chevron-back" size={24} color={colors.primary} />
-              </Pressable>
-            ) : (
-              <View style={styles.logoWrap}>
-                <Logo width={logoWidth} height={logoHeight} />
-              </View>
-            )}
+            <View style={styles.logoWrap}>
+              <Logo width={logoWidth} height={logoHeight} />
+            </View>
             <Pressable onPress={() => {}} style={styles.bellWrap}>
               <BellIcon width={bellIconSize} height={bellIconSize} />
             </Pressable>
           </View>
-
           <View style={styles.searchWrap}>
             <Input
               variant="search"
@@ -264,6 +334,7 @@ export default function HomeScreen() {
             />
           </View>
         </View>
+        )}
 
         <ScrollView
           style={styles.scroll}
@@ -274,40 +345,7 @@ export default function HomeScreen() {
           showsVerticalScrollIndicator={false}
         >
           {roomsMode ? (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              style={styles.roomTypesScroll}
-              contentContainerStyle={[styles.roomTypesContent, { paddingRight: contentPadding }]}
-            >
-              {ROOM_TYPES.map((type) => {
-                const isSelected = selectedRoomType === type.id;
-                return (
-                  <Pressable
-                    key={type.id}
-                    style={[
-                      styles.roomTypeCard,
-                      isSelected && styles.roomTypeCardSelected,
-                    ]}
-                    onPress={() => setSelectedRoomType(isSelected ? null : type.id)}
-                  >
-                    <View style={styles.roomTypeIconWrap}>
-                      <TypeIcon width={TYPE_ICON_SIZE} height={TYPE_ICON_SIZE} />
-                    </View>
-                    <Text
-                      variant="body"
-                      style={[
-                        styles.roomTypeLabel,
-                        isSelected && styles.roomTypeLabelSelected,
-                      ]}
-                      numberOfLines={1}
-                    >
-                      {type.label}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
+          <View style={styles.roomTypesBottomSpacer} />
           ) : (
           <View style={styles.bentoGrid}>
             <View style={styles.bentoRow}>
@@ -352,8 +390,6 @@ export default function HomeScreen() {
             </View>
           </View>
           )}
-
-          {roomsMode && <View style={styles.roomTypesBottomSpacer} />}
 
           <SectionRow title="Suggested for you" onViewAll={() => {}} />
           {isMobile ? (
@@ -545,6 +581,20 @@ const styles = StyleSheet.create({
   gradient: {
     flex: 1,
   },
+  typesSectionWrap: {
+    width: '100%',
+    position: 'relative',
+  },
+  typesSectionGradient: {
+    width: '100%',
+  },
+  typesSectionBlurEdge: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: '100%',
+  },
   topFixed: {
     paddingTop: spacing['6'],
   },
@@ -560,6 +610,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: spacing['3'],
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing['1'],
+  },
+  resortTitle: {
+    fontFamily: typography.fontFamily.text,
+    fontWeight: typography.fontWeight.medium,
+    fontSize: 16,
+    lineHeight: 24,
+    color: '#FF383C',
   },
   backButton: {
     padding: spacing['2'],
