@@ -24,15 +24,17 @@ const ResortImage = require('@/assets/images/resort.jpg');
 const CAROUSEL_IMAGES = [ResortImage, ResortImage, ResortImage];
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-const PROVIDES = [
-  'Private pool',
-  '24/7 Room service',
-  'Air conditioning',
-  'Restaurant facility',
+const AMENITIES: { id: string; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
+  { id: 'wifi', label: 'Free WiFi', icon: 'wifi-outline' },
+  { id: 'ac', label: 'Air conditioning', icon: 'snow-outline' },
+  { id: 'business', label: 'Business services', icon: 'briefcase-outline' },
+  { id: 'pet', label: 'Pet friendly', icon: 'paw-outline' },
+  { id: 'breakfast', label: 'Breakfast available', icon: 'cafe-outline' },
+  { id: 'parking', label: 'Parking available', icon: 'car-outline' },
 ];
 
 const DESCRIPTION =
-  'Experience refined comfort in this elegant two-floor villa featuring four spacious bedrooms and a private pool. Nestled in the lush greenery of Wayanad, the property offers complete privacy, serene views, and thoughtfully designed interiors—perfect for families or groups seeking a premium getaway in nature.';
+  'Elegant two-floor villa with private pool, curated interiors, and calm green views—perfect for a quick luxury escape.';
 
 const HOST_DESCRIPTION =
   'Mr. Ashish Kumar is an experienced host with 5 years of managing multiple luxury resorts in Wayanad.';
@@ -42,7 +44,7 @@ export default function ResortDetailsScreen() {
   const [carouselIndex, setCarouselIndex] = useState(0);
   const scrollRef = useRef<ScrollView | null>(null);
 
-  const title = params.title ?? 'Luxury stay in Wayanad';
+  const title = params.title ?? 'TITANIC Comfort Berlin Mitte';
   const displayPrice = params.price ?? '₹2,420';
   const rating = params.rating ?? '4.5';
 
@@ -112,39 +114,53 @@ export default function ResortDetailsScreen() {
 
         {/* Content - white background */}
         <View style={styles.content}>
-          {/* Title: "Luxury stay in Wayanad | 2 floors, 4 rooms | with private pool" */}
-          <Text variant="heading1" style={styles.title}>
-            {title} | 2 floors, 4 rooms | with private pool
-          </Text>
+          {/* Title + rating pill */}
+          <View style={styles.titleColumn}>
+            <Text variant="caption" style={styles.locationLabel}>
+              Berlin
+            </Text>
+            <Text variant="heading1" style={styles.title}>
+              {title}
+            </Text>
+            <View style={styles.reviewsRow}>
+              <Text variant="bodySemibold" style={styles.ratingValue}>
+                {rating}/10
+              </Text>
+              <Text variant="caption" style={styles.ratingText}>
+                Very good • 1,004 reviews
+              </Text>
+            </View>
+          </View>
+
           <Text variant="body" style={styles.description}>
             {DESCRIPTION}
           </Text>
 
-          {/* What we provide? */}
+          {/* Amenities */}
           <Text variant="bodySemibold" style={styles.sectionHeading}>
-            What we provide?
+            Popular amenities
           </Text>
-          <View style={styles.providesList}>
-            {PROVIDES.map((label) => (
-              <View key={label} style={styles.provideRow}>
-                <View style={styles.provideIconWrap}>
-                  <Ionicons name="notifications-outline" size={20} color={colors.primary} />
+          <View style={styles.amenitiesGrid}>
+            {AMENITIES.map((item) => (
+              <View key={item.id} style={styles.amenityCard}>
+                <View style={styles.amenityIconWrap}>
+                  <Ionicons name={item.icon} size={20} color={colors.text.primary} />
                 </View>
-                <Text variant="body" style={styles.provideLabel}>
-                  {label}
+                <Text variant="caption" style={styles.amenityLabel}>
+                  {item.label}
                 </Text>
               </View>
             ))}
           </View>
           <Pressable style={styles.secondaryBtn}>
             <Text variant="body" style={styles.secondaryBtnText}>
-              Show more
+              See all amenities
             </Text>
           </Pressable>
 
-          {/* Host */}
+          {/* Host - compact */}
           <Text variant="bodySemibold" style={styles.sectionHeading}>
-            Host
+            Hosted by
           </Text>
           <View style={styles.hostCard}>
             <Image source={ResortImage} style={styles.hostImage} resizeMode="cover" />
@@ -152,7 +168,7 @@ export default function ResortDetailsScreen() {
               <Text variant="bodySemibold" style={styles.hostName}>
                 Mr. Ashish Kumar
               </Text>
-              <Text variant="body" style={styles.hostDesc}>
+              <Text variant="caption" style={styles.hostDesc}>
                 {HOST_DESCRIPTION}
               </Text>
               <View style={styles.hostMeta}>
@@ -164,29 +180,11 @@ export default function ResortDetailsScreen() {
                 </View>
                 <View style={styles.hostMetaDivider} />
                 <Text variant="caption" style={styles.hostCustomers}>
-                  500+ customers
+                  500+ stays hosted
                 </Text>
               </View>
             </View>
           </View>
-          <Pressable style={styles.secondaryBtn}>
-            <Text variant="body" style={styles.secondaryBtnText}>
-              View host profile
-            </Text>
-          </Pressable>
-
-          {/* Instructions */}
-          <Text variant="bodySemibold" style={styles.sectionHeading}>
-            Instructions
-          </Text>
-          <Text variant="body" style={styles.description}>
-            {DESCRIPTION}
-          </Text>
-          <Pressable style={styles.secondaryBtn}>
-            <Text variant="body" style={styles.secondaryBtnText}>
-              More details
-            </Text>
-          </Pressable>
 
           <View style={styles.bottomSpacer} />
         </View>
@@ -293,10 +291,29 @@ const styles = StyleSheet.create({
     paddingTop: spacing['5'],
     backgroundColor: colors.surface.white,
   },
+  titleColumn: {
+    flex: 1,
+    marginBottom: spacing['3'],
+  },
   title: {
     color: colors.text.primary,
-    marginBottom: spacing['3'],
     lineHeight: 28,
+  },
+  locationLabel: {
+    color: colors.text.caption,
+    marginBottom: spacing['1'],
+  },
+  reviewsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing['2'],
+    marginTop: spacing['1'],
+  },
+  ratingValue: {
+    color: colors.text.primary,
+  },
+  ratingText: {
+    color: colors.text.secondary,
   },
   description: {
     color: colors.text.secondary,
@@ -307,26 +324,30 @@ const styles = StyleSheet.create({
     color: colors.text.primary,
     marginBottom: spacing['3'],
   },
-  providesList: {
-    gap: spacing['2'],
+  amenitiesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    rowGap: spacing['3'],
+    columnGap: spacing['4'],
     marginBottom: spacing['3'],
   },
-  provideRow: {
+  amenityCard: {
+    width: '45%',
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing['3'],
+    gap: spacing['2'],
   },
-  provideIconWrap: {
-    width: 40,
-    height: 40,
+  amenityIconWrap: {
+    width: 32,
+    height: 32,
     borderRadius: borderRadius.lg,
     backgroundColor: colors.surface.lightPink,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  provideLabel: {
+  amenityLabel: {
     color: colors.text.primary,
-    flex: 1,
+    flexShrink: 1,
   },
   secondaryBtn: {
     paddingVertical: spacing['3'],

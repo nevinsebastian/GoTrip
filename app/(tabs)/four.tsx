@@ -19,6 +19,8 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useUserProfile } from '@/src/hooks/useUserProfile';
+import { getErrorMessage } from '@/src/utils/errorHandler';
 import { usePreviousTab } from './_layout';
 
 
@@ -38,6 +40,12 @@ export default function ProfileScreen() {
   const { isMobile, isTablet } = useResponsive();
   const contentPadding = isMobile ? spacing['4'] : isTablet ? spacing['5'] : spacing['6'];
   const [logoutModalVisible, setLogoutModalVisible] = useState(false);
+
+  const {
+    data: user,
+    isLoading,
+    error,
+  } = useUserProfile();
 
   const handleBack = () => {
     if (previousTab === 'index') {
@@ -96,6 +104,14 @@ export default function ProfileScreen() {
         contentContainerStyle={[styles.scrollContent, { paddingHorizontal: contentPadding }]}
         showsVerticalScrollIndicator={false}
       >
+        {error ? (
+          <View style={styles.messageWrap}>
+            <Text variant="caption" style={styles.errorText}>
+              {getErrorMessage(error)}
+            </Text>
+          </View>
+        ) : null}
+
         {/* User info card: avatar (left) + name, phone, email (right) */}
         <View style={styles.profileCard}>
           <View style={styles.avatarWrap}>
@@ -107,13 +123,13 @@ export default function ProfileScreen() {
           </View>
           <View style={styles.profileDetails}>
             <Text variant="heading2" style={styles.profileName}>
-              Asif Ansad
+              {user?.full_name || user?.name || 'Guest user'}
             </Text>
             <Text variant="caption" style={styles.profileMeta}>
-              9734324310
+              {user?.phone || 'Phone not available'}
             </Text>
             <Text variant="caption" style={styles.profileMeta}>
-              asifansad123@gmal.com
+              {user?.email || 'Email not available'}
             </Text>
           </View>
         </View>
@@ -246,6 +262,12 @@ const styles = StyleSheet.create({
     maxWidth: 480,
     alignSelf: 'center',
     width: '100%',
+  },
+  messageWrap: {
+    marginBottom: spacing['2'],
+  },
+  errorText: {
+    color: colors.primaryAlt,
   },
   profileCard: {
     flexDirection: 'row',

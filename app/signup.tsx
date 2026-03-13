@@ -1,23 +1,25 @@
+import { Button, Card, Divider, IconButton, Input, Text } from '@/components/ui';
+import { borderRadius, colors, spacing } from '@/constants/DesignTokens';
+import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
-  View,
-  StyleSheet,
-  Platform,
   Keyboard,
+  Platform,
+  StyleSheet,
   TouchableWithoutFeedback,
   useWindowDimensions,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
-import { Card, Text, Input, Button, IconButton, Divider } from '@/components/ui';
-import { colors, spacing, borderRadius } from '@/constants/DesignTokens';
 
+import AppleIcon from '@/assets/images/apple.svg';
+import FacebookIcon from '@/assets/images/facebook.svg';
+import GoogleIcon from '@/assets/images/google.svg';
 import Logo from '@/assets/images/logogotrip.svg';
 import MailIcon from '@/assets/images/mail.svg';
 import MobileIcon from '@/assets/images/mobile.svg';
-import GoogleIcon from '@/assets/images/google.svg';
-import AppleIcon from '@/assets/images/apple.svg';
-import FacebookIcon from '@/assets/images/facebook.svg';
+import { useSendOtp } from '@/src/hooks/useSendOtp';
+import { getErrorMessage } from '@/src/utils/errorHandler';
 
 const isWeb = Platform.OS === 'web';
 const isIOS = Platform.OS === 'ios';
@@ -37,9 +39,12 @@ export default function SignupScreen() {
   const [signupMode, setSignupMode] = useState<SignupMode>('phone');
   const [fullName, setFullName] = useState('');
   const [contactValue, setContactValue] = useState('');
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const { logoWidth, logoHeight, socialIconSize } = useSignupSizes();
   const isEmailMode = signupMode === 'email';
+
+  const { mutate: sendOtp, isPending: isSendingOtp } = useSendOtp();
 
   const switchMode = () => {
     setContactValue('');
@@ -58,6 +63,44 @@ export default function SignupScreen() {
         <View style={styles.touchableWrap}>{content}</View>
       </TouchableWithoutFeedback>
     );
+
+  const handleSignup = () => {
+    setSubmitError(null);
+
+    const trimmedName = fullName.trim();
+    const trimmedContact = contactValue.trim();
+    if (!trimmedName || !trimmedContact) {
+      setSubmitError('Please enter your full name and contact details.');
+      return;
+    }
+
+    sendOtp(
+      {
+        full_name: trimmedName,
+        channel: isEmailMode ? 'email' : 'phone',
+        ...(isEmailMode ? { email: trimmedContact } : { phone: trimmedContact }),
+      },
+      {
+        onSuccess: (res) => {
+          if (res?.success) {
+            router.push({
+              pathname: '/otp',
+              params: {
+                contact: trimmedContact,
+                isEmail: isEmailMode ? '1' : '0',
+                fullName: trimmedName,
+              },
+            });
+            return;
+          }
+          setSubmitError(res?.message ?? 'Failed to send OTP. Please try again.');
+        },
+        onError: (err) => {
+          setSubmitError(getErrorMessage(err));
+        },
+      },
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -131,11 +174,18 @@ export default function SignupScreen() {
                     </Text>
                   </View>
 
+                  {submitError ? (
+                    <Text variant="caption" style={styles.errorText}>
+                      {submitError}
+                    </Text>
+                  ) : null}
+
                   <Button
                     variant="primary"
                     size="default"
                     style={styles.signupButton}
-                    onPress={() => router.push('/otp')}
+                    onPress={handleSignup}
+                    disabled={isSendingOtp}
                   >
                     Sign up
                   </Button>
@@ -299,6 +349,10 @@ const styles = StyleSheet.create({
     color: colors.neutral.alpha['9'],
     paddingHorizontal: spacing['2'],
     marginTop: spacing['1'],
+  },
+  errorText: {
+    color: '#d32f2f',
+    paddingHorizontal: spacing['2'],
   },
   signupButton: {
     width: '100%',

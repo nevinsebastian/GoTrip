@@ -1,16 +1,18 @@
-import React, { useState } from 'react';
-import { View, StyleSheet, Platform, Keyboard, TouchableWithoutFeedback } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Button, Card, Divider, IconButton, Input, Text } from '@/components/ui';
+import { borderRadius, colors, spacing } from '@/constants/DesignTokens';
 import { router } from 'expo-router';
-import { Card, Text, Input, Button, IconButton, Divider } from '@/components/ui';
-import { colors, spacing, borderRadius } from '@/constants/DesignTokens';
+import React, { useState } from 'react';
+import { Keyboard, Platform, StyleSheet, TouchableWithoutFeedback, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
+import AppleIcon from '@/assets/images/apple.svg';
+import FacebookIcon from '@/assets/images/facebook.svg';
+import GoogleIcon from '@/assets/images/google.svg';
 import Logo from '@/assets/images/logogotrip.svg';
 import MailIcon from '@/assets/images/mail.svg';
 import MobileIcon from '@/assets/images/mobile.svg';
-import GoogleIcon from '@/assets/images/google.svg';
-import AppleIcon from '@/assets/images/apple.svg';
-import FacebookIcon from '@/assets/images/facebook.svg';
+import { useSendOtp } from '@/src/hooks/useSendOtp';
+import { getErrorMessage } from '@/src/utils/errorHandler';
 
 const isWeb = Platform.OS === 'web';
 const isIOS = Platform.OS === 'ios';
@@ -24,8 +26,11 @@ type LoginMode = 'phone' | 'email';
 export default function LoginScreen() {
   const [loginMode, setLoginMode] = useState<LoginMode>('phone');
   const [inputValue, setInputValue] = useState('');
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const isEmailMode = loginMode === 'email';
+
+  const { mutate: sendOtp, isPending: isSendingOtp } = useSendOtp();
 
   const switchMode = () => {
     setInputValue('');
@@ -40,6 +45,43 @@ export default function LoginScreen() {
         <View style={styles.touchableWrap}>{content}</View>
       </TouchableWithoutFeedback>
     );
+
+  const handleGetOtp = () => {
+    setSubmitError(null);
+
+    const trimmed = inputValue.trim();
+    if (!trimmed) {
+      setSubmitError('Please enter your email or phone number.');
+      return;
+    }
+
+    const payload =
+      isEmailMode
+        ? { channel: 'email' as const, email: trimmed }
+        : { channel: 'phone' as const, phone: trimmed };
+
+    sendOtp(
+      payload,
+      {
+        onSuccess: (res) => {
+          if (res?.success) {
+            router.push({
+              pathname: '/otp',
+              params: {
+                contact: trimmed,
+                isEmail: isEmailMode ? '1' : '0',
+              },
+            });
+            return;
+          }
+          setSubmitError(res?.message ?? 'Failed to send OTP. Please try again.');
+        },
+        onError: (err) => {
+          setSubmitError(getErrorMessage(err));
+        },
+      },
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -88,21 +130,20 @@ export default function LoginScreen() {
                     </Text>
                   </View>
 
+                  {submitError ? (
+                    <Text variant="caption" style={styles.errorText}>
+                      {submitError}
+                    </Text>
+                  ) : null}
+
                   <Button
                     variant="primary"
                     size="default"
                     style={styles.getOtpButton}
-                    onPress={() =>
-                      router.push({
-                        pathname: '/otp',
-                        params: {
-                          contact: inputValue,
-                          isEmail: isEmailMode ? '1' : '0',
-                        },
-                      })
-                    }
+                    onPress={handleGetOtp}
+                    disabled={isSendingOtp}
                   >
-                    Get OTP
+                    {isSendingOtp ? 'Sending OTP...' : 'Get OTP'}
                   </Button>
 
                   <Divider style={styles.divider} />
@@ -241,6 +282,10 @@ const styles = StyleSheet.create({
     color: colors.neutral.alpha['9'],
     paddingHorizontal: spacing['2'],
     marginTop: spacing['1'],
+  },
+  errorText: {
+    color: '#d32f2f',
+    paddingHorizontal: spacing['2'],
   },
   getOtpButton: {
     width: '100%',

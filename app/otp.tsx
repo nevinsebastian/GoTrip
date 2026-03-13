@@ -15,6 +15,8 @@ import { Card, Text, Input, Button, IconButton } from '@/components/ui';
 import { colors, spacing, borderRadius, components } from '@/constants/DesignTokens';
 
 import Logo from '@/assets/images/logogotrip.svg';
+import { useVerifyOtp } from '@/src/hooks/useVerifyOtp';
+import { getErrorMessage } from '@/src/utils/errorHandler';
 
 const isIOS = Platform.OS === 'ios';
 const OTP_LENGTH = 4;
@@ -34,16 +36,20 @@ function maskContact(value: string, isEmail: boolean): string {
 }
 
 export default function OtpScreen() {
-  const { contact = '', isEmail = '0' } = useLocalSearchParams<{
+  const { contact = '', isEmail = '0', fullName = '' } = useLocalSearchParams<{
     contact?: string;
     isEmail?: string;
+    fullName?: string;
   }>();
   const [digits, setDigits] = useState<string[]>(['', '', '', '']);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const inputRefs = useRef<(TextInput | null)[]>([]);
 
   const isEmailMode = isEmail === '1';
-  const sentToLabel = maskContact(contact, isEmailMode);
+  const sentToLabel = isEmailMode ? contact : maskContact(contact, false);
   const sentVia = isEmailMode ? 'via email' : 'via SMS';
+
+  const { mutate: verifyOtp, isPending: isVerifying } = useVerifyOtp();
 
   const handleBack = () => {
     router.back();
@@ -79,11 +85,28 @@ export default function OtpScreen() {
   const handleConfirm = () => {
     const code = digits.join('');
     if (code.length !== OTP_LENGTH) return;
-    // Authenticate with magic OTP for demo; then show home
-    if (code === '5595') {
-      router.replace('/(tabs)');
-    }
-    // TODO: otherwise call API to verify OTP
+    setSubmitError(null);
+
+    verifyOtp(
+      {
+        full_name: fullName || undefined,
+        channel: isEmailMode ? 'email' : 'phone',
+        otp: code,
+        ...(isEmailMode ? { email: contact } : { phone: contact }),
+      },
+      {
+        onSuccess: (res) => {
+          if (res?.success && res?.data?.access_token) {
+            router.replace('/(tabs)');
+            return;
+          }
+          setSubmitError(res?.message ?? 'Invalid or expired OTP.');
+        },
+        onError: (err) => {
+          setSubmitError(getErrorMessage(err));
+        },
+      },
+    );
   };
 
   const code = digits.join('');
@@ -151,8 +174,16 @@ export default function OtpScreen() {
                 </View>
 
                 <Text variant="caption" style={styles.helper}>
-                  You&apos;ll get OTP in this number.
+                  {isEmailMode
+                    ? "You'll get OTP on this email."
+                    : "You'll get OTP on this number."}
                 </Text>
+
+                {submitError ? (
+                  <Text variant="caption" style={styles.errorText}>
+                    {submitError}
+                  </Text>
+                ) : null}
 
                 <Button
                   variant="primary"
@@ -161,7 +192,7 @@ export default function OtpScreen() {
                   onPress={handleConfirm}
                   disabled={!canConfirm}
                 >
-                  Confirm
+                  {isVerifying ? 'Verifying...' : 'Confirm'}
                 </Button>
 
                 <Button
@@ -259,6 +290,11 @@ const styles = StyleSheet.create({
     color: colors.neutral.alpha['9'],
     alignSelf: 'flex-start',
     marginTop: spacing['2'],
+  },
+  errorText: {
+    color: '#d32f2f',
+    alignSelf: 'flex-start',
+    marginTop: spacing['1'],
   },
   confirmButton: {
     width: '100%',
