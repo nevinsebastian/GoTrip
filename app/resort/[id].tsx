@@ -17,6 +17,7 @@ import {
   StyleSheet,
   View,
 } from 'react-native';
+import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const ResortImage = require('@/assets/images/resort.jpg');
@@ -40,13 +41,25 @@ const HOST_DESCRIPTION =
   'Mr. Ashish Kumar is an experienced host with 5 years of managing multiple luxury resorts in Wayanad.';
 
 export default function ResortDetailsScreen() {
-  const params = useLocalSearchParams<{ id?: string; title?: string; price?: string; rating?: string }>();
+  const params = useLocalSearchParams<{
+    id?: string;
+    title?: string;
+    price?: string;
+    rating?: string;
+    latitude?: string;
+    longitude?: string;
+  }>();
   const [carouselIndex, setCarouselIndex] = useState(0);
   const scrollRef = useRef<ScrollView | null>(null);
 
   const title = params.title ?? 'TITANIC Comfort Berlin Mitte';
   const displayPrice = params.price ?? '₹2,420';
   const rating = params.rating ?? '4.5';
+
+  const lat =
+    typeof params.latitude === 'string' ? parseFloat(params.latitude) : 52.509669;
+  const lng =
+    typeof params.longitude === 'string' ? parseFloat(params.longitude) : 13.376294;
 
   const onCarouselScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const { contentOffset, layoutMeasurement } = e.nativeEvent;
@@ -157,6 +170,26 @@ export default function ResortDetailsScreen() {
               See all amenities
             </Text>
           </Pressable>
+
+          {/* Map */}
+          <Text variant="bodySemibold" style={styles.sectionHeading}>
+            Location
+          </Text>
+          <View style={styles.mapCard}>
+            <MapView
+              style={styles.map}
+              provider={PROVIDER_GOOGLE}
+              initialRegion={{
+                latitude: lat,
+                longitude: lng,
+                latitudeDelta: 0.01,
+                longitudeDelta: 0.01,
+              }}
+              pointerEvents="none"
+            >
+              <Marker coordinate={{ latitude: lat, longitude: lng }} />
+            </MapView>
+          </View>
 
           {/* Host - compact */}
           <Text variant="bodySemibold" style={styles.sectionHeading}>
@@ -348,6 +381,15 @@ const styles = StyleSheet.create({
   amenityLabel: {
     color: colors.text.primary,
     flexShrink: 1,
+  },
+  mapCard: {
+    height: 180,
+    borderRadius: borderRadius['2xl'],
+    overflow: 'hidden',
+    marginBottom: spacing['5'],
+  },
+  map: {
+    flex: 1,
   },
   secondaryBtn: {
     paddingVertical: spacing['3'],
