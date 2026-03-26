@@ -6,7 +6,7 @@ import {
 } from '@/constants/DesignTokens';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Dimensions,
   Image,
@@ -16,11 +16,15 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  TextInput,
   View,
 } from 'react-native';
 import { Calendar, DateData } from 'react-native-calendars';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { getStoredAuthToken } from '@/src/api/client';
+import { useSendOtp } from '@/src/hooks/useSendOtp';
+import { getErrorMessage } from '@/src/utils/errorHandler';
 
 const ResortImage = require('@/assets/images/resort.jpg');
 
@@ -54,12 +58,19 @@ export default function ResortDetailsScreen() {
   const [carouselIndex, setCarouselIndex] = useState(0);
   const scrollRef = useRef<ScrollView | null>(null);
   const [dateModalVisible, setDateModalVisible] = useState(false);
-  const [dateModalStep, setDateModalStep] = useState<'dates' | 'guests'>('dates');
+  const [dateModalStep, setDateModalStep] = useState<'dates' | 'guests' | 'price' | 'login'>(
+    'dates',
+  );
   const [checkInDate, setCheckInDate] = useState<string | null>(null);
   const [checkOutDate, setCheckOutDate] = useState<string | null>(null);
   const [adultsCount, setAdultsCount] = useState(2);
   const [childrenCount, setChildrenCount] = useState(0);
   const [infantsCount, setInfantsCount] = useState(0);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [loginPhone, setLoginPhone] = useState('');
+  const [loginError, setLoginError] = useState<string | null>(null);
+
+  const { mutate: sendOtp, isPending: isSendingOtp } = useSendOtp();
 
   const title = params.title ?? 'TITANIC Comfort Berlin Mitte';
   const displayPrice = params.price ?? '₹2,420';
@@ -79,6 +90,7 @@ export default function ResortDetailsScreen() {
   const closeDateModal = () => {
     setDateModalVisible(false);
     setDateModalStep('dates');
+    setLoginError(null);
   };
   const openDateModal = () => {
     setDateModalStep('dates');
@@ -185,6 +197,92 @@ export default function ResortDetailsScreen() {
   };
 
   const clamp = (n: number, min: number, max: number) => Math.min(max, Math.max(min, n));
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      const token = await getStoredAuthToken();
+      if (mounted) setIsLoggedIn(Boolean(token));
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!dateModalVisible) return;
+    let mounted = true;
+    (async () => {
+      const token = await getStoredAuthToken();
+      if (mounted) setIsLoggedIn(Boolean(token));
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, [dateModalVisible]);
+
+  const nightsCount = (() => {
+    if (!checkInDate || !checkOutDate) return 0;
+    const a = new Date(checkInDate);
+    const b = new Date(checkOutDate);
+    const diff = Math.ceil((b.getTime() - a.getTime()) / (1000 * 60 * 60 * 24));
+    return Math.max(0, diff);
+  })();
+
+  const parsePrice = (value: string) => {
+    const num = Number((value ?? '').replace(/[^\d.]/g, ''));
+    return Number.isFinite(num) && num > 0 ? num : null;
+  };
+
+  const perNight = parsePrice(displayPrice) ?? 9395;
+  const nights = nightsCount || 2;
+  const subtotal = perNight * nights;
+  const taxes = Math.round(subtotal * 0.18 * 10) / 10;
+  const total = Math.round((subtotal + taxes) * 10) / 10;
+
+  const guestsLabel = (() => {
+    const parts = [`${adultsCount} adult${adultsCount === 1 ? '' : 's'}`];
+    if (childrenCount) parts.push(`${childrenCount} child${childrenCount === 1 ? '' : 'ren'}`);
+    if (infantsCount) parts.push(`${infantsCount} infant${infantsCount === 1 ? '' : 's'}`);
+    return parts.join(', ');
+  })();
+
+  const handleGuestSave = () => setDateModalStep('price');
+
+  const handleCtaPress = () => {
+    if (isLoggedIn) {
+      // TODO: Proceed to payment flow
+      closeDateModal();
+      return;
+    }
+    setDateModalStep('login');
+  };
+
+  const handleGetOtpInModal = () => {
+    setLoginError(null);
+    const trimmed = loginPhone.trim();
+    if (!trimmed) {
+      setLoginError('Please enter your phone number.');
+      return;
+    }
+    sendOtp(
+      { channel: 'phone', phone: trimmed },
+      {
+        onSuccess: (res) => {
+          if (res?.success) {
+            closeDateModal();
+            router.push({
+              pathname: '/otp',
+              params: { contact: trimmed, isEmail: '0' },
+            });
+            return;
+          }
+          setLoginError(res?.message ?? 'Failed to send OTP. Please try again.');
+        },
+        onError: (err) => setLoginError(getErrorMessage(err)),
+      },
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -442,7 +540,7 @@ export default function ResortDetailsScreen() {
                   </Pressable>
                 </View>
               </>
-            ) : (
+            ) : dateModalStep === 'guests' ? (
               <>
                 <View style={styles.dateModalHeader}>
                   <Text variant="bodySemibold" style={styles.dateModalTitle}>
@@ -561,11 +659,141 @@ export default function ResortDetailsScreen() {
                       Clear dates
                     </Text>
                   </Pressable>
-                  <Pressable style={styles.saveBtn} onPress={closeDateModal} accessibilityLabel="Save guests">
+                  <Pressable
+                    style={styles.saveBtn}
+                    onPress={handleGuestSave}
+                    accessibilityLabel="Save guests"
+                  >
                     <Text variant="bodySemibold" style={styles.saveBtnText}>
                       Save
                     </Text>
                   </Pressable>
+                </View>
+              </>
+            ) : dateModalStep === 'price' ? (
+              <>
+                <View style={styles.dateModalHeader}>
+                  <Text variant="bodySemibold" style={styles.dateModalTitle}>
+                    Price details
+                  </Text>
+                  <Pressable onPress={closeDateModal} hitSlop={12} accessibilityLabel="Close price details">
+                    <Ionicons name="close" size={22} color={colors.primary} />
+                  </Pressable>
+                </View>
+
+                <View style={styles.priceBody}>
+                  <View style={styles.priceRows}>
+                    <View style={styles.priceRow}>
+                      <Text variant="caption" style={styles.priceRowLabel}>
+                        {`${nights} nights * ₹${perNight.toLocaleString('en-IN')}`}
+                      </Text>
+                      <Text variant="bodySemibold" style={styles.priceRowValue}>
+                        ₹ {subtotal.toLocaleString('en-IN')}
+                      </Text>
+                    </View>
+                    <View style={styles.priceRow}>
+                      <Text variant="caption" style={styles.priceRowLabel}>
+                        Taxes
+                      </Text>
+                      <Text variant="bodySemibold" style={styles.priceRowValue}>
+                        ₹ {taxes.toLocaleString('en-IN')}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.priceTotalRow}>
+                    <Text variant="bodySemibold" style={styles.priceTotalLabel}>
+                      Total INR
+                    </Text>
+                    <Text variant="bodySemibold" style={styles.priceTotalLabel}>
+                      ₹ {total.toLocaleString('en-IN')}
+                    </Text>
+                  </View>
+                </View>
+
+                <Pressable
+                  style={[styles.saveBtn, styles.fullWidthCta]}
+                  onPress={handleCtaPress}
+                  accessibilityLabel={isLoggedIn ? 'Proceed to pay' : 'Login to proceed'}
+                >
+                  <Text variant="bodySemibold" style={styles.saveBtnText}>
+                    {isLoggedIn ? 'Proceed to pay' : 'Login to proceed'}
+                  </Text>
+                </Pressable>
+              </>
+            ) : (
+              <>
+                <View style={styles.dateModalHeader}>
+                  <Text variant="bodySemibold" style={styles.dateModalTitle}>
+                    Log in or sign up
+                  </Text>
+                  <Pressable onPress={closeDateModal} hitSlop={12} accessibilityLabel="Close login">
+                    <Ionicons name="close" size={22} color={colors.primary} />
+                  </Pressable>
+                </View>
+
+                <View style={styles.loginBody}>
+                  <View style={styles.loginFieldBlock}>
+                    <TextInput
+                      value={loginPhone}
+                      onChangeText={setLoginPhone}
+                      placeholder="Phone number"
+                      placeholderTextColor="rgba(0, 5, 29, 0.45)"
+                      keyboardType="phone-pad"
+                      style={styles.loginPhoneInput}
+                    />
+                    <Text variant="caption" style={styles.loginHelper}>
+                      You’ll get OTP to this number.
+                    </Text>
+                  </View>
+
+                  {loginError ? (
+                    <Text variant="caption" style={styles.loginError}>
+                      {loginError}
+                    </Text>
+                  ) : null}
+
+                  <Pressable
+                    style={[styles.otpBtn, isSendingOtp && styles.btnDisabled]}
+                    onPress={handleGetOtpInModal}
+                    accessibilityLabel="Get OTP"
+                    disabled={isSendingOtp}
+                  >
+                    <Text variant="bodySemibold" style={styles.otpBtnText}>
+                      {isSendingOtp ? 'Sending OTP...' : 'Get OTP'}
+                    </Text>
+                  </Pressable>
+
+                  <View style={styles.orRow}>
+                    <View style={styles.orLine} />
+                    <Text variant="caption" style={styles.orText}>
+                      OR
+                    </Text>
+                    <View style={styles.orLine} />
+                  </View>
+
+                  <View style={styles.socialStackInModal}>
+                    <Pressable style={styles.socialBtn} onPress={() => {}} accessibilityLabel="Log in with mail">
+                      <Text variant="bodySemibold" style={styles.socialBtnText}>
+                        Log in with mail
+                      </Text>
+                    </Pressable>
+                    <Pressable style={styles.socialBtn} onPress={() => {}} accessibilityLabel="Continue with Google">
+                      <Text variant="bodySemibold" style={styles.socialBtnText}>
+                        Continue with Google
+                      </Text>
+                    </Pressable>
+                    <Pressable style={styles.socialBtn} onPress={() => {}} accessibilityLabel="Continue with Apple">
+                      <Text variant="bodySemibold" style={styles.socialBtnText}>
+                        Continue with Apple
+                      </Text>
+                    </Pressable>
+                    <Pressable style={styles.socialBtn} onPress={() => {}} accessibilityLabel="Continue with Facebook">
+                      <Text variant="bodySemibold" style={styles.socialBtnText}>
+                        Continue with Facebook
+                      </Text>
+                    </Pressable>
+                  </View>
                 </View>
               </>
             )}
@@ -901,6 +1129,109 @@ const styles = StyleSheet.create({
   },
   saveBtnText: {
     color: colors.surface.white,
+  },
+  fullWidthCta: {
+    width: '100%',
+    marginTop: spacing['2'],
+  },
+  priceBody: {
+    width: '100%',
+    paddingHorizontal: spacing['2'],
+    gap: spacing['5'],
+    paddingTop: spacing['2'],
+    paddingBottom: spacing['2'],
+  },
+  priceRows: {
+    gap: spacing['4'],
+  },
+  priceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  priceRowLabel: {
+    color: 'rgba(0, 7, 20, 0.62)',
+  },
+  priceRowValue: {
+    color: colors.text.primary,
+  },
+  priceTotalRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: spacing['2'],
+  },
+  priceTotalLabel: {
+    color: colors.text.primary,
+  },
+  loginBody: {
+    width: '100%',
+    paddingHorizontal: spacing['2'],
+    paddingTop: spacing['2'],
+    gap: spacing['3'],
+  },
+  loginFieldBlock: {
+    gap: spacing['2'],
+  },
+  loginPhoneInput: {
+    height: 40,
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 9, 50, 0.12)',
+    borderRadius: 6,
+    paddingHorizontal: spacing['3'],
+    color: colors.text.primary,
+  },
+  loginHelper: {
+    color: 'rgba(0, 5, 29, 0.45)',
+    paddingHorizontal: spacing['1'],
+  },
+  loginError: {
+    color: '#d32f2f',
+  },
+  otpBtn: {
+    height: 32,
+    borderRadius: borderRadius.sm ?? 4,
+    backgroundColor: colors.neutral?.['9'] ?? '#8b8d98',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  otpBtnText: {
+    color: colors.surface.white,
+  },
+  btnDisabled: {
+    opacity: 0.7,
+  },
+  orRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing['2'],
+    paddingVertical: spacing['2'],
+  },
+  orLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: 'rgba(0, 0, 47, 0.15)',
+  },
+  orText: {
+    color: 'rgba(0, 5, 29, 0.45)',
+  },
+  socialStackInModal: {
+    gap: spacing['3'],
+    paddingBottom: spacing['2'],
+  },
+  socialBtn: {
+    height: 32,
+    borderRadius: borderRadius.sm ?? 4,
+    borderWidth: 1,
+    borderColor: 'rgba(231, 40, 0, 0.4)',
+    backgroundColor: 'rgba(229, 77, 46, 0.03)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing['3'],
+  },
+  socialBtnText: {
+    color: 'rgba(205, 34, 0, 0.92)',
   },
   guestsList: {
     gap: spacing['5'],
