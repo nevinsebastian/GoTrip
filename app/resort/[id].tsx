@@ -1,22 +1,24 @@
 import { Text } from '@/components/ui';
 import {
-  borderRadius,
-  colors,
-  spacing,
+    borderRadius,
+    colors,
+    spacing,
 } from '@/constants/DesignTokens';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useRef, useState } from 'react';
 import {
-  Dimensions,
-  Image,
-  NativeScrollEvent,
-  NativeSyntheticEvent,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  View,
+    Dimensions,
+    Image,
+    Modal,
+    NativeScrollEvent,
+    NativeSyntheticEvent,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    View,
 } from 'react-native';
+import { Calendar, DateData } from 'react-native-calendars';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -51,6 +53,9 @@ export default function ResortDetailsScreen() {
   }>();
   const [carouselIndex, setCarouselIndex] = useState(0);
   const scrollRef = useRef<ScrollView | null>(null);
+  const [dateModalVisible, setDateModalVisible] = useState(false);
+  const [checkInDate, setCheckInDate] = useState<string | null>(null);
+  const [checkOutDate, setCheckOutDate] = useState<string | null>(null);
 
   const title = params.title ?? 'TITANIC Comfort Berlin Mitte';
   const displayPrice = params.price ?? '₹2,420';
@@ -65,6 +70,103 @@ export default function ResortDetailsScreen() {
     const { contentOffset, layoutMeasurement } = e.nativeEvent;
     const index = Math.round(contentOffset.x / (layoutMeasurement.width || SCREEN_WIDTH));
     setCarouselIndex(Math.min(index, CAROUSEL_IMAGES.length - 1));
+  };
+
+  const closeDateModal = () => setDateModalVisible(false);
+  const openDateModal = () => setDateModalVisible(true);
+
+  const formatSelectedDatesLabel = (dates: string[]) => {
+    if (dates.length === 0) return 'Select dates';
+    const first = dates[0];
+    const month = new Date(first).toLocaleString('en-US', { month: 'long' });
+    const days = dates.map((d) => new Date(d).getDate()).join(',');
+    return `${month} ${days}`;
+  };
+
+  const getDatesInRange = (start: string, end: string) => {
+    const out: string[] = [];
+    const startDate = new Date(start);
+    const endDate = new Date(end);
+    const a = new Date(Date.UTC(startDate.getFullYear(), startDate.getMonth(), startDate.getDate()));
+    const b = new Date(Date.UTC(endDate.getFullYear(), endDate.getMonth(), endDate.getDate()));
+    if (Number.isNaN(a.getTime()) || Number.isNaN(b.getTime())) return out;
+    if (a.getTime() > b.getTime()) return out;
+
+    const cur = new Date(a);
+    while (cur.getTime() <= b.getTime()) {
+      const yyyy = cur.getUTCFullYear();
+      const mm = String(cur.getUTCMonth() + 1).padStart(2, '0');
+      const dd = String(cur.getUTCDate()).padStart(2, '0');
+      out.push(`${yyyy}-${mm}-${dd}`);
+      cur.setUTCDate(cur.getUTCDate() + 1);
+    }
+    return out;
+  };
+
+  const selectedDates = (() => {
+    if (checkInDate && checkOutDate) return getDatesInRange(checkInDate, checkOutDate);
+    if (checkInDate) return [checkInDate];
+    return [];
+  })();
+
+  const markedDates: Record<
+    string,
+    { customStyles?: { container?: any; text?: any } }
+  > = React.useMemo(() => {
+    const lightFill = colors.surface.lightPink ?? '#feebe7';
+    const primary = colors.primary;
+    const out: Record<string, { customStyles?: { container?: any; text?: any } }> = {};
+
+    if (!checkInDate) return out;
+
+    if (!checkOutDate) {
+      out[checkInDate] = {
+        customStyles: {
+          container: {
+            backgroundColor: primary,
+            borderRadius: 999,
+          },
+          text: { color: colors.surface.white, fontWeight: '600' },
+        },
+      };
+      return out;
+    }
+
+    const range = getDatesInRange(checkInDate, checkOutDate);
+    range.forEach((d, idx) => {
+      const isEdge = idx === 0 || idx === range.length - 1;
+      out[d] = {
+        customStyles: {
+          container: {
+            backgroundColor: isEdge ? primary : lightFill,
+            borderRadius: 999,
+          },
+          text: { color: isEdge ? colors.surface.white : colors.text.primary, fontWeight: '600' },
+        },
+      };
+    });
+
+    return out;
+  }, [checkInDate, checkOutDate]);
+
+  const handleDayPress = (day: DateData) => {
+    const date = day.dateString;
+    if (!checkInDate || (checkInDate && checkOutDate)) {
+      setCheckInDate(date);
+      setCheckOutDate(null);
+      return;
+    }
+    if (new Date(date).getTime() < new Date(checkInDate).getTime()) {
+      setCheckInDate(date);
+      setCheckOutDate(null);
+      return;
+    }
+    setCheckOutDate(date);
+  };
+
+  const handleClearDates = () => {
+    setCheckInDate(null);
+    setCheckOutDate(null);
   };
 
   return (
@@ -234,13 +336,87 @@ export default function ResortDetailsScreen() {
               For 1 room/day.
             </Text>
           </View>
-          <Pressable style={styles.reserveBtn}>
+          <Pressable style={styles.reserveBtn} onPress={openDateModal} accessibilityLabel="Reserve">
             <Text variant="bodySemibold" style={styles.reserveBtnText}>
               Reserve
             </Text>
           </Pressable>
         </View>
       </SafeAreaView>
+
+      {/* Date selection modal */}
+      <Modal
+        visible={dateModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={closeDateModal}
+      >
+        <Pressable style={styles.modalOverlay} onPress={closeDateModal}>
+          <Pressable style={styles.dateModalCard} onPress={(e) => e.stopPropagation()}>
+            <View style={styles.dateModalHeader}>
+              <Text variant="bodySemibold" style={styles.dateModalTitle}>
+                Select dates
+              </Text>
+              <Pressable onPress={closeDateModal} hitSlop={12} accessibilityLabel="Close date selector">
+                <Ionicons name="close" size={22} color={colors.primary} />
+              </Pressable>
+            </View>
+
+            <View style={styles.calendarCard}>
+              <Calendar
+                current={checkInDate ?? undefined}
+                markingType="custom"
+                markedDates={markedDates}
+                onDayPress={handleDayPress}
+                hideExtraDays={false}
+                enableSwipeMonths
+                renderArrow={(direction) => (
+                  <Ionicons
+                    name={direction === 'left' ? 'chevron-back' : 'chevron-forward'}
+                    size={16}
+                    color={colors.text.secondary}
+                  />
+                )}
+                theme={{
+                  textDayFontFamily: 'Poppins',
+                  textMonthFontFamily: 'Poppins',
+                  textDayHeaderFontFamily: 'Poppins',
+                  textMonthFontWeight: '500',
+                  textDayFontWeight: '500',
+                  monthTextColor: colors.text.primary,
+                  textSectionTitleColor: colors.text.caption,
+                  dayTextColor: '#4A5660',
+                  textDisabledColor: '#e0e0e0',
+                  arrowColor: colors.text.secondary,
+                  todayTextColor: colors.text.primary,
+                  textDayFontSize: 14,
+                  textMonthFontSize: 14,
+                  textDayHeaderFontSize: 12,
+                }}
+                style={styles.calendarInner}
+              />
+            </View>
+
+            <View style={styles.dateModalFooter}>
+              <View style={styles.dateModalFooterLeft}>
+                <Text variant="bodySemibold" style={styles.selectedDatesText}>
+                  {formatSelectedDatesLabel(selectedDates)}
+                </Text>
+                <Pressable onPress={handleClearDates} accessibilityLabel="Clear selected dates">
+                  <Text variant="caption" style={styles.clearDatesText}>
+                    Clear dates
+                  </Text>
+                </Pressable>
+              </View>
+              <Pressable style={styles.saveBtn} onPress={closeDateModal} accessibilityLabel="Save dates">
+                <Text variant="bodySemibold" style={styles.saveBtnText}>
+                  Save
+                </Text>
+              </Pressable>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -489,6 +665,82 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   reserveBtnText: {
+    color: colors.surface.white,
+  },
+  // Date modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.15)',
+    justifyContent: 'flex-end',
+    paddingHorizontal: spacing['3'],
+    paddingBottom: spacing['4'],
+  },
+  dateModalCard: {
+    alignSelf: 'center',
+    width: '100%',
+    maxWidth: 360,
+    backgroundColor: colors.gray['1'] ?? '#fcfcfc',
+    borderRadius: borderRadius['2xl'],
+    paddingVertical: spacing['4'],
+    paddingHorizontal: spacing['3'],
+    borderWidth: 1,
+    borderColor: colors.border.light,
+    shadowColor: '#000932',
+    shadowOpacity: 0.12,
+    shadowRadius: 32,
+    shadowOffset: { width: 0, height: 12 },
+    elevation: 10,
+    gap: spacing['4'],
+  },
+  dateModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing['1'],
+  },
+  dateModalTitle: {
+    color: colors.primary,
+    fontSize: 16,
+    lineHeight: 24,
+  },
+  calendarCard: {
+    backgroundColor: colors.surface.white,
+    borderRadius: borderRadius.lg,
+    padding: spacing['6'],
+    shadowColor: '#000',
+    shadowOpacity: 0.09,
+    shadowRadius: 19,
+    shadowOffset: { width: 2, height: 16 },
+    elevation: 6,
+  },
+  calendarInner: {
+    borderRadius: borderRadius.lg,
+  },
+  dateModalFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  dateModalFooterLeft: {
+    flexShrink: 1,
+    gap: spacing['1'],
+  },
+  selectedDatesText: {
+    color: colors.text.primary,
+  },
+  clearDatesText: {
+    color: colors.text.secondary,
+    textDecorationLine: 'underline',
+  },
+  saveBtn: {
+    width: 104,
+    height: 32,
+    borderRadius: borderRadius.sm ?? 4,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  saveBtnText: {
     color: colors.surface.white,
   },
 });
