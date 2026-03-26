@@ -1,22 +1,22 @@
 import { Text } from '@/components/ui';
 import {
-    borderRadius,
-    colors,
-    spacing,
+  borderRadius,
+  colors,
+  spacing,
 } from '@/constants/DesignTokens';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useRef, useState } from 'react';
 import {
-    Dimensions,
-    Image,
-    Modal,
-    NativeScrollEvent,
-    NativeSyntheticEvent,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    View,
+  Dimensions,
+  Image,
+  Modal,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View,
 } from 'react-native';
 import { Calendar, DateData } from 'react-native-calendars';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
@@ -670,17 +670,19 @@ const styles = StyleSheet.create({
   // Date modal
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.15)',
+    backgroundColor: 'rgba(0, 8, 48, 0.27)',
     justifyContent: 'flex-end',
-    paddingHorizontal: spacing['3'],
-    paddingBottom: spacing['4'],
+    paddingHorizontal: 0,
+    paddingBottom: 0,
   },
   dateModalCard: {
-    alignSelf: 'center',
     width: '100%',
-    maxWidth: 360,
+    alignSelf: 'stretch',
     backgroundColor: colors.gray['1'] ?? '#fcfcfc',
-    borderRadius: borderRadius['2xl'],
+    borderTopLeftRadius: borderRadius['2xl'],
+    borderTopRightRadius: borderRadius['2xl'],
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
     paddingVertical: spacing['4'],
     paddingHorizontal: spacing['3'],
     borderWidth: 1,
@@ -690,7 +692,7 @@ const styles = StyleSheet.create({
     shadowRadius: 32,
     shadowOffset: { width: 0, height: 12 },
     elevation: 10,
-    gap: spacing['4'],
+    gap: spacing['6'],
   },
   dateModalHeader: {
     flexDirection: 'row',
