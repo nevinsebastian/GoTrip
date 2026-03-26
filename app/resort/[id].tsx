@@ -54,8 +54,12 @@ export default function ResortDetailsScreen() {
   const [carouselIndex, setCarouselIndex] = useState(0);
   const scrollRef = useRef<ScrollView | null>(null);
   const [dateModalVisible, setDateModalVisible] = useState(false);
+  const [dateModalStep, setDateModalStep] = useState<'dates' | 'guests'>('dates');
   const [checkInDate, setCheckInDate] = useState<string | null>(null);
   const [checkOutDate, setCheckOutDate] = useState<string | null>(null);
+  const [adultsCount, setAdultsCount] = useState(2);
+  const [childrenCount, setChildrenCount] = useState(0);
+  const [infantsCount, setInfantsCount] = useState(0);
 
   const title = params.title ?? 'TITANIC Comfort Berlin Mitte';
   const displayPrice = params.price ?? '₹2,420';
@@ -72,8 +76,14 @@ export default function ResortDetailsScreen() {
     setCarouselIndex(Math.min(index, CAROUSEL_IMAGES.length - 1));
   };
 
-  const closeDateModal = () => setDateModalVisible(false);
-  const openDateModal = () => setDateModalVisible(true);
+  const closeDateModal = () => {
+    setDateModalVisible(false);
+    setDateModalStep('dates');
+  };
+  const openDateModal = () => {
+    setDateModalStep('dates');
+    setDateModalVisible(true);
+  };
 
   const formatSelectedDatesLabel = (dates: string[]) => {
     if (dates.length === 0) return 'Select dates';
@@ -168,6 +178,13 @@ export default function ResortDetailsScreen() {
     setCheckInDate(null);
     setCheckOutDate(null);
   };
+
+  const handleDatesSave = () => {
+    if (!checkInDate) return;
+    setDateModalStep('guests');
+  };
+
+  const clamp = (n: number, min: number, max: number) => Math.min(max, Math.max(min, n));
 
   return (
     <View style={styles.container}>
@@ -353,67 +370,205 @@ export default function ResortDetailsScreen() {
       >
         <Pressable style={styles.modalOverlay} onPress={closeDateModal}>
           <Pressable style={styles.dateModalCard} onPress={(e) => e.stopPropagation()}>
-            <View style={styles.dateModalHeader}>
-              <Text variant="bodySemibold" style={styles.dateModalTitle}>
-                Select dates
-              </Text>
-              <Pressable onPress={closeDateModal} hitSlop={12} accessibilityLabel="Close date selector">
-                <Ionicons name="close" size={22} color={colors.primary} />
-              </Pressable>
-            </View>
-
-            <View style={styles.calendarCard}>
-              <Calendar
-                current={checkInDate ?? undefined}
-                markingType="custom"
-                markedDates={markedDates}
-                onDayPress={handleDayPress}
-                hideExtraDays={false}
-                enableSwipeMonths
-                renderArrow={(direction) => (
-                  <Ionicons
-                    name={direction === 'left' ? 'chevron-back' : 'chevron-forward'}
-                    size={16}
-                    color={colors.text.secondary}
-                  />
-                )}
-                theme={{
-                  textDayFontFamily: 'Poppins',
-                  textMonthFontFamily: 'Poppins',
-                  textDayHeaderFontFamily: 'Poppins',
-                  textMonthFontWeight: '500',
-                  textDayFontWeight: '500',
-                  monthTextColor: colors.text.primary,
-                  textSectionTitleColor: colors.text.caption,
-                  dayTextColor: '#4A5660',
-                  textDisabledColor: '#e0e0e0',
-                  arrowColor: colors.text.secondary,
-                  todayTextColor: colors.text.primary,
-                  textDayFontSize: 14,
-                  textMonthFontSize: 14,
-                  textDayHeaderFontSize: 12,
-                }}
-                style={styles.calendarInner}
-              />
-            </View>
-
-            <View style={styles.dateModalFooter}>
-              <View style={styles.dateModalFooterLeft}>
-                <Text variant="bodySemibold" style={styles.selectedDatesText}>
-                  {formatSelectedDatesLabel(selectedDates)}
-                </Text>
-                <Pressable onPress={handleClearDates} accessibilityLabel="Clear selected dates">
-                  <Text variant="caption" style={styles.clearDatesText}>
-                    Clear dates
+            {dateModalStep === 'dates' ? (
+              <>
+                <View style={styles.dateModalHeader}>
+                  <Text variant="bodySemibold" style={styles.dateModalTitle}>
+                    Select dates
                   </Text>
-                </Pressable>
-              </View>
-              <Pressable style={styles.saveBtn} onPress={closeDateModal} accessibilityLabel="Save dates">
-                <Text variant="bodySemibold" style={styles.saveBtnText}>
-                  Save
-                </Text>
-              </Pressable>
-            </View>
+                  <Pressable
+                    onPress={closeDateModal}
+                    hitSlop={12}
+                    accessibilityLabel="Close date selector"
+                  >
+                    <Ionicons name="close" size={22} color={colors.primary} />
+                  </Pressable>
+                </View>
+
+                <View style={styles.calendarCard}>
+                  <Calendar
+                    current={checkInDate ?? undefined}
+                    markingType="custom"
+                    markedDates={markedDates}
+                    onDayPress={handleDayPress}
+                    hideExtraDays={false}
+                    enableSwipeMonths
+                    renderArrow={(direction) => (
+                      <Ionicons
+                        name={direction === 'left' ? 'chevron-back' : 'chevron-forward'}
+                        size={16}
+                        color={colors.text.secondary}
+                      />
+                    )}
+                    theme={{
+                      textDayFontFamily: 'Poppins',
+                      textMonthFontFamily: 'Poppins',
+                      textDayHeaderFontFamily: 'Poppins',
+                      textMonthFontWeight: '500',
+                      textDayFontWeight: '500',
+                      monthTextColor: colors.text.primary,
+                      textSectionTitleColor: colors.text.caption,
+                      dayTextColor: '#4A5660',
+                      textDisabledColor: '#e0e0e0',
+                      arrowColor: colors.text.secondary,
+                      todayTextColor: colors.text.primary,
+                      textDayFontSize: 14,
+                      textMonthFontSize: 14,
+                      textDayHeaderFontSize: 12,
+                    } as any}
+                    style={styles.calendarInner}
+                  />
+                </View>
+
+                <View style={styles.dateModalFooter}>
+                  <View style={styles.dateModalFooterLeft}>
+                    <Text variant="bodySemibold" style={styles.selectedDatesText}>
+                      {formatSelectedDatesLabel(selectedDates)}
+                    </Text>
+                    <Pressable onPress={handleClearDates} accessibilityLabel="Clear selected dates">
+                      <Text variant="caption" style={styles.clearDatesText}>
+                        Clear dates
+                      </Text>
+                    </Pressable>
+                  </View>
+                  <Pressable
+                    style={styles.saveBtn}
+                    onPress={handleDatesSave}
+                    accessibilityLabel="Save dates"
+                  >
+                    <Text variant="bodySemibold" style={styles.saveBtnText}>
+                      Save
+                    </Text>
+                  </Pressable>
+                </View>
+              </>
+            ) : (
+              <>
+                <View style={styles.dateModalHeader}>
+                  <Text variant="bodySemibold" style={styles.dateModalTitle}>
+                    Guest details
+                  </Text>
+                  <Pressable
+                    onPress={closeDateModal}
+                    hitSlop={12}
+                    accessibilityLabel="Close guest details"
+                  >
+                    <Ionicons name="close" size={22} color={colors.primary} />
+                  </Pressable>
+                </View>
+
+                <View style={styles.guestsList}>
+                  <View style={styles.guestRow}>
+                    <View style={styles.guestRowLeft}>
+                      <Text variant="bodySemibold" style={styles.guestLabel}>
+                        Adults
+                      </Text>
+                      <Text variant="caption" style={styles.guestSubLabel}>
+                        Age 13+
+                      </Text>
+                    </View>
+                    <View style={styles.stepper}>
+                      <Pressable
+                        onPress={() => setAdultsCount((v) => clamp(v - 1, 1, 10))}
+                        hitSlop={10}
+                        accessibilityLabel="Decrease adults"
+                      >
+                        <Ionicons name="remove" size={16} color={colors.primary} />
+                      </Pressable>
+                      <Text variant="bodySemibold" style={styles.stepperValue}>
+                        {adultsCount}
+                      </Text>
+                      <Pressable
+                        onPress={() => setAdultsCount((v) => clamp(v + 1, 1, 10))}
+                        hitSlop={10}
+                        accessibilityLabel="Increase adults"
+                      >
+                        <Ionicons name="add" size={16} color={colors.primary} />
+                      </Pressable>
+                    </View>
+                  </View>
+
+                  <View style={styles.guestRow}>
+                    <View style={styles.guestRowLeft}>
+                      <Text variant="bodySemibold" style={styles.guestLabel}>
+                        Children
+                      </Text>
+                      <Text variant="caption" style={styles.guestSubLabel}>
+                        Age 2-12
+                      </Text>
+                    </View>
+                    <View style={styles.stepper}>
+                      <Pressable
+                        onPress={() => setChildrenCount((v) => clamp(v - 1, 0, 10))}
+                        hitSlop={10}
+                        accessibilityLabel="Decrease children"
+                      >
+                        <Ionicons name="remove" size={16} color={colors.primary} />
+                      </Pressable>
+                      <Text variant="bodySemibold" style={styles.stepperValue}>
+                        {childrenCount}
+                      </Text>
+                      <Pressable
+                        onPress={() => setChildrenCount((v) => clamp(v + 1, 0, 10))}
+                        hitSlop={10}
+                        accessibilityLabel="Increase children"
+                      >
+                        <Ionicons name="add" size={16} color={colors.primary} />
+                      </Pressable>
+                    </View>
+                  </View>
+
+                  <View style={styles.guestRow}>
+                    <View style={styles.guestRowLeft}>
+                      <Text variant="bodySemibold" style={styles.guestLabel}>
+                        Infants
+                      </Text>
+                      <Text variant="caption" style={styles.guestSubLabel}>
+                        Under 2
+                      </Text>
+                    </View>
+                    <View style={styles.stepper}>
+                      <Pressable
+                        onPress={() => setInfantsCount((v) => clamp(v - 1, 0, 10))}
+                        hitSlop={10}
+                        accessibilityLabel="Decrease infants"
+                      >
+                        <Ionicons name="remove" size={16} color={colors.primary} />
+                      </Pressable>
+                      <Text variant="bodySemibold" style={styles.stepperValue}>
+                        {infantsCount}
+                      </Text>
+                      <Pressable
+                        onPress={() => setInfantsCount((v) => clamp(v + 1, 0, 10))}
+                        hitSlop={10}
+                        accessibilityLabel="Increase infants"
+                      >
+                        <Ionicons name="add" size={16} color={colors.primary} />
+                      </Pressable>
+                    </View>
+                  </View>
+                </View>
+
+                <View style={styles.guestFooter}>
+                  <Pressable
+                    onPress={() => {
+                      handleClearDates();
+                      setDateModalStep('dates');
+                    }}
+                    accessibilityLabel="Clear dates"
+                  >
+                    <Text variant="caption" style={styles.guestFooterClear}>
+                      Clear dates
+                    </Text>
+                  </Pressable>
+                  <Pressable style={styles.saveBtn} onPress={closeDateModal} accessibilityLabel="Save guests">
+                    <Text variant="bodySemibold" style={styles.saveBtnText}>
+                      Save
+                    </Text>
+                  </Pressable>
+                </View>
+              </>
+            )}
           </Pressable>
         </Pressable>
       </Modal>
@@ -707,8 +862,10 @@ const styles = StyleSheet.create({
   },
   calendarCard: {
     backgroundColor: colors.surface.white,
-    borderRadius: borderRadius.lg,
-    padding: spacing['6'],
+    width: 306,
+    alignSelf: 'center',
+    borderRadius: 8,
+    padding: 24,
     shadowColor: '#000',
     shadowOpacity: 0.09,
     shadowRadius: 19,
@@ -716,7 +873,7 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   calendarInner: {
-    borderRadius: borderRadius.lg,
+    borderRadius: 8,
   },
   dateModalFooter: {
     flexDirection: 'row',
@@ -744,5 +901,51 @@ const styles = StyleSheet.create({
   },
   saveBtnText: {
     color: colors.surface.white,
+  },
+  guestsList: {
+    gap: spacing['5'],
+    paddingHorizontal: spacing['2'],
+    paddingTop: spacing['2'],
+  },
+  guestRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  guestRowLeft: {
+    gap: spacing['1'],
+  },
+  guestLabel: {
+    color: colors.text.primary,
+  },
+  guestSubLabel: {
+    color: colors.text.secondary,
+  },
+  stepper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: 104,
+    height: 32,
+    paddingHorizontal: spacing['3'],
+    borderRadius: borderRadius.sm ?? 4,
+    borderWidth: 1,
+    borderColor: 'rgba(231, 40, 0, 0.4)',
+    backgroundColor: 'rgba(229, 77, 46, 0.03)',
+  },
+  stepperValue: {
+    color: colors.text.primary,
+    minWidth: 18,
+    textAlign: 'center',
+  },
+  guestFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing['2'],
+    paddingTop: spacing['2'],
+  },
+  guestFooterClear: {
+    color: colors.text.primary,
   },
 });
