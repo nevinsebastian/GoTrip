@@ -2,7 +2,7 @@ import { Button, Card, Divider, IconButton, Input, Text } from '@/components/ui'
 import { borderRadius, colors, spacing } from '@/constants/DesignTokens';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
-import { Keyboard, Platform, StyleSheet, TouchableWithoutFeedback, View } from 'react-native';
+import { Keyboard, Platform, Pressable, StyleSheet, TouchableWithoutFeedback, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import AppleIcon from '@/assets/images/apple.svg';
@@ -88,15 +88,22 @@ export default function LoginScreen() {
       {wrap(
         <>
           <View style={styles.header}>
-            <IconButton
-              icon="chevron-back"
-              size={isIOS ? 24 : 20}
-              color={colors.primary}
-              onPress={() => router.replace('/signup')}
-            />
-            <Text variant="header" color="primaryBrand" style={styles.headerTitle}>
-              Log in
-            </Text>
+            <View style={styles.headerLeft}>
+              <IconButton
+                icon="chevron-back"
+                size={isIOS ? 24 : 20}
+                color={colors.primary}
+                onPress={() => router.replace('/signup')}
+              />
+              <Text variant="header" color="primaryBrand" style={styles.headerTitle}>
+                Log in
+              </Text>
+            </View>
+            <Pressable onPress={() => router.replace('/(tabs)')} accessibilityLabel="Skip login">
+              <Text variant="bodySemibold" color="primaryBrand">
+                Skip
+              </Text>
+            </Pressable>
           </View>
 
           <View style={styles.screen}>
@@ -212,10 +219,15 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: spacing['2'],
     paddingVertical: spacing['2'],
     minHeight: 48,
     backgroundColor: colors.gray['2'],
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   headerTitle: {
     marginLeft: spacing['2'],

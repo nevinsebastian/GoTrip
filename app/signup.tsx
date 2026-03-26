@@ -5,6 +5,7 @@ import React, { useState } from 'react';
 import {
   Keyboard,
   Platform,
+  Pressable,
   StyleSheet,
   TouchableWithoutFeedback,
   useWindowDimensions,
@@ -107,15 +108,22 @@ export default function SignupScreen() {
       {wrap(
         <>
           <View style={styles.header}>
-            <IconButton
-              icon="chevron-back"
-              size={isIOS ? 24 : 20}
-              color={colors.primary}
-              onPress={goToLogin}
-            />
-            <Text variant="header" color="primaryBrand" style={styles.headerTitle}>
-              Sign up
-            </Text>
+            <View style={styles.headerLeft}>
+              <IconButton
+                icon="chevron-back"
+                size={isIOS ? 24 : 20}
+                color={colors.primary}
+                onPress={goToLogin}
+              />
+              <Text variant="header" color="primaryBrand" style={styles.headerTitle}>
+                Sign up
+              </Text>
+            </View>
+            <Pressable onPress={() => router.replace('/(tabs)')} accessibilityLabel="Skip signup">
+              <Text variant="bodySemibold" color="primaryBrand">
+                Skip
+              </Text>
+            </Pressable>
           </View>
 
           <View style={styles.screen}>
@@ -287,10 +295,15 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: spacing['2'],
     paddingVertical: spacing['2'],
     minHeight: 48,
     backgroundColor: colors.gray['2'],
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   headerTitle: {
     marginLeft: spacing['2'],
