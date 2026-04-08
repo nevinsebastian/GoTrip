@@ -83,6 +83,7 @@ export default function OtpScreen() {
   };
 
   const handleConfirm = () => {
+    if (isVerifying) return;
     const code = digits.join('');
     if (code.length !== OTP_LENGTH) return;
     setSubmitError(null);
@@ -110,7 +111,7 @@ export default function OtpScreen() {
   };
 
   const code = digits.join('');
-  const canConfirm = code.length === OTP_LENGTH;
+  const canConfirm = code.length === OTP_LENGTH && !isVerifying;
 
   const wrap = (content: React.ReactNode) =>
     isWeb ? (
