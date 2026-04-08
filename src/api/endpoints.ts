@@ -18,5 +18,8 @@ export const ENDPOINTS = {
     profile: '/api/v1/users/me',
     updateProfile: '/api/v1/users/me',
   },
+  categories: {
+    byType: (type: string) => `/api/v1/categories/type/${type}`,
+  },
 } as const;
 

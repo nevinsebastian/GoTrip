@@ -26,6 +26,7 @@ import HillIll from '@/assets/images/hill ill 1.svg';
 import Logo from '@/assets/images/logogotrip.svg';
 import RoomsIll from '@/assets/images/Rooms ill 1.svg';
 import TypeIcon from '@/assets/images/type.svg';
+import { useCategoriesByType } from '@/src/hooks/useCategoriesByType';
 
 const ResortImage = require('../../assets/images/resort.jpg');
 
@@ -218,6 +219,25 @@ export default function HomeScreen() {
   const [roomsMode, setRoomsMode] = useState(false);
   const [selectedRoomType, setSelectedRoomType] = useState<string | null>(null); // id of selected type
 
+  const { data: categoriesRes, isLoading: isCategoriesLoading } = useCategoriesByType(
+    'hotel',
+    roomsMode,
+  );
+
+  const apiRoomTypes = (() => {
+    const parents = categoriesRes?.data ?? [];
+    const roomsCategory = parents[0];
+    const children = roomsCategory?.children ?? [];
+    const active = children.filter((c) => c.is_active !== false);
+    const sorted = [...active].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+    return sorted.map((c) => ({
+      id: c.slug || c.id,
+      label: c.name,
+    }));
+  })();
+
+  const roomTypesToRender = apiRoomTypes.length ? apiRoomTypes : ROOM_TYPES;
+
   // Responsive padding based on screen size
   const contentPadding = isMobile 
     ? spacing['4'] 
@@ -280,7 +300,7 @@ export default function HomeScreen() {
                 style={styles.roomTypesScroll}
                 contentContainerStyle={[styles.roomTypesContent, { paddingRight: contentPadding, paddingHorizontal: contentPadding }]}
               >
-                {ROOM_TYPES.map((type) => {
+                {(isCategoriesLoading ? ROOM_TYPES : roomTypesToRender).map((type) => {
                   const isSelected = selectedRoomType === type.id;
                   return (
                     <Pressable

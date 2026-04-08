@@ -86,3 +86,27 @@ export interface APIError {
   isUnauthorized?: boolean;
 }
 
+export type CategoryType = 'hotel' | 'activity' | 'camping' | 'package';
+
+export interface Category {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string | null;
+  icon_url?: string | null;
+  image_url?: string | null;
+  parent_id?: string | null;
+  type?: CategoryType | null;
+  sort_order?: number;
+  is_active?: boolean;
+  created_at?: string;
+  updated_at?: string;
+  children?: Category[];
+}
+
+export interface CategoriesByTypeResponse {
+  success: boolean;
+  message: string;
+  data: Category[];
+}
+
