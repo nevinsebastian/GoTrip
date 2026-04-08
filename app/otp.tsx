@@ -1,18 +1,18 @@
-import React, { useState, useRef } from 'react';
+import { Button, Card, IconButton, Input, Text } from '@/components/ui';
+import { borderRadius, colors, spacing } from '@/constants/DesignTokens';
+import { router, useLocalSearchParams } from 'expo-router';
+import React, { useRef, useState } from 'react';
 import {
-  View,
-  StyleSheet,
-  Platform,
   Keyboard,
-  TouchableWithoutFeedback,
+  Platform,
+  StyleSheet,
   TextInput,
+  TouchableWithoutFeedback,
+  View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const isWeb = Platform.OS === 'web';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { router, useLocalSearchParams } from 'expo-router';
-import { Card, Text, Input, Button, IconButton } from '@/components/ui';
-import { colors, spacing, borderRadius, components } from '@/constants/DesignTokens';
 
 import Logo from '@/assets/images/logogotrip.svg';
 import { useVerifyOtp } from '@/src/hooks/useVerifyOtp';
@@ -83,6 +83,7 @@ export default function OtpScreen() {
   };
 
   const handleConfirm = () => {
+    if (isVerifying) return;
     const code = digits.join('');
     if (code.length !== OTP_LENGTH) return;
     setSubmitError(null);
@@ -110,7 +111,7 @@ export default function OtpScreen() {
   };
 
   const code = digits.join('');
-  const canConfirm = code.length === OTP_LENGTH;
+  const canConfirm = code.length === OTP_LENGTH && !isVerifying;
 
   const wrap = (content: React.ReactNode) =>
     isWeb ? (
