@@ -1,7 +1,7 @@
 import {
-  Button,
-  Input,
-  Text
+    Button,
+    Input,
+    Text
 } from '@/components/ui';
 import { useResponsive } from '@/components/ui/useResponsive';
 import { borderRadius, colors, components, spacing, typography } from '@/constants/DesignTokens';
@@ -10,11 +10,11 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
-  Image,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  View,
+    Image,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
