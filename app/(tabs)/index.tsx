@@ -132,6 +132,7 @@ function StayCard({
   title,
   price,
   rating,
+  imageUrl,
   onPress,
   cardStyle,
   containerPadding = 0,
@@ -139,6 +140,7 @@ function StayCard({
   title: string;
   price: string;
   rating: string;
+  imageUrl?: string | null;
   onPress: () => void;
   cardStyle?: any;
   containerPadding?: number;
@@ -168,11 +170,17 @@ function StayCard({
     <Pressable onPress={onPress} style={[styles.stayCardWrap, { width: cardWidth }, cardStyle]}>
       {/* Image: rectangle with all sides rounded (separate from text) */}
       <View style={styles.stayImageWrap}>
-        <Image
-          source={ResortImage}
-          style={styles.stayImage}
-          resizeMode="cover"
-        />
+        {imageUrl ? (
+          <Image
+            source={{ uri: imageUrl }}
+            style={styles.stayImage}
+            resizeMode="cover"
+          />
+        ) : (
+          <View style={styles.stayImagePlaceholder} accessibilityLabel="Listing image placeholder">
+            <Ionicons name="image-outline" size={26} color={colors.text.caption} />
+          </View>
+        )}
         <View style={styles.favoriteBadge}>
           <HeartIcon width={heartIconSize} height={heartIconSize} />
         </View>
@@ -229,19 +237,41 @@ export default function HomeScreen() {
 
   const { data: rootCategoriesRes } = useRootCategories(!roomsMode);
   const { data: listingsRes } = useListings({ page: 1, limit: 20 }, !roomsMode);
+  const { data: nearYouRes } = useListings(
+    { location: 'varkala', page: 1, limit: 20 },
+    !roomsMode,
+  );
+  const { data: economicRes } = useListings({ max_price: 2499, page: 1, limit: 20 }, !roomsMode);
 
   const categoryMetaById = (() => {
     const parents = rootCategoriesRes?.data ?? [];
-    const map = new Map<string, { name: string; sortOrder: number }>();
+    const map = new Map<string, { name: string; sortOrder: number; type?: string | null }>();
     parents.forEach((c) => {
-      map.set(c.id, { name: c.name, sortOrder: c.sort_order ?? 0 });
+      map.set(c.id, { name: c.name, sortOrder: c.sort_order ?? 0, type: c.type ?? null });
     });
     return map;
   })();
 
   const getPrimaryImage = (media?: ListingMedia[]) => {
     if (!media?.length) return null;
-    const images = media.filter((m) => m.media_type === 'image' && !!m.url);
+    const isDirectImageUrl = (url: string) => {
+      const u = url.toLowerCase();
+      if (!u.startsWith('http')) return false;
+      // accept common direct image URLs; reject HTML page links like https://ibb.co/<code>
+      return (
+        u.includes('i.ibb.co/') ||
+        u.endsWith('.jpg') ||
+        u.endsWith('.jpeg') ||
+        u.endsWith('.png') ||
+        u.endsWith('.webp') ||
+        u.endsWith('.gif') ||
+        u.includes('cloudfront') ||
+        u.includes('amazonaws.com') ||
+        u.includes('cdn')
+      );
+    };
+
+    const images = media.filter((m) => m.media_type === 'image' && !!m.url && isDirectImageUrl(m.url));
     const first = images.find((m) => m.sort_order === 0) ?? images[0];
     return first?.url ?? null;
   };
@@ -266,7 +296,22 @@ export default function HomeScreen() {
 
     return Array.from(byCategory.values())
       .filter((g) => g.items.length)
+      .filter((g) => {
+        const meta = g.categoryId ? categoryMetaById.get(g.categoryId) : undefined;
+        // Don't show Packages section on home; package has its own bento tile
+        return (meta?.type ?? null) !== 'package' && g.categoryName.toLowerCase() !== 'packages';
+      })
       .sort((a, b) => a.sortOrder - b.sortOrder || a.categoryName.localeCompare(b.categoryName));
+  })();
+
+  const economicListings = (() => {
+    const list = economicRes?.data ?? [];
+    return list.filter((l) => (l.category?.type ?? null) !== 'package');
+  })();
+
+  const nearYouListings = (() => {
+    const list = nearYouRes?.data ?? [];
+    return list.filter((l) => (l.category?.type ?? null) !== 'package');
   })();
 
   const apiRoomTypes = (() => {
@@ -456,8 +501,75 @@ export default function HomeScreen() {
           </View>
           )}
 
-          {!roomsMode
-            ? groupedListings.map((group) => (
+          {!roomsMode ? (
+            <>
+              {economicListings.length ? (
+                <View key="economic">
+                  <SectionRow title="Economic" onViewAll={() => {}} />
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={[styles.horizontalList, { paddingHorizontal: 0 }]}
+                  >
+                    {economicListings.map((listing) => (
+                      <StayCard
+                        key={listing.id}
+                        title={listing.title}
+                        price={`₹${Number(listing.price_start ?? 0).toLocaleString('en-IN')}/night`}
+                        rating={'4.5'}
+                        imageUrl={getPrimaryImage(listing.media)}
+                        onPress={() =>
+                          router.push({
+                            pathname: '/resort/[id]',
+                            params: {
+                              id: listing.id,
+                              title: listing.title,
+                              price: `₹${Number(listing.price_start ?? 0).toLocaleString('en-IN')}`,
+                              rating: '4.5',
+                            },
+                          })
+                        }
+                        containerPadding={contentPadding}
+                      />
+                    ))}
+                  </ScrollView>
+                </View>
+              ) : null}
+
+              {nearYouListings.length ? (
+                <View key="near-you">
+                  <SectionRow title="Near you" onViewAll={() => {}} />
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={[styles.horizontalList, { paddingHorizontal: 0 }]}
+                  >
+                    {nearYouListings.map((listing) => (
+                      <StayCard
+                        key={listing.id}
+                        title={listing.title}
+                        price={`₹${Number(listing.price_start ?? 0).toLocaleString('en-IN')}/night`}
+                        rating={'4.5'}
+                        imageUrl={getPrimaryImage(listing.media)}
+                        onPress={() =>
+                          router.push({
+                            pathname: '/resort/[id]',
+                            params: {
+                              id: listing.id,
+                              title: listing.title,
+                              price: `₹${Number(listing.price_start ?? 0).toLocaleString('en-IN')}`,
+                              rating: '4.5',
+                            },
+                          })
+                        }
+                        containerPadding={contentPadding}
+                      />
+                    ))}
+                  </ScrollView>
+                </View>
+              ) : null}
+
+              {groupedListings.map((group) => (
                 <View key={group.categoryId || group.categoryName}>
                   <SectionRow title={group.categoryName} onViewAll={() => {}} />
                   {isMobile ? (
@@ -472,6 +584,7 @@ export default function HomeScreen() {
                           title={listing.title}
                           price={`₹${Number(listing.price_start ?? 0).toLocaleString('en-IN')}/night`}
                           rating={'4.5'}
+                          imageUrl={getPrimaryImage(listing.media)}
                           onPress={() =>
                             router.push({
                               pathname: '/resort/[id]',
@@ -496,6 +609,7 @@ export default function HomeScreen() {
                           title={listing.title}
                           price={`₹${Number(listing.price_start ?? 0).toLocaleString('en-IN')}/night`}
                           rating={'4.5'}
+                          imageUrl={getPrimaryImage(listing.media)}
                           onPress={() =>
                             router.push({
                               pathname: '/resort/[id]',
@@ -514,8 +628,9 @@ export default function HomeScreen() {
                     </View>
                   )}
                 </View>
-              ))
-            : null}
+              ))}
+            </>
+          ) : null}
 
         </ScrollView>
       </LinearGradient>
@@ -721,6 +836,13 @@ const styles = StyleSheet.create({
   stayImage: {
     width: '100%',
     height: '100%',
+  },
+  stayImagePlaceholder: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: colors.gray['2'],
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   favoriteBadge: {
     position: 'absolute',
