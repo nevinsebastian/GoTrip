@@ -110,23 +110,28 @@ export default function ResortDetailsScreen() {
     return imgs.length ? imgs : [];
   })();
 
-  const amenityIconFor = (label: string): keyof typeof Ionicons.glyphMap => {
-    const s = label.toLowerCase();
-    if (s.includes('wifi')) return 'wifi-outline';
-    if (s.includes('parking')) return 'car-outline';
-    if (s.includes('breakfast')) return 'cafe-outline';
-    if (s.includes('air') || s.includes('ac')) return 'snow-outline';
-    if (s.includes('pool')) return 'water-outline';
-    if (s.includes('pet')) return 'paw-outline';
-    if (s.includes('gym') || s.includes('fitness')) return 'barbell-outline';
-    if (s.includes('spa')) return 'flower-outline';
-    return 'checkmark-circle-outline';
-  };
+  const normalizeAmenity = (label: string) => label.toLowerCase().replace(/\s+/g, ' ').trim();
 
-  const amenitiesFromListing = (listing?.amenities ?? []).filter(Boolean);
+  // Keep the original icon + label sizing/wording by mapping API values → existing amenity cards.
+  const amenityCatalog = AMENITIES.map((a) => ({
+    ...a,
+    keys: [
+      normalizeAmenity(a.label),
+      // common backend variants
+      a.id === 'wifi' ? 'wifi' : null,
+      a.id === 'parking' ? 'parking' : null,
+      a.id === 'breakfast' ? 'breakfast' : null,
+      a.id === 'ac' ? 'air conditioning' : null,
+      a.id === 'pet' ? 'pet friendly' : null,
+      a.id === 'business' ? 'business' : null,
+    ].filter(Boolean) as string[],
+  }));
+
+  const amenitiesFromListing = (listing?.amenities ?? []).filter(Boolean).map(normalizeAmenity);
+
   const amenitiesToRender =
     amenitiesFromListing.length > 0
-      ? amenitiesFromListing.map((a) => ({ id: a, label: a, icon: amenityIconFor(a) }))
+      ? amenityCatalog.filter((a) => a.keys.some((k) => amenitiesFromListing.includes(k)))
       : AMENITIES;
 
   const visibleAmenities = showAllAmenities ? amenitiesToRender : amenitiesToRender.slice(0, 4);
