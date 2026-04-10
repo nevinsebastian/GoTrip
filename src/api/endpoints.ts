@@ -19,7 +19,11 @@ export const ENDPOINTS = {
     updateProfile: '/api/v1/users/me',
   },
   categories: {
+    root: '/api/v1/categories',
     byType: (type: string) => `/api/v1/categories/type/${type}`,
+  },
+  listings: {
+    browse: '/api/v1/listings',
   },
 } as const;
 

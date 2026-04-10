@@ -110,3 +110,54 @@ export interface CategoriesByTypeResponse {
   data: Category[];
 }
 
+export interface ListingCategoryLite {
+  id: string;
+  name: string;
+  slug: string;
+  type: CategoryType;
+}
+
+export interface ListingMedia {
+  id: string;
+  listing_id: string;
+  url: string;
+  media_type: 'image' | 'video' | string;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Listing {
+  id: string;
+  vendor_id: string;
+  category_id: string;
+  title: string;
+  description?: string | null;
+  location?: string | null;
+  latitude?: string | null;
+  longitude?: string | null;
+  price_start?: string | null;
+  amenities?: string[] | null;
+  policies?: unknown;
+  max_guests?: number | null;
+  status?: string;
+  created_at?: string;
+  updated_at?: string;
+  category?: ListingCategoryLite;
+  media?: ListingMedia[];
+}
+
+export interface ListingsMeta {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
+export interface ListingsResponse {
+  success: boolean;
+  message: string;
+  data: Listing[];
+  meta: ListingsMeta;
+}
+

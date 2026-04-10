@@ -27,6 +27,9 @@ import Logo from '@/assets/images/logogotrip.svg';
 import RoomsIll from '@/assets/images/Rooms ill 1.svg';
 import TypeIcon from '@/assets/images/type.svg';
 import { useCategoriesByType } from '@/src/hooks/useCategoriesByType';
+import { useRootCategories } from '@/src/hooks/useRootCategories';
+import { useListings } from '@/src/hooks/useListings';
+import type { Listing, ListingMedia } from '@/src/api/types';
 
 const ResortImage = require('../../assets/images/resort.jpg');
 
@@ -224,6 +227,48 @@ export default function HomeScreen() {
     roomsMode,
   );
 
+  const { data: rootCategoriesRes } = useRootCategories(!roomsMode);
+  const { data: listingsRes } = useListings({ page: 1, limit: 20 }, !roomsMode);
+
+  const categoryMetaById = (() => {
+    const parents = rootCategoriesRes?.data ?? [];
+    const map = new Map<string, { name: string; sortOrder: number }>();
+    parents.forEach((c) => {
+      map.set(c.id, { name: c.name, sortOrder: c.sort_order ?? 0 });
+    });
+    return map;
+  })();
+
+  const getPrimaryImage = (media?: ListingMedia[]) => {
+    if (!media?.length) return null;
+    const images = media.filter((m) => m.media_type === 'image' && !!m.url);
+    const first = images.find((m) => m.sort_order === 0) ?? images[0];
+    return first?.url ?? null;
+  };
+
+  const groupedListings = (() => {
+    const list = listingsRes?.data ?? [];
+    const byCategory = new Map<
+      string,
+      { categoryId: string; categoryName: string; sortOrder: number; items: Listing[] }
+    >();
+
+    list.forEach((l) => {
+      const categoryId = l.category?.id ?? l.category_id;
+      const meta = categoryId ? categoryMetaById.get(categoryId) : undefined;
+      const categoryName = meta?.name ?? l.category?.name ?? 'Listings';
+      const sortOrder = meta?.sortOrder ?? Number.MAX_SAFE_INTEGER;
+      const key = categoryId || categoryName;
+      const existing = byCategory.get(key);
+      if (existing) existing.items.push(l);
+      else byCategory.set(key, { categoryId, categoryName, sortOrder, items: [l] });
+    });
+
+    return Array.from(byCategory.values())
+      .filter((g) => g.items.length)
+      .sort((a, b) => a.sortOrder - b.sortOrder || a.categoryName.localeCompare(b.categoryName));
+  })();
+
   const apiRoomTypes = (() => {
     const parents = categoriesRes?.data ?? [];
     const roomsCategory = parents[0];
@@ -411,181 +456,66 @@ export default function HomeScreen() {
           </View>
           )}
 
-          <SectionRow title="Suggested for you" onViewAll={() => {}} />
-          {isMobile ? (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={[styles.horizontalList, { paddingHorizontal: 0 }]}
-            >
-              {STAYS.map((stay, i) => (
-                <StayCard
-                  key={i}
-                  title={stay.title}
-                  price={stay.price}
-                  rating={stay.rating}
-                  onPress={() =>
-                    router.push({
-                      pathname: '/resort/[id]',
-                      params: { id: String(i), title: stay.title, price: stay.price, rating: stay.rating },
-                    })
-                  }
-                  containerPadding={contentPadding}
-                />
-              ))}
-            </ScrollView>
-          ) : (
-            <View style={styles.staysGrid}>
-              {STAYS.map((stay, i) => (
-                <StayCard
-                  key={i}
-                  title={stay.title}
-                  price={stay.price}
-                  rating={stay.rating}
-                  onPress={() =>
-                    router.push({
-                      pathname: '/resort/[id]',
-                      params: { id: String(i), title: stay.title, price: stay.price, rating: stay.rating },
-                    })
-                  }
-                  cardStyle={styles.stayCardGrid}
-                  containerPadding={contentPadding}
-                />
-              ))}
-            </View>
-          )}
-
-          <SectionRow title="Top rated stays" onViewAll={() => {}} />
-          {isMobile ? (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={[styles.horizontalList, { paddingHorizontal: 0 }]}
-            >
-              {STAYS.map((stay, i) => (
-                <StayCard
-                  key={`top-${i}`}
-                  title={stay.title}
-                  price={stay.price}
-                  rating={stay.rating}
-                  onPress={() =>
-                    router.push({
-                      pathname: '/resort/[id]',
-                      params: { id: `top-${i}`, title: stay.title, price: stay.price, rating: stay.rating },
-                    })
-                  }
-                  containerPadding={contentPadding}
-                />
-              ))}
-            </ScrollView>
-          ) : (
-            <View style={styles.staysGrid}>
-              {STAYS.map((stay, i) => (
-                <StayCard
-                  key={`top-${i}`}
-                  title={stay.title}
-                  price={stay.price}
-                  rating={stay.rating}
-                  onPress={() =>
-                    router.push({
-                      pathname: '/resort/[id]',
-                      params: { id: `top-${i}`, title: stay.title, price: stay.price, rating: stay.rating },
-                    })
-                  }
-                  cardStyle={styles.stayCardGrid}
-                  containerPadding={contentPadding}
-                />
-              ))}
-            </View>
-          )}
-
-          <SectionRow title="Budget options" onViewAll={() => {}} />
-          {isMobile ? (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={[styles.horizontalList, { paddingHorizontal: 0 }]}
-            >
-              {STAYS.map((stay, i) => (
-                <StayCard
-                  key={`budget-${i}`}
-                  title={stay.title}
-                  price={stay.price}
-                  rating={stay.rating}
-                  onPress={() =>
-                    router.push({
-                      pathname: '/resort/[id]',
-                      params: { id: `budget-${i}`, title: stay.title, price: stay.price, rating: stay.rating },
-                    })
-                  }
-                  containerPadding={contentPadding}
-                />
-              ))}
-            </ScrollView>
-          ) : (
-            <View style={styles.staysGrid}>
-              {STAYS.map((stay, i) => (
-                <StayCard
-                  key={`budget-${i}`}
-                  title={stay.title}
-                  price={stay.price}
-                  rating={stay.rating}
-                  onPress={() =>
-                    router.push({
-                      pathname: '/resort/[id]',
-                      params: { id: `budget-${i}`, title: stay.title, price: stay.price, rating: stay.rating },
-                    })
-                  }
-                  cardStyle={styles.stayCardGrid}
-                  containerPadding={contentPadding}
-                />
-              ))}
-            </View>
-          )}
-
-          <SectionRow title="Luxury resorts" onViewAll={() => {}} />
-          {isMobile ? (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={[styles.horizontalList, { paddingHorizontal: 0 }]}
-            >
-              {STAYS.map((stay, i) => (
-                <StayCard
-                  key={`luxury-${i}`}
-                  title={stay.title}
-                  price={stay.price}
-                  rating={stay.rating}
-                  onPress={() =>
-                    router.push({
-                      pathname: '/resort/[id]',
-                      params: { id: `luxury-${i}`, title: stay.title, price: stay.price, rating: stay.rating },
-                    })
-                  }
-                  containerPadding={contentPadding}
-                />
-              ))}
-            </ScrollView>
-          ) : (
-            <View style={styles.staysGrid}>
-              {STAYS.map((stay, i) => (
-                <StayCard
-                  key={`luxury-${i}`}
-                  title={stay.title}
-                  price={stay.price}
-                  rating={stay.rating}
-                  onPress={() =>
-                    router.push({
-                      pathname: '/resort/[id]',
-                      params: { id: `luxury-${i}`, title: stay.title, price: stay.price, rating: stay.rating },
-                    })
-                  }
-                  cardStyle={styles.stayCardGrid}
-                  containerPadding={contentPadding}
-                />
-              ))}
-            </View>
-          )}
+          {!roomsMode
+            ? groupedListings.map((group) => (
+                <View key={group.categoryId || group.categoryName}>
+                  <SectionRow title={group.categoryName} onViewAll={() => {}} />
+                  {isMobile ? (
+                    <ScrollView
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                      contentContainerStyle={[styles.horizontalList, { paddingHorizontal: 0 }]}
+                    >
+                      {group.items.map((listing) => (
+                        <StayCard
+                          key={listing.id}
+                          title={listing.title}
+                          price={`₹${Number(listing.price_start ?? 0).toLocaleString('en-IN')}/night`}
+                          rating={'4.5'}
+                          onPress={() =>
+                            router.push({
+                              pathname: '/resort/[id]',
+                              params: {
+                                id: listing.id,
+                                title: listing.title,
+                                price: `₹${Number(listing.price_start ?? 0).toLocaleString('en-IN')}`,
+                                rating: '4.5',
+                              },
+                            })
+                          }
+                          cardStyle={{}}
+                          containerPadding={contentPadding}
+                        />
+                      ))}
+                    </ScrollView>
+                  ) : (
+                    <View style={styles.staysGrid}>
+                      {group.items.map((listing) => (
+                        <StayCard
+                          key={listing.id}
+                          title={listing.title}
+                          price={`₹${Number(listing.price_start ?? 0).toLocaleString('en-IN')}/night`}
+                          rating={'4.5'}
+                          onPress={() =>
+                            router.push({
+                              pathname: '/resort/[id]',
+                              params: {
+                                id: listing.id,
+                                title: listing.title,
+                                price: `₹${Number(listing.price_start ?? 0).toLocaleString('en-IN')}`,
+                                rating: '4.5',
+                              },
+                            })
+                          }
+                          cardStyle={styles.stayCardGrid}
+                          containerPadding={contentPadding}
+                        />
+                      ))}
+                    </View>
+                  )}
+                </View>
+              ))
+            : null}
 
         </ScrollView>
       </LinearGradient>
