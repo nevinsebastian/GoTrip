@@ -20,12 +20,12 @@ import {
   View,
 } from 'react-native';
 import { Calendar, DateData } from 'react-native-calendars';
-import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getStoredAuthToken } from '@/src/api/client';
 import { useSendOtp } from '@/src/hooks/useSendOtp';
 import { getErrorMessage } from '@/src/utils/errorHandler';
 import { useListingDetails } from '@/src/hooks/useListingDetails';
+import { ListingMap } from '@/src/components/ListingMap';
 
 const ResortImage = require('@/assets/images/resort.jpg');
 
@@ -456,21 +456,11 @@ export default function ResortDetailsScreen() {
             Location
           </Text>
           <View style={styles.mapCard}>
-            <MapView
+            <ListingMap
+              latitude={Number.isFinite(lat) ? lat : 52.509669}
+              longitude={Number.isFinite(lng) ? lng : 13.376294}
               style={styles.map}
-              provider={PROVIDER_GOOGLE}
-              initialRegion={{
-                latitude: Number.isFinite(lat) ? lat : 52.509669,
-                longitude: Number.isFinite(lng) ? lng : 13.376294,
-                latitudeDelta: 0.01,
-                longitudeDelta: 0.01,
-              }}
-              pointerEvents="none"
-            >
-              {Number.isFinite(lat) && Number.isFinite(lng) ? (
-                <Marker coordinate={{ latitude: lat, longitude: lng }} />
-              ) : null}
-            </MapView>
+            />
           </View>
 
           {/* Host - compact */}
