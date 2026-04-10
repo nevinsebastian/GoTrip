@@ -21,6 +21,12 @@ export interface User {
   updatedAt?: string;
 }
 
+export interface UserProfileResponse {
+  success: boolean;
+  message: string;
+  data: User;
+}
+
 export interface LoginResponse {
   token: string; // JWT access token
   refreshToken?: string;

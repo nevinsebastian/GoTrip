@@ -3,11 +3,11 @@
 
 import apiClient from './client';
 import { ENDPOINTS } from './endpoints';
-import type { User } from './types';
+import type { User, UserProfileResponse } from './types';
 
 export const fetchUserProfile = async (): Promise<User> => {
-  const response = await apiClient.get<User>(ENDPOINTS.user.profile);
-  return response.data;
+  const response = await apiClient.get<UserProfileResponse>(ENDPOINTS.user.profile);
+  return response.data.data;
 };
 
 export interface UpdateUserProfileRequest {
