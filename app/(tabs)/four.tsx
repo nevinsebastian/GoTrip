@@ -8,7 +8,7 @@ import {
 } from '@/constants/DesignTokens';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   Image,
   Modal,
@@ -65,13 +65,7 @@ export default function ProfileScreen() {
   const { mutate: sendOtp, isPending: isSendingOtp } = useSendOtp();
   const { mutate: verifyOtp, isPending: isVerifyingOtp } = useVerifyOtp();
 
-  useEffect(() => {
-    if (error?.isUnauthorized) {
-      setLoginModalVisible(true);
-      setLoginStep('login');
-      setLoginError(null);
-    }
-  }, [error?.isUnauthorized]);
+  const isUnauthorized = Boolean(error?.isUnauthorized);
 
   const handleBack = () => {
     if (previousTab === 'index') {
@@ -121,8 +115,15 @@ export default function ProfileScreen() {
     setLoginError(null);
     setLoginStep('login');
     setOtpDigits(['', '', '', '']);
-    // try again next time user opens profile / after OTP flow
-    refetch();
+  };
+
+  const openLoginModal = () => {
+    setLoginModalVisible(true);
+    setLoginStep('login');
+    setLoginError(null);
+    setLoginMode('phone');
+    setLoginValue('');
+    setOtpDigits(['', '', '', '']);
   };
 
   const handleGetOtp = () => {
@@ -236,7 +237,7 @@ export default function ProfileScreen() {
         contentContainerStyle={[styles.scrollContent, { paddingHorizontal: contentPadding }]}
         showsVerticalScrollIndicator={false}
       >
-        {error ? (
+        {error && !isUnauthorized ? (
           <View style={styles.messageWrap}>
             <Text variant="caption" style={styles.errorText}>
               {getErrorMessage(error)}
@@ -246,24 +247,46 @@ export default function ProfileScreen() {
 
         {/* User info card: avatar (left) + name, phone, email (right) */}
         <View style={styles.profileCard}>
-          <View style={styles.avatarWrap}>
-            <Image
-              source={require('@/assets/images/profile-avatar.png')}
-              style={styles.avatarImage}
-              resizeMode="cover"
-            />
-          </View>
-          <View style={styles.profileDetails}>
-            <Text variant="heading2" style={styles.profileName}>
-              {user?.full_name || user?.name || 'Guest user'}
-            </Text>
-            <Text variant="caption" style={styles.profileMeta}>
-              {user?.phone || 'Phone not available'}
-            </Text>
-            <Text variant="caption" style={styles.profileMeta}>
-              {user?.email || 'Email not available'}
-            </Text>
-          </View>
+          {isUnauthorized || !user ? (
+            <View style={styles.profileLoggedOut}>
+              <Text variant="heading2" style={styles.profileName}>
+                Account
+              </Text>
+              <Text variant="caption" style={styles.profileMeta}>
+                Log in to see your profile details and bookings.
+              </Text>
+              <Pressable
+                style={({ pressed }) => [styles.loginCta, pressed && styles.loginCtaPressed]}
+                onPress={openLoginModal}
+                accessibilityLabel="Login or sign up"
+              >
+                <Text variant="bodySemibold" style={styles.loginCtaText}>
+                  Login or sign up
+                </Text>
+              </Pressable>
+            </View>
+          ) : (
+            <>
+              <View style={styles.avatarWrap}>
+                <Image
+                  source={require('@/assets/images/profile-avatar.png')}
+                  style={styles.avatarImage}
+                  resizeMode="cover"
+                />
+              </View>
+              <View style={styles.profileDetails}>
+                <Text variant="heading2" style={styles.profileName}>
+                  {user?.full_name || user?.name}
+                </Text>
+                <Text variant="caption" style={styles.profileMeta}>
+                  {user?.phone || 'Phone not available'}
+                </Text>
+                <Text variant="caption" style={styles.profileMeta}>
+                  {user?.email || 'Email not available'}
+                </Text>
+              </View>
+            </>
+          )}
         </View>
 
         {/* Menu list: icon in rounded grey box + label; Log out in red */}
@@ -813,6 +836,26 @@ const styles = StyleSheet.create({
   },
   socialBtnText: {
     color: colors.text.primary,
+  },
+  profileLoggedOut: {
+    flex: 1,
+    gap: spacing['2'],
+  },
+  loginCta: {
+    height: 36,
+    borderRadius: borderRadius.lg,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: spacing['2'],
+    alignSelf: 'flex-start',
+    paddingHorizontal: spacing['4'],
+  },
+  loginCtaPressed: {
+    opacity: 0.85,
+  },
+  loginCtaText: {
+    color: colors.surface.white,
   },
   otpSubtitle: {
     color: 'rgba(0, 5, 29, 0.45)',
