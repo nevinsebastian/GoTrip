@@ -11,6 +11,7 @@ import { router } from 'expo-router';
 import React, { useRef, useState } from 'react';
 import {
   Image,
+  KeyboardAvoidingView,
   Modal,
   Platform,
   Pressable,
@@ -334,21 +335,28 @@ export default function ProfileScreen() {
         animationType="slide"
         onRequestClose={closeLoginModal}
       >
-        <Pressable style={styles.sheetOverlay} onPress={closeLoginModal}>
-          <Pressable style={styles.sheetCard} onPress={(e) => e.stopPropagation()}>
-            <View style={styles.sheetHeader}>
-              <Pressable onPress={closeLoginModal} hitSlop={12} accessibilityLabel="Close login">
-                <Ionicons name="chevron-back" size={22} color={colors.primary} />
-              </Pressable>
+        <Pressable
+          style={styles.sheetOverlay}
+          onPress={loginStep === 'otp' ? undefined : closeLoginModal}
+        >
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 24}
+          >
+            <Pressable style={styles.sheetCard} onPress={(e) => e.stopPropagation()}>
+              <View style={styles.sheetHeader}>
+                <Pressable onPress={closeLoginModal} hitSlop={12} accessibilityLabel="Close login">
+                  <Ionicons name="chevron-back" size={22} color={colors.primary} />
+                </Pressable>
               <Text variant="bodySemibold" style={styles.sheetTitle}>
                 {loginStep === 'otp' ? 'Enter OTP' : 'Log in or sign up'}
               </Text>
               <View style={{ width: 22 }} />
-            </View>
+              </View>
 
-            <View style={styles.sheetBody}>
-              {loginStep === 'login' ? (
-                <>
+              <View style={styles.sheetBody}>
+                {loginStep === 'login' ? (
+                  <>
                   <TextInput
                     value={loginValue}
                     onChangeText={setLoginValue}
@@ -422,9 +430,9 @@ export default function ProfileScreen() {
                       </Text>
                     </Pressable>
                   </View>
-                </>
-              ) : (
-                <>
+                  </>
+                ) : (
+                  <>
                   <Text variant="caption" style={styles.otpSubtitle}>
                     {loginMode === 'email'
                       ? `Sent to ${loginValue.trim() || 'your email'}`
@@ -484,10 +492,11 @@ export default function ProfileScreen() {
                       Change email/phone
                     </Text>
                   </Pressable>
-                </>
-              )}
-            </View>
-          </Pressable>
+                  </>
+                )}
+              </View>
+            </Pressable>
+          </KeyboardAvoidingView>
         </Pressable>
       </Modal>
 
