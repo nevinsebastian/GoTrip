@@ -3,7 +3,7 @@
 
 import apiClient from './client';
 import { ENDPOINTS } from './endpoints';
-import type { ListingsResponse } from './types';
+import type { ListingDetailResponse, ListingsResponse } from './types';
 
 export interface BrowseListingsParams {
   category_id?: string;
@@ -18,6 +18,11 @@ export interface BrowseListingsParams {
 
 export const browseListings = async (params: BrowseListingsParams): Promise<ListingsResponse> => {
   const response = await apiClient.get<ListingsResponse>(ENDPOINTS.listings.browse, { params });
+  return response.data;
+};
+
+export const fetchListingById = async (id: string): Promise<ListingDetailResponse> => {
+  const response = await apiClient.get<ListingDetailResponse>(`${ENDPOINTS.listings.browse}/${id}`);
   return response.data;
 };
 

@@ -25,10 +25,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { getStoredAuthToken } from '@/src/api/client';
 import { useSendOtp } from '@/src/hooks/useSendOtp';
 import { getErrorMessage } from '@/src/utils/errorHandler';
+import { useListingDetails } from '@/src/hooks/useListingDetails';
 
 const ResortImage = require('@/assets/images/resort.jpg');
 
-const CAROUSEL_IMAGES = [ResortImage, ResortImage, ResortImage];
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const AMENITIES: { id: string; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
@@ -55,6 +55,9 @@ export default function ResortDetailsScreen() {
     latitude?: string;
     longitude?: string;
   }>();
+  const listingId = typeof params.id === 'string' ? params.id : undefined;
+  const { data: listingRes } = useListingDetails(listingId);
+  const listing = listingRes?.data;
   const [carouselIndex, setCarouselIndex] = useState(0);
   const scrollRef = useRef<ScrollView | null>(null);
   const [dateModalVisible, setDateModalVisible] = useState(false);
@@ -69,22 +72,71 @@ export default function ResortDetailsScreen() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [loginPhone, setLoginPhone] = useState('');
   const [loginError, setLoginError] = useState<string | null>(null);
+  const [showAllAmenities, setShowAllAmenities] = useState(false);
 
   const { mutate: sendOtp, isPending: isSendingOtp } = useSendOtp();
 
-  const title = params.title ?? 'TITANIC Comfort Berlin Mitte';
-  const displayPrice = params.price ?? '₹2,420';
+  const title = listing?.title ?? params.title ?? 'TITANIC Comfort Berlin Mitte';
+  const displayPrice =
+    listing?.price_start != null ? `₹${Number(listing.price_start).toLocaleString('en-IN')}` : (params.price ?? '₹2,420');
   const rating = params.rating ?? '4.5';
 
-  const lat =
-    typeof params.latitude === 'string' ? parseFloat(params.latitude) : 52.509669;
-  const lng =
-    typeof params.longitude === 'string' ? parseFloat(params.longitude) : 13.376294;
+  const locationLabel = (() => {
+    const loc = (listing?.location ?? '').trim();
+    if (!loc) return '—';
+    // Prefer the first segment (e.g. "Varkala" from "Varkala, Kerala")
+    return loc.split(',')[0]?.trim() || loc;
+  })();
+
+  const lat = listing?.latitude ? parseFloat(String(listing.latitude)) : typeof params.latitude === 'string' ? parseFloat(params.latitude) : 52.509669;
+  const lng = listing?.longitude ? parseFloat(String(listing.longitude)) : typeof params.longitude === 'string' ? parseFloat(params.longitude) : 13.376294;
+
+  const getDirectImageUrl = (url?: string | null) => {
+    if (!url) return null;
+    const u = url.toLowerCase();
+    if (!u.startsWith('http')) return null;
+    if (u.includes('i.ibb.co/')) return url;
+    if (u.endsWith('.jpg') || u.endsWith('.jpeg') || u.endsWith('.png') || u.endsWith('.webp') || u.endsWith('.gif')) return url;
+    return null;
+  };
+
+  const carouselImages = (() => {
+    const media = listing?.media ?? [];
+    const imgs = media
+      .filter((m) => m.media_type === 'image')
+      .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+      .map((m) => getDirectImageUrl(m.url))
+      .filter(Boolean) as string[];
+    return imgs.length ? imgs : [];
+  })();
+
+  const amenityIconFor = (label: string): keyof typeof Ionicons.glyphMap => {
+    const s = label.toLowerCase();
+    if (s.includes('wifi')) return 'wifi-outline';
+    if (s.includes('parking')) return 'car-outline';
+    if (s.includes('breakfast')) return 'cafe-outline';
+    if (s.includes('air') || s.includes('ac')) return 'snow-outline';
+    if (s.includes('pool')) return 'water-outline';
+    if (s.includes('pet')) return 'paw-outline';
+    if (s.includes('gym') || s.includes('fitness')) return 'barbell-outline';
+    if (s.includes('spa')) return 'flower-outline';
+    return 'checkmark-circle-outline';
+  };
+
+  const amenitiesFromListing = (listing?.amenities ?? []).filter(Boolean);
+  const amenitiesToRender =
+    amenitiesFromListing.length > 0
+      ? amenitiesFromListing.map((a) => ({ id: a, label: a, icon: amenityIconFor(a) }))
+      : AMENITIES;
+
+  const visibleAmenities = showAllAmenities ? amenitiesToRender : amenitiesToRender.slice(0, 4);
+  const canExpandAmenities = amenitiesToRender.length > 4;
 
   const onCarouselScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const { contentOffset, layoutMeasurement } = e.nativeEvent;
     const index = Math.round(contentOffset.x / (layoutMeasurement.width || SCREEN_WIDTH));
-    setCarouselIndex(Math.min(index, CAROUSEL_IMAGES.length - 1));
+    const max = Math.max(0, (carouselImages.length || 1) - 1);
+    setCarouselIndex(Math.min(index, max));
   };
 
   const closeDateModal = () => {
@@ -301,10 +353,10 @@ export default function ResortDetailsScreen() {
             onMomentumScrollEnd={onCarouselScroll}
             style={styles.carousel}
           >
-            {CAROUSEL_IMAGES.map((img, i) => (
+            {(carouselImages.length ? carouselImages : [ResortImage]).map((img: any, i: number) => (
               <Image
                 key={i}
-                source={img}
+                source={typeof img === 'string' ? { uri: img } : img}
                 style={[styles.carouselSlide, { width: SCREEN_WIDTH }]}
                 resizeMode="cover"
               />
@@ -312,7 +364,7 @@ export default function ResortDetailsScreen() {
           </ScrollView>
           {/* Carousel dots */}
           <View style={styles.carouselDots}>
-            {CAROUSEL_IMAGES.map((_, i) => (
+            {(carouselImages.length ? carouselImages : [ResortImage]).map((_, i) => (
               <View
                 key={i}
                 style={[styles.dot, i === carouselIndex && styles.dotActive]}
@@ -347,7 +399,7 @@ export default function ResortDetailsScreen() {
           {/* Title + rating pill */}
           <View style={styles.titleColumn}>
             <Text variant="caption" style={styles.locationLabel}>
-              Berlin
+              {locationLabel}
             </Text>
             <Text variant="heading1" style={styles.title}>
               {title}
@@ -363,7 +415,7 @@ export default function ResortDetailsScreen() {
           </View>
 
           <Text variant="body" style={styles.description}>
-            {DESCRIPTION}
+            {listing?.description ?? DESCRIPTION}
           </Text>
 
           {/* Amenities */}
@@ -371,7 +423,7 @@ export default function ResortDetailsScreen() {
             Popular amenities
           </Text>
           <View style={styles.amenitiesGrid}>
-            {AMENITIES.map((item) => (
+            {visibleAmenities.map((item) => (
               <View key={item.id} style={styles.amenityCard}>
                 <View style={styles.amenityIconWrap}>
                   <Ionicons name={item.icon} size={20} color={colors.text.primary} />
@@ -382,11 +434,17 @@ export default function ResortDetailsScreen() {
               </View>
             ))}
           </View>
-          <Pressable style={styles.secondaryBtn}>
-            <Text variant="body" style={styles.secondaryBtnText}>
-              See all amenities
-            </Text>
-          </Pressable>
+          {canExpandAmenities ? (
+            <Pressable
+              style={styles.secondaryBtn}
+              onPress={() => setShowAllAmenities((v) => !v)}
+              accessibilityLabel={showAllAmenities ? 'Show less amenities' : 'See all amenities'}
+            >
+              <Text variant="body" style={styles.secondaryBtnText}>
+                {showAllAmenities ? 'Show less' : 'See all amenities'}
+              </Text>
+            </Pressable>
+          ) : null}
 
           {/* Map */}
           <Text variant="bodySemibold" style={styles.sectionHeading}>
@@ -397,14 +455,16 @@ export default function ResortDetailsScreen() {
               style={styles.map}
               provider={PROVIDER_GOOGLE}
               initialRegion={{
-                latitude: lat,
-                longitude: lng,
+                latitude: Number.isFinite(lat) ? lat : 52.509669,
+                longitude: Number.isFinite(lng) ? lng : 13.376294,
                 latitudeDelta: 0.01,
                 longitudeDelta: 0.01,
               }}
               pointerEvents="none"
             >
-              <Marker coordinate={{ latitude: lat, longitude: lng }} />
+              {Number.isFinite(lat) && Number.isFinite(lng) ? (
+                <Marker coordinate={{ latitude: lat, longitude: lng }} />
+              ) : null}
             </MapView>
           </View>
 
@@ -416,7 +476,7 @@ export default function ResortDetailsScreen() {
             <Image source={ResortImage} style={styles.hostImage} resizeMode="cover" />
             <View style={styles.hostInfo}>
               <Text variant="bodySemibold" style={styles.hostName}>
-                Mr. Ashish Kumar
+                {listing?.vendor?.business_name ?? 'Host'}
               </Text>
               <Text variant="caption" style={styles.hostDesc}>
                 {HOST_DESCRIPTION}

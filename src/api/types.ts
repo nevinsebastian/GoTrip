@@ -161,3 +161,27 @@ export interface ListingsResponse {
   meta: ListingsMeta;
 }
 
+export interface ListingVendorLite {
+  id: string;
+  business_name: string;
+}
+
+export interface ListingReview {
+  id?: string;
+  rating?: number;
+  comment?: string;
+  created_at?: string;
+  user_id?: string;
+}
+
+export interface ListingDetail extends Listing {
+  vendor?: ListingVendorLite;
+  reviews?: ListingReview[];
+}
+
+export interface ListingDetailResponse {
+  success: boolean;
+  message: string;
+  data: ListingDetail;
+}
+
