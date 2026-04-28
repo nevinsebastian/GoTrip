@@ -1,31 +1,36 @@
 import { Text } from '@/components/ui';
 import {
-  borderRadius,
-  colors,
-  spacing,
+    borderRadius,
+    colors,
+    spacing,
 } from '@/constants/DesignTokens';
+import { getStoredAuthToken } from '@/src/api/client';
+import { ListingMap } from '@/src/components/ListingMap';
+import { PaymentResultModal } from '@/src/components/PaymentResultModal';
+import { RazorpayCheckoutModal } from '@/src/components/RazorpayCheckoutModal';
+import { useCreateBooking } from '@/src/hooks/useCreateBooking';
+import { useCreateOrder } from '@/src/hooks/useCreateOrder';
+import { useListingDetails } from '@/src/hooks/useListingDetails';
+import { useSendOtp } from '@/src/hooks/useSendOtp';
+import { useVerifyPayment } from '@/src/hooks/useVerifyPayment';
+import { getErrorMessage } from '@/src/utils/errorHandler';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  Dimensions,
-  Image,
-  Modal,
-  NativeScrollEvent,
-  NativeSyntheticEvent,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  TextInput,
-  View,
+    Dimensions,
+    Image,
+    Modal,
+    NativeScrollEvent,
+    NativeSyntheticEvent,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    TextInput,
+    View,
 } from 'react-native';
 import { Calendar, DateData } from 'react-native-calendars';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { getStoredAuthToken } from '@/src/api/client';
-import { useSendOtp } from '@/src/hooks/useSendOtp';
-import { getErrorMessage } from '@/src/utils/errorHandler';
-import { useListingDetails } from '@/src/hooks/useListingDetails';
-import { ListingMap } from '@/src/components/ListingMap';
 
 const ResortImage = require('@/assets/images/resort.jpg');
 
@@ -73,8 +78,29 @@ export default function ResortDetailsScreen() {
   const [loginPhone, setLoginPhone] = useState('');
   const [loginError, setLoginError] = useState<string | null>(null);
   const [showAllAmenities, setShowAllAmenities] = useState(false);
+  const [paymentVisible, setPaymentVisible] = useState(false);
+  const [paymentOrder, setPaymentOrder] = useState<{
+    order_id: string;
+    amount: number;
+    currency: string;
+    key_id: string;
+    booking_id: string;
+  } | null>(null);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [paymentResult, setPaymentResult] = useState<null | {
+    status: 'success' | 'failed';
+    bookingId?: string;
+    totalLabel?: string;
+    datesLabel?: string;
+    guestsLabel?: string;
+    title?: string;
+    errorMessage?: string;
+  }>(null);
 
   const { mutate: sendOtp, isPending: isSendingOtp } = useSendOtp();
+  const { mutate: createBookingMut, isPending: isCreatingBooking } = useCreateBooking();
+  const { mutate: createOrderMut, isPending: isCreatingOrder } = useCreateOrder();
+  const { mutate: verifyPaymentMut, isPending: isVerifyingPayment } = useVerifyPayment();
 
   const title = listing?.title ?? params.title ?? 'TITANIC Comfort Berlin Mitte';
   const displayPrice =
@@ -307,12 +333,83 @@ export default function ResortDetailsScreen() {
   const handleGuestSave = () => setDateModalStep('price');
 
   const handleCtaPress = () => {
-    if (isLoggedIn) {
-      // TODO: Proceed to payment flow
-      closeDateModal();
+    // Debug-friendly guards: if we return early, show why.
+    if (!isLoggedIn) {
+      setPaymentError('Please log in to proceed.');
+      setDateModalStep('login');
       return;
     }
-    setDateModalStep('login');
+    if (!listingId) {
+      setPaymentError('Listing id missing. Please go back and open the listing again.');
+      return;
+    }
+    if (!checkInDate || !checkOutDate) {
+      setPaymentError('Please select both check-in and check-out dates.');
+      setDateModalStep('dates');
+      return;
+    }
+
+    setPaymentError(null);
+
+    const guests = Math.max(1, adultsCount + childrenCount + infantsCount);
+
+    createBookingMut(
+      {
+        listing_id: listingId,
+        start_date: checkInDate,
+        end_date: checkOutDate,
+        guests,
+      },
+      {
+        onSuccess: (res) => {
+          const bookingId = res?.data?.id;
+          if (!res?.success || !bookingId) {
+            setPaymentError(res?.message ?? 'Failed to create booking.');
+            return;
+          }
+          createOrderMut(
+            {
+              booking_id: bookingId,
+              // Workaround for backend Razorpay receipt length validation (<= 40).
+              receipt: bookingId.slice(0, 40),
+            },
+            {
+              onSuccess: (orderRes) => {
+                const d = orderRes?.data;
+                if (!orderRes?.success || !d?.order_id || !d?.key_id) {
+                  setPaymentError(orderRes?.message ?? 'Failed to create payment order.');
+                  return;
+                }
+                setPaymentOrder({
+                  order_id: d.order_id,
+                  amount: d.amount,
+                  currency: d.currency ?? 'INR',
+                  key_id: d.key_id,
+                  booking_id: bookingId,
+                });
+                // Hide the booking bottom-sheet modal before opening Razorpay.
+                // Otherwise the sheet can sit above and visually block the payment modal.
+                setDateModalVisible(false);
+                setPaymentVisible(true);
+              },
+              onError: (err) => {
+                const msg =
+                  (err as any)?.details?.error?.description ||
+                  (err as any)?.details?.message ||
+                  (err as any)?.message ||
+                  getErrorMessage(err);
+                setPaymentError(String(msg));
+              },
+            },
+          );
+        },
+        onError: (err) => {
+          // Prefer backend message for 4xx (e.g. "No availability...")
+          const msg = (err as any)?.details?.message || (err as any)?.message || getErrorMessage(err);
+          setPaymentError(String(msg));
+        },
+      },
+    );
   };
 
   const handleGetOtpInModal = () => {
@@ -343,6 +440,104 @@ export default function ResortDetailsScreen() {
 
   return (
     <View style={styles.container}>
+      <PaymentResultModal
+        visible={Boolean(paymentResult)}
+        status={paymentResult?.status ?? 'success'}
+        bookingId={paymentResult?.bookingId}
+        title={paymentResult?.title}
+        datesLabel={paymentResult?.datesLabel}
+        guestsLabel={paymentResult?.guestsLabel}
+        totalPriceLabel={paymentResult?.totalLabel}
+        errorMessage={paymentResult?.errorMessage}
+        imageSource={carouselImages?.[0] ? { uri: carouselImages[0] } : ResortImage}
+        onClose={() => setPaymentResult(null)}
+        onRetry={
+          paymentResult?.status === 'failed'
+            ? () => {
+                setPaymentResult(null);
+                if (paymentOrder) setPaymentVisible(true);
+              }
+            : undefined
+        }
+      />
+      <RazorpayCheckoutModal
+        visible={paymentVisible && Boolean(paymentOrder)}
+        onClose={() => {
+          setPaymentVisible(false);
+          setPaymentOrder(null);
+        }}
+        keyId={paymentOrder?.key_id ?? ''}
+        orderId={paymentOrder?.order_id ?? ''}
+        amount={paymentOrder?.amount ?? 0}
+        currency={paymentOrder?.currency ?? 'INR'}
+        name="GoTrip"
+        description={title}
+        onError={(msg) => {
+          setPaymentError(msg);
+          setPaymentVisible(false);
+          setPaymentResult({
+            status: 'failed',
+            bookingId: paymentOrder?.booking_id,
+            title,
+            datesLabel: checkInDate && checkOutDate ? `${checkInDate} to ${checkOutDate}` : undefined,
+            guestsLabel,
+            totalLabel: `₹ ${total.toLocaleString('en-IN')} including tax`,
+            errorMessage: msg,
+          });
+        }}
+        onSuccess={(payload) => {
+          setPaymentError(null);
+          verifyPaymentMut(
+            {
+              razorpay_order_id: payload.razorpay_order_id,
+              razorpay_payment_id: payload.razorpay_payment_id,
+              razorpay_signature: payload.razorpay_signature,
+            },
+            {
+              onSuccess: (res) => {
+                if (res?.success) {
+                  setPaymentVisible(false);
+                  setPaymentResult({
+                    status: 'success',
+                    bookingId: paymentOrder?.booking_id,
+                    title,
+                    datesLabel: checkInDate && checkOutDate ? `${checkInDate} to ${checkOutDate}` : undefined,
+                    guestsLabel,
+                    totalLabel: `₹ ${total.toLocaleString('en-IN')} including tax`,
+                  });
+                  return;
+                }
+                const msg = res?.message ?? 'Payment verification failed.';
+                setPaymentError(msg);
+                setPaymentVisible(false);
+                setPaymentResult({
+                  status: 'failed',
+                  bookingId: paymentOrder?.booking_id,
+                  title,
+                  datesLabel: checkInDate && checkOutDate ? `${checkInDate} to ${checkOutDate}` : undefined,
+                  guestsLabel,
+                  totalLabel: `₹ ${total.toLocaleString('en-IN')} including tax`,
+                  errorMessage: msg,
+                });
+              },
+              onError: (err) => {
+                const msg = getErrorMessage(err);
+                setPaymentError(msg);
+                setPaymentVisible(false);
+                setPaymentResult({
+                  status: 'failed',
+                  bookingId: paymentOrder?.booking_id,
+                  title,
+                  datesLabel: checkInDate && checkOutDate ? `${checkInDate} to ${checkOutDate}` : undefined,
+                  guestsLabel,
+                  totalLabel: `₹ ${total.toLocaleString('en-IN')} including tax`,
+                  errorMessage: msg,
+                });
+              },
+            },
+          );
+        }}
+      />
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
@@ -770,11 +965,22 @@ export default function ResortDetailsScreen() {
                   style={[styles.saveBtn, styles.fullWidthCta]}
                   onPress={handleCtaPress}
                   accessibilityLabel={isLoggedIn ? 'Proceed to pay' : 'Login to proceed'}
+                  disabled={isCreatingBooking || isCreatingOrder}
                 >
                   <Text variant="bodySemibold" style={styles.saveBtnText}>
-                    {isLoggedIn ? 'Proceed to pay' : 'Login to proceed'}
+                    {isCreatingBooking || isCreatingOrder
+                      ? 'Processing...'
+                      : isLoggedIn
+                        ? 'Proceed to pay'
+                        : 'Login to proceed'}
                   </Text>
                 </Pressable>
+
+                {paymentError ? (
+                  <Text variant="caption" style={styles.loginError}>
+                    {paymentError}
+                  </Text>
+                ) : null}
               </>
             ) : (
               <>

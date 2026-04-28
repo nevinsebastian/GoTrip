@@ -25,5 +25,15 @@ export const ENDPOINTS = {
   listings: {
     browse: '/api/v1/listings',
   },
+  bookings: {
+    create: '/api/v1/bookings',
+    mine: '/api/v1/bookings',
+    detail: (id: string) => `/api/v1/bookings/${id}`,
+    cancel: (id: string) => `/api/v1/bookings/${id}/cancel`,
+  },
+  payments: {
+    createOrder: '/api/v1/payments/create-order',
+    verify: '/api/v1/payments/verify',
+  },
 } as const;
 

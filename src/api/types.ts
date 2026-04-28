@@ -191,3 +191,68 @@ export interface ListingDetailResponse {
   data: ListingDetail;
 }
 
+// --- Bookings ---
+export interface CreateBookingRequest {
+  listing_id: string;
+  start_date: string; // YYYY-MM-DD
+  end_date: string; // YYYY-MM-DD
+  guests: number;
+}
+
+export type BookingStatus =
+  | 'pending'
+  | 'confirmed'
+  | 'cancelled'
+  | 'failed'
+  | string;
+
+export interface Booking {
+  id: string;
+  listing_id: string;
+  start_date: string;
+  end_date: string;
+  guests: number;
+  status?: BookingStatus;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface CreateBookingResponse {
+  success: boolean;
+  message: string;
+  data: Booking;
+}
+
+// --- Payments (Razorpay) ---
+export interface CreateOrderRequest {
+  booking_id: string;
+  /**
+   * Optional Razorpay receipt override.
+   * Razorpay requires receipt length <= 40 chars.
+   */
+  receipt?: string;
+}
+
+export interface CreateOrderResponse {
+  success: boolean;
+  message: string;
+  data: {
+    order_id: string;
+    amount: number; // in paise
+    currency: string;
+    key_id: string;
+  };
+}
+
+export interface VerifyPaymentRequest {
+  razorpay_order_id: string;
+  razorpay_payment_id: string;
+  razorpay_signature: string;
+}
+
+export interface VerifyPaymentResponse {
+  success: boolean;
+  message: string;
+  data?: unknown;
+}
+
