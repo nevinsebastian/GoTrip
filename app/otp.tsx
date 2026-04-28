@@ -3,12 +3,12 @@ import { borderRadius, colors, spacing } from '@/constants/DesignTokens';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useRef, useState } from 'react';
 import {
-  Keyboard,
-  Platform,
-  StyleSheet,
-  TextInput,
-  TouchableWithoutFeedback,
-  View,
+    Keyboard,
+    Platform,
+    StyleSheet,
+    TextInput,
+    TouchableWithoutFeedback,
+    View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 

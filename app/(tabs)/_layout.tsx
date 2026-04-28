@@ -4,6 +4,7 @@ import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { Tabs } from 'expo-router';
 import React, { createContext, useContext, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useResponsive } from '@/components/ui/useResponsive';
 
 import TicketsIcon from '@/assets/images/tickets.svg';
 
@@ -56,8 +57,10 @@ function CustomTabBar({
   setPreviousTab,
 }: BottomTabBarProps & { setPreviousTab: (name: TabRouteName) => void }) {
   const isProfileActive = state.routes[state.index].name === 'four';
+  const { isDesktop } = useResponsive();
 
-  if (isProfileActive) {
+  // Web desktop uses a footer (no bottom navbar).
+  if ((Platform.OS === 'web' && isDesktop) || isProfileActive) {
     return null;
   }
 

@@ -11,6 +11,7 @@ import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
     Image,
+    Platform,
     Pressable,
     ScrollView,
     StyleSheet,
@@ -26,12 +27,13 @@ import HillIll from '@/assets/images/hill ill 1.svg';
 import Logo from '@/assets/images/logogotrip.svg';
 import RoomsIll from '@/assets/images/Rooms ill 1.svg';
 import TypeIcon from '@/assets/images/type.svg';
-import { useCategoriesByType } from '@/src/hooks/useCategoriesByType';
-import { useRootCategories } from '@/src/hooks/useRootCategories';
-import { useListings } from '@/src/hooks/useListings';
 import type { Listing, ListingMedia } from '@/src/api/types';
+import { useCategoriesByType } from '@/src/hooks/useCategoriesByType';
+import { useListings } from '@/src/hooks/useListings';
+import { useRootCategories } from '@/src/hooks/useRootCategories';
 
 const ResortImage = require('../../assets/images/resort.jpg');
+const WebLogo = require('../../assets/images/logogotrip.png');
 
 const TYPE_ICON_BG = '#FFD49A';
 const TYPE_LABEL_COLOR = '#545454';
@@ -276,6 +278,170 @@ export default function HomeScreen() {
     return first?.url ?? null;
   };
 
+  // Desktop web-only home (Figma 158-11304). Must not affect iOS/Android/mobile web.
+  const isDesktopWeb = Platform.OS === 'web' && isDesktop;
+  if (isDesktopWeb) {
+    const listings = listingsRes?.data ?? [];
+    const suggested = listings.slice(0, 6);
+    const topRated = listings.slice(0, 5);
+    const budget = (economicRes?.data ?? listings).slice(0, 5);
+    const luxury = listings.slice(0, 5);
+
+    const containerMaxWidth = 1240;
+    const sidePad = Math.max(24, Math.floor((width - containerMaxWidth) / 2));
+    const cardW = 200;
+
+    const DesktopSection = ({
+      title,
+      items,
+    }: {
+      title: string;
+      items: Listing[];
+    }) => (
+      <View style={stylesWeb.section}>
+        <View style={stylesWeb.sectionHeader}>
+          <Text variant="bodySemibold" style={stylesWeb.sectionTitle}>
+            {title}
+          </Text>
+          <Pressable accessibilityLabel="View all" style={stylesWeb.viewAllBtn}>
+            <Text variant="caption" style={stylesWeb.viewAllText}>
+              View all
+            </Text>
+            <Ionicons name="chevron-forward" size={14} color={colors.primary} />
+          </Pressable>
+        </View>
+
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={stylesWeb.row}>
+          {items.map((l) => {
+            const img = getPrimaryImage(l.media);
+            const price =
+              l.price_start != null ? `₹${Number(l.price_start).toLocaleString('en-IN')}/night` : '—';
+            return (
+              <Pressable
+                key={l.id}
+                style={[stylesWeb.cardWrap, { width: cardW }]}
+                onPress={() => router.push({ pathname: '/resort/[id]', params: { id: l.id } })}
+                accessibilityLabel={l.title}
+              >
+                <View style={stylesWeb.cardImageWrap}>
+                  {img ? (
+                    <Image source={{ uri: img }} style={stylesWeb.cardImage} resizeMode="cover" />
+                  ) : (
+                    <View style={stylesWeb.cardImagePlaceholder}>
+                      <Ionicons name="image-outline" size={22} color={colors.text.caption} />
+                    </View>
+                  )}
+                  <View style={stylesWeb.heartBadge}>
+                    <HeartIcon width={18} height={18} />
+                  </View>
+                </View>
+                <View style={stylesWeb.cardMetaRow}>
+                  <Text variant="caption" numberOfLines={2} style={stylesWeb.cardTitle}>
+                    {l.title}
+                  </Text>
+                  <View style={stylesWeb.cardRating}>
+                    <Ionicons name="star-outline" size={14} color={colors.rating.star} />
+                    <Text variant="caption" style={stylesWeb.cardRatingText}>
+                      4.5
+                    </Text>
+                  </View>
+                </View>
+                <Text variant="caption" style={stylesWeb.cardPrice}>
+                  {price}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+      </View>
+    );
+
+    return (
+      <SafeAreaView style={stylesWeb.page} edges={['top']}>
+        <View style={[stylesWeb.container, { paddingHorizontal: sidePad }]}>
+          {/* Header */}
+          <View style={stylesWeb.header}>
+            {Platform.OS === 'web' ? (
+              <Image source={WebLogo} style={stylesWeb.logoImg} resizeMode="contain" />
+            ) : (
+              <Logo width={90} height={42} />
+            )}
+            <View style={stylesWeb.searchWrap}>
+              <Input
+                placeholder="Search"
+                style={stylesWeb.searchInput}
+                placeholderTextColor="rgba(28,32,36,0.7)"
+              />
+              <View style={stylesWeb.searchIcon}>
+                <Ionicons name="search" size={16} color={colors.primary} />
+              </View>
+            </View>
+            <View style={stylesWeb.headerActions}>
+              <Pressable style={stylesWeb.iconBtn} accessibilityLabel="Notifications">
+                <BellIcon width={18} height={18} />
+              </Pressable>
+              <Pressable style={[stylesWeb.iconBtn, stylesWeb.avatarBtn]} accessibilityLabel="Profile">
+                <Ionicons name="person-outline" size={18} color={colors.surface.white} />
+              </Pressable>
+              <Pressable style={stylesWeb.menuBtn} accessibilityLabel="Menu">
+                <Ionicons name="menu" size={22} color={colors.primary} />
+              </Pressable>
+            </View>
+          </View>
+
+          {/* Category tiles */}
+          <View style={stylesWeb.tilesRow}>
+            {CATEGORIES.map((c) => (
+              <View key={c.title} style={stylesWeb.tileOuter}>
+                <CategoryCard
+                  title={c.title}
+                  subtitle={c.subtitle}
+                  bg={c.bg}
+                  iconKey={c.iconKey}
+                  onPress={() => {}}
+                />
+              </View>
+            ))}
+          </View>
+
+          <DesktopSection title="Suggested for you" items={suggested} />
+          <DesktopSection title="Top rated stays" items={topRated} />
+          <DesktopSection title="Budget options" items={budget} />
+          <DesktopSection title="Luxury resorts" items={luxury} />
+        </View>
+
+        {/* Footer */}
+        <View style={stylesWeb.footer}>
+          <View style={[stylesWeb.footerInner, { paddingHorizontal: sidePad }]}>
+            <Text variant="caption" style={stylesWeb.footerLink}>
+              More info
+            </Text>
+            <Text variant="caption" style={stylesWeb.footerLink}>
+              Link 1
+            </Text>
+            <Text variant="caption" style={stylesWeb.footerLink}>
+              Link 2
+            </Text>
+            <View style={{ flex: 1 }} />
+            <Text variant="caption" style={stylesWeb.footerBrand}>
+              GOTRIP HOLIDAY
+            </Text>
+            <View style={{ flex: 1 }} />
+            <Text variant="caption" style={stylesWeb.footerLink}>
+              More info
+            </Text>
+            <Text variant="caption" style={stylesWeb.footerLink}>
+              Link 1
+            </Text>
+            <Text variant="caption" style={stylesWeb.footerLink}>
+              Link 2
+            </Text>
+          </View>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   const groupedListings = (() => {
     const list = listingsRes?.data ?? [];
     const byCategory = new Map<
@@ -429,7 +595,11 @@ export default function HomeScreen() {
         <View style={[styles.topFixed, { paddingHorizontal: contentPadding }]}>
           <View style={styles.header}>
             <View style={styles.logoWrap}>
+            {Platform.OS === 'web' ? (
+              <Image source={WebLogo} style={[styles.webLogo, { width: logoWidth, height: logoHeight }]} resizeMode="contain" />
+            ) : (
               <Logo width={logoWidth} height={logoHeight} />
+            )}
             </View>
             <Pressable onPress={() => {}} style={styles.bellWrap}>
               <BellIcon width={bellIconSize} height={bellIconSize} />
@@ -695,6 +865,9 @@ const styles = StyleSheet.create({
   logoWrap: {
     flexDirection: 'column',
   },
+  webLogo: {
+    alignSelf: 'flex-start',
+  },
   logoSub: {
     color: colors.text.primary,
     marginTop: 2,
@@ -878,5 +1051,176 @@ const styles = StyleSheet.create({
   },
   stayRating: {
     color: colors.text.primary,
+  },
+});
+
+// Desktop web-only styles (do not affect native/mobile web).
+const stylesWeb = StyleSheet.create({
+  page: {
+    flex: 1,
+    backgroundColor: colors.surface.white,
+  },
+  container: {
+    width: '100%',
+  },
+  header: {
+    marginTop: spacing['4'],
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing['4'],
+  },
+  searchWrap: {
+    flex: 1,
+    maxWidth: 520,
+    position: 'relative',
+  },
+  searchInput: {
+    height: 40,
+    borderRadius: borderRadius.pill,
+    backgroundColor: 'rgba(229,77,46,0.10)',
+    borderWidth: 0,
+    paddingLeft: spacing['4'],
+    paddingRight: 44,
+  },
+  searchIcon: {
+    position: 'absolute',
+    right: 12,
+    top: 0,
+    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 32,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing['3'],
+  },
+  iconBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    backgroundColor: 'rgba(229,77,46,0.05)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarBtn: {
+    backgroundColor: colors.primary,
+  },
+  menuBtn: {
+    width: 22,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tilesRow: {
+    marginTop: spacing['5'],
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing['4'],
+  },
+  tileOuter: {
+    flex: 1,
+  },
+  section: {
+    marginTop: spacing['6'],
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing['3'],
+  },
+  sectionTitle: {
+    color: colors.text.primary,
+  },
+  viewAllBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  viewAllText: {
+    color: colors.primary,
+  },
+  row: {
+    gap: spacing['3'],
+    paddingBottom: spacing['1'],
+  },
+  cardWrap: {
+    gap: spacing['2'],
+  },
+  cardImageWrap: {
+    width: '100%',
+    height: 120,
+    borderRadius: 16,
+    overflow: 'hidden',
+    backgroundColor: colors.gray['2'],
+  },
+  cardImage: {
+    width: '100%',
+    height: '100%',
+  },
+  cardImagePlaceholder: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.gray['2'],
+  },
+  heartBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 26,
+    height: 26,
+    borderRadius: 6,
+    backgroundColor: colors.surface.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cardMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    gap: spacing['2'],
+  },
+  cardTitle: {
+    flex: 1,
+    color: colors.text.primary,
+  },
+  cardRating: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  cardRatingText: {
+    color: colors.text.secondary,
+  },
+  cardPrice: {
+    color: colors.text.secondary,
+  },
+  footer: {
+    marginTop: spacing['7'],
+    backgroundColor: colors.primary,
+    paddingVertical: spacing['5'],
+  },
+  footerInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing['4'],
+  },
+  footerLink: {
+    color: colors.surface.white,
+  },
+  footerBrand: {
+    color: colors.surface.white,
+    letterSpacing: 4,
+  },
+  logoImg: {
+    width: 90,
+    height: 42,
   },
 });
