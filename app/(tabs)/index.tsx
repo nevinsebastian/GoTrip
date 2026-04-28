@@ -287,8 +287,6 @@ export default function HomeScreen() {
     const budget = (economicRes?.data ?? listings).slice(0, 5);
     const luxury = listings.slice(0, 5);
 
-    const containerMaxWidth = 1240;
-    const sidePad = Math.max(24, Math.floor((width - containerMaxWidth) / 2));
     const cardW = 200;
 
     const DesktopSection = ({
@@ -358,86 +356,92 @@ export default function HomeScreen() {
 
     return (
       <SafeAreaView style={stylesWeb.page} edges={['top']}>
-        <View style={[stylesWeb.container, { paddingHorizontal: sidePad }]}>
-          {/* Header */}
-          <View style={stylesWeb.header}>
-            {Platform.OS === 'web' ? (
-              <Image source={WebLogo} style={stylesWeb.logoImg} resizeMode="contain" />
-            ) : (
-              <Logo width={90} height={42} />
-            )}
-            <View style={stylesWeb.searchWrap}>
-              <Input
-                placeholder="Search"
-                style={stylesWeb.searchInput}
-                placeholderTextColor="rgba(28,32,36,0.7)"
-              />
-              <View style={stylesWeb.searchIcon}>
-                <Ionicons name="search" size={16} color={colors.primary} />
-              </View>
-            </View>
-            <View style={stylesWeb.headerActions}>
-              <Pressable style={stylesWeb.iconBtn} accessibilityLabel="Notifications">
-                <BellIcon width={18} height={18} />
-              </Pressable>
-              <Pressable style={[stylesWeb.iconBtn, stylesWeb.avatarBtn]} accessibilityLabel="Profile">
-                <Ionicons name="person-outline" size={18} color={colors.surface.white} />
-              </Pressable>
-              <Pressable style={stylesWeb.menuBtn} accessibilityLabel="Menu">
-                <Ionicons name="menu" size={22} color={colors.primary} />
-              </Pressable>
-            </View>
-          </View>
-
-          {/* Category tiles */}
-          <View style={stylesWeb.tilesRow}>
-            {CATEGORIES.map((c) => (
-              <View key={c.title} style={stylesWeb.tileOuter}>
-                <CategoryCard
-                  title={c.title}
-                  subtitle={c.subtitle}
-                  bg={c.bg}
-                  iconKey={c.iconKey}
-                  onPress={() => {}}
+        <ScrollView
+          style={stylesWeb.scroll}
+          contentContainerStyle={stylesWeb.scrollContent}
+          showsVerticalScrollIndicator={true}
+        >
+          <View style={stylesWeb.container}>
+            {/* Header */}
+            <View style={stylesWeb.header}>
+              {Platform.OS === 'web' ? (
+                <Image source={WebLogo} style={stylesWeb.logoImg} resizeMode="contain" />
+              ) : (
+                <Logo width={90} height={42} />
+              )}
+              <View style={stylesWeb.searchWrap}>
+                <Input
+                  placeholder="Search"
+                  style={stylesWeb.searchInput}
+                  placeholderTextColor="rgba(28,32,36,0.7)"
                 />
+                <View style={stylesWeb.searchIcon}>
+                  <Ionicons name="search" size={16} color={colors.primary} />
+                </View>
               </View>
-            ))}
+              <View style={stylesWeb.headerActions}>
+                <Pressable style={stylesWeb.iconBtn} accessibilityLabel="Notifications">
+                  <BellIcon width={18} height={18} />
+                </Pressable>
+                <Pressable style={[stylesWeb.iconBtn, stylesWeb.avatarBtn]} accessibilityLabel="Profile">
+                  <Ionicons name="person-outline" size={18} color={colors.surface.white} />
+                </Pressable>
+                <Pressable style={stylesWeb.menuBtn} accessibilityLabel="Menu">
+                  <Ionicons name="menu" size={22} color={colors.primary} />
+                </Pressable>
+              </View>
+            </View>
+
+            {/* Category tiles */}
+            <View style={stylesWeb.tilesRow}>
+              {CATEGORIES.map((c) => (
+                <View key={c.title} style={stylesWeb.tileOuter}>
+                  <CategoryCard
+                    title={c.title}
+                    subtitle={c.subtitle}
+                    bg={c.bg}
+                    iconKey={c.iconKey}
+                    onPress={() => {}}
+                  />
+                </View>
+              ))}
+            </View>
+
+            <DesktopSection title="Suggested for you" items={suggested} />
+            <DesktopSection title="Top rated stays" items={topRated} />
+            <DesktopSection title="Budget options" items={budget} />
+            <DesktopSection title="Luxury resorts" items={luxury} />
           </View>
 
-          <DesktopSection title="Suggested for you" items={suggested} />
-          <DesktopSection title="Top rated stays" items={topRated} />
-          <DesktopSection title="Budget options" items={budget} />
-          <DesktopSection title="Luxury resorts" items={luxury} />
-        </View>
-
-        {/* Footer */}
-        <View style={stylesWeb.footer}>
-          <View style={[stylesWeb.footerInner, { paddingHorizontal: sidePad }]}>
-            <Text variant="caption" style={stylesWeb.footerLink}>
-              More info
-            </Text>
-            <Text variant="caption" style={stylesWeb.footerLink}>
-              Link 1
-            </Text>
-            <Text variant="caption" style={stylesWeb.footerLink}>
-              Link 2
-            </Text>
-            <View style={{ flex: 1 }} />
-            <Text variant="caption" style={stylesWeb.footerBrand}>
-              GOTRIP HOLIDAY
-            </Text>
-            <View style={{ flex: 1 }} />
-            <Text variant="caption" style={stylesWeb.footerLink}>
-              More info
-            </Text>
-            <Text variant="caption" style={stylesWeb.footerLink}>
-              Link 1
-            </Text>
-            <Text variant="caption" style={stylesWeb.footerLink}>
-              Link 2
-            </Text>
+          {/* Footer */}
+          <View style={stylesWeb.footer}>
+            <View style={stylesWeb.footerInner}>
+              <Text variant="caption" style={stylesWeb.footerLink}>
+                More info
+              </Text>
+              <Text variant="caption" style={stylesWeb.footerLink}>
+                Link 1
+              </Text>
+              <Text variant="caption" style={stylesWeb.footerLink}>
+                Link 2
+              </Text>
+              <View style={{ flex: 1 }} />
+              <Text variant="caption" style={stylesWeb.footerBrand}>
+                GOTRIP HOLIDAY
+              </Text>
+              <View style={{ flex: 1 }} />
+              <Text variant="caption" style={stylesWeb.footerLink}>
+                More info
+              </Text>
+              <Text variant="caption" style={stylesWeb.footerLink}>
+                Link 1
+              </Text>
+              <Text variant="caption" style={stylesWeb.footerLink}>
+                Link 2
+              </Text>
+            </View>
           </View>
-        </View>
+        </ScrollView>
       </SafeAreaView>
     );
   }
@@ -1060,8 +1064,17 @@ const stylesWeb = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.surface.white,
   },
+  scroll: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: spacing['7'],
+  },
   container: {
     width: '100%',
+    maxWidth: 1280,
+    alignSelf: 'center',
+    paddingHorizontal: 40,
   },
   header: {
     marginTop: spacing['4'],
@@ -1211,6 +1224,9 @@ const stylesWeb = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing['4'],
+    maxWidth: 1280,
+    alignSelf: 'center',
+    paddingHorizontal: 40,
   },
   footerLink: {
     color: colors.surface.white,
