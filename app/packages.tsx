@@ -2,6 +2,7 @@ import BellIcon from '@/assets/images/bell.svg';
 import { IconButton, Input, Text } from '@/components/ui';
 import { useResponsive } from '@/components/ui/useResponsive';
 import { borderRadius, colors, spacing } from '@/constants/DesignTokens';
+import type { Category } from '@/src/api/types';
 import { useCategoriesByType } from '@/src/hooks/useCategoriesByType';
 import { useListings } from '@/src/hooks/useListings';
 import { Ionicons } from '@expo/vector-icons';
@@ -20,14 +21,17 @@ export default function PackagesScreen() {
   const bellIconSize = isMobile ? 24 : isTablet ? 26 : 28;
 
   const [query, setQuery] = useState('');
+  const [selectedChild, setSelectedChild] = useState<string | null>(null);
 
   const { data: categoriesRes } = useCategoriesByType('package', true);
   const packageCategory = categoriesRes?.data?.[0];
   const categoryId = packageCategory?.id;
+  const children: Category[] = packageCategory?.children ?? [];
+  const effectiveCategoryId = selectedChild ?? categoryId;
 
   const { data: listingsRes } = useListings(
-    { page: 1, limit: 20, category_id: categoryId },
-    Boolean(categoryId),
+    { page: 1, limit: 20, category_id: effectiveCategoryId },
+    Boolean(effectiveCategoryId),
   );
 
   const listings = listingsRes?.data ?? [];
@@ -73,6 +77,46 @@ export default function PackagesScreen() {
           onChangeText={setQuery}
         />
       </View>
+
+      {children.length ? (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={[
+            styles.chipsRow,
+            { paddingHorizontal: contentPadding, maxWidth, alignSelf: maxWidth ? 'center' : 'stretch' },
+          ]}
+        >
+          <Pressable
+            style={[styles.chip, !selectedChild && styles.chipActive]}
+            onPress={() => setSelectedChild(null)}
+            accessibilityLabel="All packages"
+          >
+            <Text variant="caption" style={[styles.chipText, !selectedChild && styles.chipTextActive]}>
+              All
+            </Text>
+          </Pressable>
+          {children
+            .slice()
+            .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+            .filter((c) => (c.type == null ? true : String(c.type).trim().length > 0))
+            .map((c) => {
+              const active = selectedChild === c.id;
+              return (
+                <Pressable
+                  key={c.id}
+                  style={[styles.chip, active && styles.chipActive]}
+                  onPress={() => setSelectedChild(c.id)}
+                  accessibilityLabel={c.name}
+                >
+                  <Text variant="caption" style={[styles.chipText, active && styles.chipTextActive]}>
+                    {c.name}
+                  </Text>
+                </Pressable>
+              );
+            })}
+        </ScrollView>
+      ) : null}
 
       <ScrollView
         style={styles.scroll}
@@ -165,6 +209,23 @@ const styles = StyleSheet.create({
   searchWrap: { marginBottom: spacing['4'] },
   scroll: { flex: 1 },
   scrollContent: { paddingBottom: spacing['8'] },
+  chipsRow: { gap: spacing['2'], paddingBottom: 0, marginBottom: spacing['3'], paddingRight: spacing['4'] },
+  chip: {
+    height: 32,
+    paddingHorizontal: spacing['3'],
+    borderRadius: 10,
+    backgroundColor: colors.surface.white,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  chipActive: {
+    borderColor: colors.primary,
+    backgroundColor: 'rgba(229,77,46,0.06)',
+  },
+  chipText: { color: colors.text.secondary },
+  chipTextActive: { color: colors.text.primary, fontWeight: '600' },
   sectionTitle: { color: colors.text.primary, marginBottom: spacing['3'] },
   list: { gap: spacing['4'] },
   card: {

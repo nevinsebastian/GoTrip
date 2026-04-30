@@ -28,10 +28,11 @@ export default function ResortsScreen() {
   const children: Category[] = root?.children ?? [];
 
   const categoryId = root?.id;
+  const effectiveCategoryId = selectedChild ?? categoryId;
 
   const { data: listingsRes } = useListings(
-    { page: 1, limit: 20, category_id: categoryId },
-    Boolean(categoryId),
+    { page: 1, limit: 20, category_id: effectiveCategoryId },
+    Boolean(effectiveCategoryId),
   );
 
   const listings = listingsRes?.data ?? [];
@@ -79,45 +80,6 @@ export default function ResortsScreen() {
         />
       </View>
 
-      {children.length ? (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={[
-            styles.chipsRow,
-            { paddingHorizontal: contentPadding, maxWidth, alignSelf: maxWidth ? 'center' : 'stretch' },
-          ]}
-        >
-          <Pressable
-            style={[styles.chip, !selectedChild && styles.chipActive]}
-            onPress={() => setSelectedChild(null)}
-            accessibilityLabel="All"
-          >
-            <Text variant="caption" style={[styles.chipText, !selectedChild && styles.chipTextActive]}>
-              All
-            </Text>
-          </Pressable>
-          {children
-            .slice()
-            .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
-            .map((c) => {
-              const active = selectedChild === c.id;
-              return (
-                <Pressable
-                  key={c.id}
-                  style={[styles.chip, active && styles.chipActive]}
-                  onPress={() => setSelectedChild(c.id)}
-                  accessibilityLabel={c.name}
-                >
-                  <Text variant="caption" style={[styles.chipText, active && styles.chipTextActive]}>
-                    {c.name}
-                  </Text>
-                </Pressable>
-              );
-            })}
-        </ScrollView>
-      ) : null}
-
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={[
@@ -126,6 +88,50 @@ export default function ResortsScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
+        {children.length ? (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.chipsRow}
+          >
+            <Pressable
+              style={[styles.chip, !selectedChild && styles.chipActive]}
+              onPress={() => setSelectedChild(null)}
+              accessibilityLabel="All"
+            >
+              <Text
+                variant="caption"
+                style={[styles.chipText, !selectedChild && styles.chipTextActive]}
+              >
+                All
+              </Text>
+            </Pressable>
+            {children
+              .slice()
+              .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+              // If backend starts returning `type`, never show null/empty labels.
+              .filter((c) => (c.type == null ? true : String(c.type).trim().length > 0))
+              .map((c) => {
+                const active = selectedChild === c.id;
+                return (
+                  <Pressable
+                    key={c.id}
+                    style={[styles.chip, active && styles.chipActive]}
+                    onPress={() => setSelectedChild(c.id)}
+                    accessibilityLabel={c.name}
+                  >
+                    <Text
+                      variant="caption"
+                      style={[styles.chipText, active && styles.chipTextActive]}
+                    >
+                      {c.name}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+          </ScrollView>
+        ) : null}
+
         <View style={styles.grid}>
           {visible.map((l) => (
             <Pressable
@@ -180,8 +186,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: 'rgba(255,32,0,0.03)',
   },
-  searchWrap: { marginBottom: spacing['3'] },
-  chipsRow: { gap: spacing['2'], paddingBottom: spacing['1'] },
+  searchWrap: { marginBottom: spacing['2'] },
+  chipsRow: { gap: spacing['2'], paddingBottom: 0, marginBottom: spacing['2'], paddingRight: spacing['4'] },
   chip: {
     height: 32,
     paddingHorizontal: spacing['3'],
@@ -199,7 +205,7 @@ const styles = StyleSheet.create({
   chipText: { color: colors.text.secondary },
   chipTextActive: { color: colors.text.primary, fontWeight: '600' },
   scroll: { flex: 1 },
-  scrollContent: { paddingTop: spacing['2'], paddingBottom: spacing['8'] },
+  scrollContent: { paddingTop: 0, paddingBottom: spacing['8'] },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
