@@ -82,6 +82,8 @@ function RootLayoutNav() {
           <Stack.Screen name="otp" options={{ headerShown: false }} />
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="resort/[id]" options={{ headerShown: false }} />
+          <Stack.Screen name="resorts" options={{ headerShown: false }} />
+          <Stack.Screen name="packages" options={{ headerShown: false }} />
           <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
         </Stack>
       </ThemeProvider>

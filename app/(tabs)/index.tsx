@@ -70,6 +70,17 @@ const CATEGORIES: Array<{ title: string; subtitle: string; bg: string; iconKey: 
   { title: 'Activities', subtitle: 'Other experiences', bg: '#FFE0B2', iconKey: 'activities' },
 ];
 
+function routeForCategory(iconKey: CategoryIconKey) {
+  switch (iconKey) {
+    case 'rooms':
+      return '/resorts';
+    case 'packages':
+      return '/packages';
+    default:
+      return null;
+  }
+}
+
 // Room type cards (Figma 110-801): icon type.svg + label, same icon for all.
 const ROOM_TYPES: Array<{ id: string; label: string }> = [
   { id: 'budget', label: 'Budget' },
@@ -401,7 +412,10 @@ export default function HomeScreen() {
                     subtitle={c.subtitle}
                     bg={c.bg}
                     iconKey={c.iconKey}
-                    onPress={() => {}}
+                  onPress={() => {
+                    const r = routeForCategory(c.iconKey);
+                    if (r) router.push(r as any);
+                  }}
                   />
                 </View>
               ))}
@@ -639,7 +653,7 @@ export default function HomeScreen() {
                   subtitle={CATEGORIES[0].subtitle}
                   bg={CATEGORIES[0].bg}
                   iconKey={CATEGORIES[0].iconKey}
-                  onPress={() => setRoomsMode(true)}
+                  onPress={() => router.push('/resorts')}
                 />
               </View>
               <View style={styles.bentoCell1}>
@@ -648,7 +662,7 @@ export default function HomeScreen() {
                   subtitle={CATEGORIES[1].subtitle}
                   bg={CATEGORIES[1].bg}
                   iconKey={CATEGORIES[1].iconKey}
-                  onPress={() => {}}
+                  onPress={() => router.push('/packages')}
                 />
               </View>
             </View>
