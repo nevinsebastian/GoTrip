@@ -208,19 +208,48 @@ export type BookingStatus =
 
 export interface Booking {
   id: string;
+  user_id?: string;
   listing_id: string;
   start_date: string;
   end_date: string;
   guests: number;
+  rooms?: number;
+  total_amount?: string;
   status?: BookingStatus;
+  cancellation_reason?: string | null;
+  cancelled_at?: string | null;
   created_at?: string;
   updated_at?: string;
+  listing?: {
+    id: string;
+    title?: string;
+    location?: string;
+  };
+  payment?: {
+    id: string;
+    status?: string;
+    amount?: string;
+  } | null;
 }
 
 export interface CreateBookingResponse {
   success: boolean;
   message: string;
   data: Booking;
+}
+
+export interface BookingsMeta {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
+export interface BookingsResponse {
+  success: boolean;
+  message: string;
+  data: Booking[];
+  meta: BookingsMeta;
 }
 
 // --- Payments (Razorpay) ---
