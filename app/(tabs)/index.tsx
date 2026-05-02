@@ -1,7 +1,7 @@
 import {
-    Button,
-    Input,
-    Text
+  Button,
+  Input,
+  Text
 } from '@/components/ui';
 import { useResponsive } from '@/components/ui/useResponsive';
 import { borderRadius, colors, components, spacing, typography } from '@/constants/DesignTokens';
@@ -10,12 +10,13 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
-    Image,
-    Platform,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    View,
+  Image,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -240,6 +241,7 @@ function SectionRow({
 
 export default function HomeScreen() {
   const { isMobile, isTablet, isDesktop, width } = useResponsive();
+  const [webMenuOpen, setWebMenuOpen] = useState(false);
   const [roomsMode, setRoomsMode] = useState(false);
   const [selectedRoomType, setSelectedRoomType] = useState<string | null>(null); // id of selected type
 
@@ -368,6 +370,60 @@ export default function HomeScreen() {
 
     return (
       <SafeAreaView style={stylesWeb.page} edges={['top']}>
+        <Modal
+          visible={webMenuOpen}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setWebMenuOpen(false)}
+        >
+          <Pressable style={stylesWeb.menuOverlay} onPress={() => setWebMenuOpen(false)}>
+            <Pressable style={stylesWeb.menuPanel} onPress={(e) => e.stopPropagation()}>
+              <View style={stylesWeb.menuHeader}>
+                <Text variant="bodySemibold" style={stylesWeb.menuTitle}>
+                  Menu
+                </Text>
+                <Pressable
+                  onPress={() => setWebMenuOpen(false)}
+                  hitSlop={10}
+                  accessibilityLabel="Close menu"
+                  style={stylesWeb.menuClose}
+                >
+                  <Ionicons name="close" size={20} color={colors.primary} />
+                </Pressable>
+              </View>
+
+              <View style={stylesWeb.menuDivider} />
+
+              {[
+                { label: 'Home', icon: 'home-outline' as const, onPress: () => router.replace('/(tabs)') },
+                { label: 'Resorts', icon: 'bed-outline' as const, onPress: () => router.push('/resorts') },
+                { label: 'Packages', icon: 'airplane-outline' as const, onPress: () => router.push('/packages') },
+                { label: 'Wishlist', icon: 'heart-outline' as const, onPress: () => router.push('/(tabs)/two') },
+                { label: 'Tickets', icon: 'ticket-outline' as const, onPress: () => router.push('/(tabs)/three') },
+                { label: 'Profile', icon: 'person-outline' as const, onPress: () => router.push('/(tabs)/four') },
+              ].map((item) => (
+                <Pressable
+                  key={item.label}
+                  style={({ pressed }) => [stylesWeb.menuRow, pressed && stylesWeb.menuRowPressed]}
+                  onPress={() => {
+                    setWebMenuOpen(false);
+                    item.onPress();
+                  }}
+                  accessibilityLabel={item.label}
+                >
+                  <View style={stylesWeb.menuIconBox}>
+                    <Ionicons name={item.icon} size={18} color={colors.primary} />
+                  </View>
+                  <Text variant="body" style={stylesWeb.menuLabel}>
+                    {item.label}
+                  </Text>
+                  <Ionicons name="chevron-forward" size={16} color={colors.text.caption} />
+                </Pressable>
+              ))}
+            </Pressable>
+          </Pressable>
+        </Modal>
+
         <ScrollView
           style={stylesWeb.scroll}
           contentContainerStyle={stylesWeb.scrollContent}
@@ -398,7 +454,11 @@ export default function HomeScreen() {
                 <Pressable style={[stylesWeb.iconBtn, stylesWeb.avatarBtn]} accessibilityLabel="Profile">
                   <Ionicons name="person-outline" size={18} color={colors.surface.white} />
                 </Pressable>
-                <Pressable style={stylesWeb.menuBtn} accessibilityLabel="Menu">
+                <Pressable
+                  style={stylesWeb.menuBtn}
+                  accessibilityLabel="Menu"
+                  onPress={() => setWebMenuOpen(true)}
+                >
                   <Ionicons name="menu" size={22} color={colors.primary} />
                 </Pressable>
               </View>
@@ -1146,6 +1206,80 @@ const stylesWeb = StyleSheet.create({
     height: 40,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  menuOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.25)',
+    justifyContent: 'flex-start',
+    alignItems: 'flex-end',
+    paddingTop: 72,
+    paddingRight: 16,
+  },
+  menuPanel: {
+    width: 320,
+    borderRadius: borderRadius['2xl'],
+    backgroundColor: colors.surface.white,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 9, 50, 0.10)',
+    overflow: 'hidden',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.12,
+        shadowRadius: 20,
+      },
+      android: { elevation: 8 },
+      web: { boxShadow: '0 12px 40px rgba(0,0,0,0.18)' },
+    }),
+  },
+  menuHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing['4'],
+    paddingVertical: spacing['4'],
+  },
+  menuTitle: {
+    color: colors.text.primary,
+  },
+  menuClose: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(229,77,46,0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(229,77,46,0.18)',
+  },
+  menuDivider: {
+    height: 1,
+    backgroundColor: 'rgba(0, 9, 50, 0.08)',
+  },
+  menuRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing['4'],
+    paddingVertical: spacing['4'],
+    gap: spacing['3'],
+  },
+  menuRowPressed: {
+    backgroundColor: 'rgba(229,77,46,0.06)',
+  },
+  menuIconBox: {
+    width: 34,
+    height: 34,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(229,77,46,0.18)',
+    backgroundColor: 'rgba(229,77,46,0.06)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  menuLabel: {
+    flex: 1,
+    color: colors.text.primary,
   },
   tilesRow: {
     marginTop: spacing['5'],
