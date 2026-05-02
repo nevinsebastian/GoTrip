@@ -1,12 +1,11 @@
 import BellIcon from '@/assets/images/bell.svg';
-import { LoginSheetModal } from '@/src/components/LoginSheetModal';
 import { Button, IconButton, Text } from '@/components/ui';
 import { useResponsive } from '@/components/ui/useResponsive';
 import { borderRadius, colors, shadows, spacing } from '@/constants/DesignTokens';
 import type { ListingMedia, WishlistListing } from '@/src/api/types';
-import { USER_PROFILE_QUERY_KEY } from '@/src/hooks/useUserProfile';
-import { useUserProfile } from '@/src/hooks/useUserProfile';
+import { LoginSheetModal } from '@/src/components/LoginSheetModal';
 import { useRemoveWishlist } from '@/src/hooks/useRemoveWishlist';
+import { USER_PROFILE_QUERY_KEY, useUserProfile } from '@/src/hooks/useUserProfile';
 import { useWishlists } from '@/src/hooks/useWishlists';
 import { getErrorMessage } from '@/src/utils/errorHandler';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,20 +14,25 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  View,
+    ActivityIndicator,
+    Alert,
+    Image,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const FALLBACK_PLACEHOLDER = require('@/assets/images/resort.jpg');
 const GRID_GAP = spacing['3'];
 const WISHLIST_PAGE_SIZE = 50;
+
+/** Full-screen gradient — matches Tickets / Packages (Figma wishlist). */
+const GRADIENT_TOP = '#FCFCFC';
+const GRADIENT_BOTTOM = '#FFDCD3';
+const SCREEN_TINT = '#FFF8F6';
 
 function getPrimaryImage(media?: ListingMedia[]) {
   if (!media?.length) return null;
@@ -106,11 +110,12 @@ export default function WishlistScreen() {
       ? `${totalFromApi} item${totalFromApi === 1 ? '' : 's'} added in wishlist`
       : `${items.length} item${items.length === 1 ? '' : 's'} added in wishlist`;
 
-  /** Inner width for grid inside padded white sheet */
-  const sheetInnerWidth = maxWidth
-    ? Math.min(maxWidth, width) - 2 * contentPadding
+  /** White sheet has marginHorizontal + ScrollView paddingHorizontal — grid spans inner width */
+  const sheetOuterWidth = maxWidth
+    ? Math.min(maxWidth, width - 2 * contentPadding)
     : width - 2 * contentPadding;
-  const columnWidth = (sheetInnerWidth - GRID_GAP) / 2;
+  const gridInnerWidth = sheetOuterWidth - 2 * contentPadding;
+  const columnWidth = (gridInnerWidth - GRID_GAP) / 2;
 
   const showLoggedOut = !profileLoading && isUnauthorized;
 
@@ -125,38 +130,50 @@ export default function WishlistScreen() {
     );
   };
 
+  const headerBlock = (
+    <View
+      style={[
+        styles.headerBlock,
+        { paddingHorizontal: contentPadding, maxWidth, alignSelf: maxWidth ? 'center' : 'stretch' },
+      ]}
+    >
+      <View style={styles.headerTopRow}>
+        <IconButton
+          icon="chevron-back"
+          size={isMobile ? 24 : 26}
+          color={colors.primary}
+          onPress={() => router.replace('/(tabs)')}
+        />
+        <Pressable style={styles.bellWrap} onPress={() => {}} accessibilityLabel="Notifications">
+          <BellIcon width={bellIconSize} height={bellIconSize} />
+        </Pressable>
+      </View>
+      <View style={styles.headerTextColumn}>
+        <Text variant="header" color="primaryBrand" style={styles.headerMainTitle}>
+          Your wishlist
+        </Text>
+        {showWishlistCount ? (
+          <Text variant="caption" style={styles.headerSubtitle}>
+            {itemCountLabel}
+          </Text>
+        ) : null}
+      </View>
+    </View>
+  );
+
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <LinearGradient
-        colors={[colors.surface.lightPink, colors.surface.background]}
-        style={styles.gradient}
-      >
-        <View
-          style={[
-            styles.header,
-            { paddingHorizontal: contentPadding, maxWidth, alignSelf: maxWidth ? 'center' : 'stretch' },
-          ]}
-        >
-          <IconButton
-            icon="chevron-back"
-            size={isMobile ? 24 : 26}
-            color={colors.primary}
-            onPress={() => router.replace('/(tabs)')}
+    <SafeAreaView style={[styles.container, { backgroundColor: SCREEN_TINT }]} edges={['top']}>
+      <View style={styles.screenFill}>
+        <View style={styles.bgWrap} pointerEvents="none">
+          <LinearGradient
+            colors={[GRADIENT_TOP, GRADIENT_BOTTOM]}
+            start={{ x: 0.5, y: 0 }}
+            end={{ x: 0.5, y: 1 }}
+            style={styles.bgGradient}
           />
-          <View style={styles.headerTitles}>
-            <Text variant="header" color="primaryBrand" style={styles.headerMainTitle}>
-              Your wishlist
-            </Text>
-            {showWishlistCount ? (
-              <Text variant="caption" style={styles.headerSubtitle}>
-                {itemCountLabel}
-              </Text>
-            ) : null}
-          </View>
-          <Pressable style={styles.bellWrap} onPress={() => {}} accessibilityLabel="Notifications">
-            <BellIcon width={bellIconSize} height={bellIconSize} />
-          </Pressable>
         </View>
+
+        {headerBlock}
 
         {profileLoading ? (
           <View style={styles.centered}>
@@ -223,7 +240,18 @@ export default function WishlistScreen() {
             </View>
           </View>
         ) : canFetchWishlist && items.length > 0 ? (
-          <View style={[styles.whiteSheet, maxWidth ? { maxWidth, alignSelf: 'center', width: '100%' } : null]}>
+          <View
+            style={[
+              styles.whiteSheet,
+              { marginHorizontal: contentPadding },
+              maxWidth
+                ? {
+                    alignSelf: 'center',
+                    width: Math.min(maxWidth, width - 2 * contentPadding),
+                  }
+                : null,
+            ]}
+          >
             <ScrollView
               style={styles.scroll}
               contentContainerStyle={[styles.scrollContent, { paddingHorizontal: contentPadding }]}
@@ -244,27 +272,29 @@ export default function WishlistScreen() {
                   return (
                     <View key={l.wishlist_id} style={[styles.gridCell, { width: columnWidth }]}>
                       <View style={styles.wishCard}>
-                        <View style={styles.wishImageWrap}>
-                          <Pressable
-                            onPress={goToListing}
-                            style={styles.imagePressable}
-                            accessibilityLabel={l.title}
-                            accessibilityRole="imagebutton"
-                          >
-                            {img ? (
-                              <Image
-                                source={{ uri: img }}
-                                style={styles.wishImage}
-                                resizeMode="cover"
-                              />
-                            ) : (
-                              <Image
-                                source={FALLBACK_PLACEHOLDER}
-                                style={styles.wishImage}
-                                resizeMode="cover"
-                              />
-                            )}
-                          </Pressable>
+                        <View style={styles.imageShadowWrap}>
+                          <View style={styles.imageClip}>
+                            <Pressable
+                              onPress={goToListing}
+                              style={styles.imagePressable}
+                              accessibilityLabel={l.title}
+                              accessibilityRole="imagebutton"
+                            >
+                              {img ? (
+                                <Image
+                                  source={{ uri: img }}
+                                  style={styles.wishImage}
+                                  resizeMode="cover"
+                                />
+                              ) : (
+                                <Image
+                                  source={FALLBACK_PLACEHOLDER}
+                                  style={styles.wishImage}
+                                  resizeMode="cover"
+                                />
+                              )}
+                            </Pressable>
+                          </View>
                           <Pressable
                             style={({ pressed }) => [
                               styles.heartSquare,
@@ -279,26 +309,29 @@ export default function WishlistScreen() {
                             <Ionicons name="heart" size={18} color={colors.primary} />
                           </Pressable>
                         </View>
-                        <Pressable onPress={goToListing} accessibilityRole="button">
-                          <Text variant="bodySemibold" numberOfLines={2} style={styles.wishTitle}>
-                            {l.title}
-                          </Text>
-                          <View style={styles.metaRow}>
-                            <Text variant="caption" style={styles.priceText}>
-                              {priceLabel}
+
+                        <View style={styles.wishCardBody}>
+                          <Pressable onPress={goToListing} accessibilityRole="button" style={styles.wishCardPress}>
+                            <Text variant="bodySemibold" numberOfLines={2} style={styles.wishTitle}>
+                              {l.title}
                             </Text>
-                            <View style={styles.ratingRow}>
-                              <Ionicons
-                                name="star-outline"
-                                size={12}
-                                color={colors.text.caption}
-                              />
-                              <Text variant="caption" style={styles.ratingText}>
-                                {formatRating(l)}
+                            <View style={styles.metaRow}>
+                              <Text variant="caption" style={styles.priceText}>
+                                {priceLabel}
                               </Text>
+                              <View style={styles.ratingRow}>
+                                <Ionicons
+                                  name="star-outline"
+                                  size={12}
+                                  color={colors.text.caption}
+                                />
+                                <Text variant="caption" style={styles.ratingText}>
+                                  {formatRating(l)}
+                                </Text>
+                              </View>
                             </View>
-                          </View>
-                        </Pressable>
+                          </Pressable>
+                        </View>
                       </View>
                     </View>
                   );
@@ -314,7 +347,7 @@ export default function WishlistScreen() {
             </Text>
           </View>
         )}
-      </LinearGradient>
+      </View>
 
       <LoginSheetModal
         visible={loginModalVisible}
@@ -331,32 +364,38 @@ export default function WishlistScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.surface.lightPink,
   },
-  gradient: {
+  screenFill: {
     flex: 1,
   },
-  header: {
+  bgWrap: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  bgGradient: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+  },
+  headerBlock: {
+    paddingTop: spacing['2'],
+    paddingBottom: spacing['4'],
+  },
+  headerTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingTop: spacing['3'],
-    paddingBottom: spacing['4'],
-    minHeight: 56,
+    justifyContent: 'space-between',
+    marginBottom: spacing['4'],
   },
-  headerTitles: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: spacing['2'],
-    minWidth: 0,
+  headerTextColumn: {
+    alignItems: 'flex-start',
   },
   headerMainTitle: {
-    textAlign: 'center',
+    textAlign: 'left',
   },
   headerSubtitle: {
-    marginTop: 2,
+    marginTop: spacing['1'],
     color: colors.text.caption,
-    textAlign: 'center',
+    textAlign: 'left',
   },
   bellWrap: {
     width: 40,
@@ -412,14 +451,24 @@ const styles = StyleSheet.create({
   },
   whiteSheet: {
     flex: 1,
+    minHeight: 200,
     backgroundColor: colors.surface.white,
-    borderTopLeftRadius: borderRadius['2xl'],
-    borderTopRightRadius: borderRadius['2xl'],
+    borderTopLeftRadius: borderRadius['4xl'],
+    borderTopRightRadius: borderRadius['4xl'],
     overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 9, 50, 0.06)',
     ...Platform.select({
-      ios: shadows.card,
-      android: shadows.card,
-      web: shadows.card,
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -2 },
+        shadowOpacity: 0.06,
+        shadowRadius: 12,
+      },
+      android: { elevation: 4 },
+      web: {
+        boxShadow: '0 -4px 24px rgba(0, 9, 50, 0.08)',
+      },
     }),
   },
   scroll: {
@@ -441,18 +490,35 @@ const styles = StyleSheet.create({
   wishCard: {
     width: '100%',
   },
-  wishImageWrap: {
+  /** Shadow lives here; inner `imageClip` clips the photo so the shadow is not cut off. */
+  imageShadowWrap: {
     width: '100%',
-    aspectRatio: 1.15,
+    borderRadius: borderRadius.lg,
+    backgroundColor: colors.surface.white,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.12,
+        shadowRadius: 6,
+      },
+      android: {
+        elevation: 4,
+      },
+      web: {
+        boxShadow: '0 2px 10px rgba(0, 9, 50, 0.12)',
+      },
+    }),
+  },
+  imageClip: {
+    width: '100%',
+    aspectRatio: 1.12,
     borderRadius: borderRadius.lg,
     overflow: 'hidden',
     backgroundColor: colors.gray['2'],
-    marginBottom: spacing['2'],
   },
   imagePressable: {
     ...StyleSheet.absoluteFillObject,
-    borderRadius: borderRadius.lg,
-    overflow: 'hidden',
   },
   wishImage: {
     width: '100%',
@@ -464,7 +530,7 @@ const styles = StyleSheet.create({
     right: spacing['2'],
     width: 32,
     height: 32,
-    borderRadius: borderRadius.md,
+    borderRadius: 16,
     backgroundColor: colors.surface.white,
     alignItems: 'center',
     justifyContent: 'center',
@@ -487,17 +553,29 @@ const styles = StyleSheet.create({
   heartSquareDisabled: {
     opacity: 0.5,
   },
+  wishCardBody: {
+    width: '100%',
+    marginTop: spacing['2'],
+  },
+  wishCardPress: {
+    width: '100%',
+  },
   wishTitle: {
     color: colors.text.primary,
-    marginBottom: spacing['2'],
-    minHeight: 40,
+    textAlign: 'left',
+    lineHeight: 20,
+    marginBottom: spacing['3'],
   },
   metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    width: '100%',
   },
   priceText: {
+    flex: 1,
+    flexShrink: 1,
+    marginRight: spacing['2'],
     color: colors.text.secondary,
     fontWeight: '500',
   },
@@ -505,6 +583,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+    flexShrink: 0,
   },
   ratingText: {
     color: colors.text.secondary,
