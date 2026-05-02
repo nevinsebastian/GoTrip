@@ -298,7 +298,8 @@ export default function HomeScreen() {
     const budget = (economicRes?.data ?? listings).slice(0, 5);
     const luxury = listings.slice(0, 5);
 
-    const cardW = 200;
+    // Desktop scale-up so layout feels filled (Figma desktop).
+    const cardW = 280;
 
     const DesktopSection = ({
       title,
@@ -430,29 +431,31 @@ export default function HomeScreen() {
           {/* Footer */}
           <View style={stylesWeb.footer}>
             <View style={stylesWeb.footerInner}>
-              <Text variant="caption" style={stylesWeb.footerLink}>
-                More info
-              </Text>
-              <Text variant="caption" style={stylesWeb.footerLink}>
-                Link 1
-              </Text>
-              <Text variant="caption" style={stylesWeb.footerLink}>
-                Link 2
-              </Text>
-              <View style={{ flex: 1 }} />
+              <View style={stylesWeb.footerGroup}>
+                <Text variant="caption" style={stylesWeb.footerLink}>
+                  More info
+                </Text>
+                <Text variant="caption" style={stylesWeb.footerLink}>
+                  Link 1
+                </Text>
+                <Text variant="caption" style={stylesWeb.footerLink}>
+                  Link 2
+                </Text>
+              </View>
               <Text variant="caption" style={stylesWeb.footerBrand}>
                 GOTRIP HOLIDAY
               </Text>
-              <View style={{ flex: 1 }} />
-              <Text variant="caption" style={stylesWeb.footerLink}>
-                More info
-              </Text>
-              <Text variant="caption" style={stylesWeb.footerLink}>
-                Link 1
-              </Text>
-              <Text variant="caption" style={stylesWeb.footerLink}>
-                Link 2
-              </Text>
+              <View style={stylesWeb.footerGroup}>
+                <Text variant="caption" style={stylesWeb.footerLink}>
+                  More info
+                </Text>
+                <Text variant="caption" style={stylesWeb.footerLink}>
+                  Link 1
+                </Text>
+                <Text variant="caption" style={stylesWeb.footerLink}>
+                  Link 2
+                </Text>
+              </View>
             </View>
           </View>
         </ScrollView>
@@ -1082,13 +1085,14 @@ const stylesWeb = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: spacing['7'],
+    // Keep footer visually “attached” (avoid huge bottom whitespace).
+    paddingBottom: spacing['5'],
   },
   container: {
     width: '100%',
-    maxWidth: 1280,
-    alignSelf: 'center',
-    paddingHorizontal: 40,
+    // IMPORTANT: Desktop web should feel “filled” (no large side gutters).
+    // So we avoid a hard maxWidth here and instead use a modest fixed padding.
+    paddingHorizontal: 16,
   },
   header: {
     marginTop: spacing['4'],
@@ -1099,7 +1103,7 @@ const stylesWeb = StyleSheet.create({
   },
   searchWrap: {
     flex: 1,
-    maxWidth: 520,
+    maxWidth: 720,
     position: 'relative',
   },
   searchInput: {
@@ -1148,7 +1152,7 @@ const stylesWeb = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: spacing['4'],
+    gap: spacing['6'],
   },
   tileOuter: {
     flex: 1,
@@ -1164,6 +1168,8 @@ const stylesWeb = StyleSheet.create({
   },
   sectionTitle: {
     color: colors.text.primary,
+    fontSize: 18,
+    lineHeight: 24,
   },
   viewAllBtn: {
     flexDirection: 'row',
@@ -1174,15 +1180,15 @@ const stylesWeb = StyleSheet.create({
     color: colors.primary,
   },
   row: {
-    gap: spacing['3'],
-    paddingBottom: spacing['1'],
+    gap: spacing['4'],
+    paddingBottom: spacing['2'],
   },
   cardWrap: {
     gap: spacing['2'],
   },
   cardImageWrap: {
     width: '100%',
-    height: 120,
+    height: 170,
     borderRadius: 16,
     overflow: 'hidden',
     backgroundColor: colors.gray['2'],
@@ -1237,10 +1243,16 @@ const stylesWeb = StyleSheet.create({
   footerInner: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing['5'],
+    width: '100%',
+    paddingHorizontal: 16,
+  },
+  footerGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: spacing['4'],
-    maxWidth: 1280,
-    alignSelf: 'center',
-    paddingHorizontal: 40,
+    minWidth: 260,
   },
   footerLink: {
     color: colors.surface.white,
@@ -1248,9 +1260,10 @@ const stylesWeb = StyleSheet.create({
   footerBrand: {
     color: colors.surface.white,
     letterSpacing: 4,
+    fontSize: 12,
   },
   logoImg: {
-    width: 90,
-    height: 42,
+    width: 110,
+    height: 50,
   },
 });
