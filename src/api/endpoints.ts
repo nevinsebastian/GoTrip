@@ -37,6 +37,7 @@ export const ENDPOINTS = {
   },
   wishlists: {
     mine: '/api/v1/wishlists',
+    item: (wishlistId: string) => `/api/v1/wishlists/${wishlistId}`,
   },
 } as const;
 

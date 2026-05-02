@@ -18,3 +18,7 @@ export async function fetchMyWishlists(
   });
   return response.data;
 }
+
+export async function removeWishlistItem(wishlistId: string): Promise<void> {
+  await apiClient.delete(ENDPOINTS.wishlists.item(wishlistId));
+}

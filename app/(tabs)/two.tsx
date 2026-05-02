@@ -1,20 +1,22 @@
 import BellIcon from '@/assets/images/bell.svg';
 import { LoginSheetModal } from '@/src/components/LoginSheetModal';
-import { Button, IconButton, Input, Text } from '@/components/ui';
+import { Button, IconButton, Text } from '@/components/ui';
 import { useResponsive } from '@/components/ui/useResponsive';
 import { borderRadius, colors, shadows, spacing } from '@/constants/DesignTokens';
 import type { ListingMedia, WishlistListing } from '@/src/api/types';
 import { USER_PROFILE_QUERY_KEY } from '@/src/hooks/useUserProfile';
 import { useUserProfile } from '@/src/hooks/useUserProfile';
-import { wishlistsQueryKey, useWishlists } from '@/src/hooks/useWishlists';
+import { useRemoveWishlist } from '@/src/hooks/useRemoveWishlist';
+import { useWishlists } from '@/src/hooks/useWishlists';
 import { getErrorMessage } from '@/src/utils/errorHandler';
 import { Ionicons } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Image,
   Platform,
   Pressable,
@@ -25,6 +27,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const FALLBACK_PLACEHOLDER = require('@/assets/images/resort.jpg');
+const GRID_GAP = spacing['3'];
+const WISHLIST_PAGE_SIZE = 50;
 
 function getPrimaryImage(media?: ListingMedia[]) {
   if (!media?.length) return null;
@@ -63,7 +67,6 @@ export default function WishlistScreen() {
   const { width, isMobile, isTablet } = useResponsive();
   const queryClient = useQueryClient();
   const [loginModalVisible, setLoginModalVisible] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
 
   const contentPadding = isMobile ? spacing['4'] : isTablet ? spacing['5'] : spacing['6'];
   const bellIconSize = isMobile ? 24 : isTablet ? 26 : 28;
@@ -87,20 +90,40 @@ export default function WishlistScreen() {
     isLoading: wishlistLoading,
     error: wishlistError,
     refetch: refetchWishlists,
-  } = useWishlists({ page: 1, limit: 20 }, canFetchWishlist);
+  } = useWishlists(
+    { page: 1, limit: WISHLIST_PAGE_SIZE },
+    canFetchWishlist,
+  );
+
+  const { mutate: removeWishlist, isPending: isRemoving } = useRemoveWishlist();
 
   const items = wishlistsRes?.data ?? [];
-  const visibleItems = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
-    if (!q) return items;
-    return items.filter((l) => {
-      const title = (l.title ?? '').toLowerCase();
-      const loc = (l.location ?? '').toLowerCase();
-      return title.includes(q) || loc.includes(q);
-    });
-  }, [items, searchQuery]);
+  const totalFromApi = wishlistsRes?.meta?.total;
+  const showWishlistCount =
+    items.length > 0 || (typeof totalFromApi === 'number' && totalFromApi > 0);
+  const itemCountLabel =
+    typeof totalFromApi === 'number'
+      ? `${totalFromApi} item${totalFromApi === 1 ? '' : 's'} added in wishlist`
+      : `${items.length} item${items.length === 1 ? '' : 's'} added in wishlist`;
+
+  /** Inner width for grid inside padded white sheet */
+  const sheetInnerWidth = maxWidth
+    ? Math.min(maxWidth, width) - 2 * contentPadding
+    : width - 2 * contentPadding;
+  const columnWidth = (sheetInnerWidth - GRID_GAP) / 2;
 
   const showLoggedOut = !profileLoading && isUnauthorized;
+
+  const handleRemoveHeart = (wishlistId: string) => {
+    removeWishlist(
+      { wishlistId },
+      {
+        onError: (err) => {
+          Alert.alert('Could not update wishlist', getErrorMessage(err));
+        },
+      },
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -120,9 +143,16 @@ export default function WishlistScreen() {
             color={colors.primary}
             onPress={() => router.replace('/(tabs)')}
           />
-          <Text variant="header" color="primaryBrand" style={styles.headerTitle}>
-            Your wishlist
-          </Text>
+          <View style={styles.headerTitles}>
+            <Text variant="header" color="primaryBrand" style={styles.headerMainTitle}>
+              Your wishlist
+            </Text>
+            {showWishlistCount ? (
+              <Text variant="caption" style={styles.headerSubtitle}>
+                {itemCountLabel}
+              </Text>
+            ) : null}
+          </View>
           <Pressable style={styles.bellWrap} onPress={() => {}} accessibilityLabel="Notifications">
             <BellIcon width={bellIconSize} height={bellIconSize} />
           </Pressable>
@@ -193,100 +223,88 @@ export default function WishlistScreen() {
             </View>
           </View>
         ) : canFetchWishlist && items.length > 0 ? (
-          <View style={{ flex: 1 }}>
-            <View
-              style={[
-                styles.searchWrap,
-                { paddingHorizontal: contentPadding, maxWidth, alignSelf: maxWidth ? 'center' : 'stretch' },
-              ]}
-            >
-              <Input
-                variant="search"
-                showSearchIcon
-                placeholder="Search saved listings"
-                placeholderTextColor={colors.text.placeholder}
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-              />
-            </View>
-
+          <View style={[styles.whiteSheet, maxWidth ? { maxWidth, alignSelf: 'center', width: '100%' } : null]}>
             <ScrollView
               style={styles.scroll}
-              contentContainerStyle={[
-                styles.scrollContent,
-                { paddingHorizontal: contentPadding, maxWidth, alignSelf: maxWidth ? 'center' : 'stretch' },
-              ]}
+              contentContainerStyle={[styles.scrollContent, { paddingHorizontal: contentPadding }]}
               showsVerticalScrollIndicator={false}
             >
-              <Text variant="bodySemibold" style={styles.sectionLabel}>
-                Saved for you
-              </Text>
+              <View style={styles.grid}>
+                {items.map((l) => {
+                  const img = getPrimaryImage(l.media);
+                  const priceNum = l.price_start != null ? Number(l.price_start) : NaN;
+                  const priceLabel =
+                    Number.isFinite(priceNum) && priceNum >= 0
+                      ? `₹${priceNum.toLocaleString('en-IN')}${priceSuffix(l)}`
+                      : '—';
 
-              {visibleItems.length === 0 ? (
-                <Text variant="caption" style={styles.noMatch}>
-                  No listings match your search.
-                </Text>
-              ) : (
-                <View style={styles.list}>
-                  {visibleItems.map((l) => {
-                    const img = getPrimaryImage(l.media);
-                    const priceNum = l.price_start != null ? Number(l.price_start) : NaN;
-                    const priceLabel =
-                      Number.isFinite(priceNum) && priceNum >= 0
-                        ? `₹${priceNum.toLocaleString('en-IN')}${priceSuffix(l)}`
-                        : '—';
+                  const goToListing = () =>
+                    router.push({ pathname: '/resort/[id]', params: { id: l.id } });
 
-                    return (
-                      <Pressable
-                        key={l.wishlist_id}
-                        style={styles.wishCard}
-                        onPress={() =>
-                          router.push({ pathname: '/resort/[id]', params: { id: l.id } })
-                        }
-                        accessibilityLabel={l.title}
-                      >
+                  return (
+                    <View key={l.wishlist_id} style={[styles.gridCell, { width: columnWidth }]}>
+                      <View style={styles.wishCard}>
                         <View style={styles.wishImageWrap}>
-                          {img ? (
-                            <Image source={{ uri: img }} style={styles.wishImage} resizeMode="cover" />
-                          ) : (
-                            <Image
-                              source={FALLBACK_PLACEHOLDER}
-                              style={styles.wishImage}
-                              resizeMode="cover"
-                            />
-                          )}
-                          <View style={styles.heartBadge}>
-                            <Ionicons name="heart" size={20} color={colors.surface.white} />
-                          </View>
+                          <Pressable
+                            onPress={goToListing}
+                            style={styles.imagePressable}
+                            accessibilityLabel={l.title}
+                            accessibilityRole="imagebutton"
+                          >
+                            {img ? (
+                              <Image
+                                source={{ uri: img }}
+                                style={styles.wishImage}
+                                resizeMode="cover"
+                              />
+                            ) : (
+                              <Image
+                                source={FALLBACK_PLACEHOLDER}
+                                style={styles.wishImage}
+                                resizeMode="cover"
+                              />
+                            )}
+                          </Pressable>
+                          <Pressable
+                            style={({ pressed }) => [
+                              styles.heartSquare,
+                              pressed && styles.heartSquarePressed,
+                              isRemoving && styles.heartSquareDisabled,
+                            ]}
+                            onPress={() => handleRemoveHeart(l.wishlist_id)}
+                            disabled={isRemoving}
+                            hitSlop={8}
+                            accessibilityLabel="Remove from wishlist"
+                          >
+                            <Ionicons name="heart" size={18} color={colors.primary} />
+                          </Pressable>
                         </View>
-                        <Text variant="bodySemibold" numberOfLines={2} style={styles.wishTitle}>
-                          {l.title}
-                        </Text>
-                        {l.location ? (
-                          <View style={styles.locRow}>
-                            <Ionicons name="location-outline" size={14} color={colors.text.caption} />
-                            <Text variant="caption" numberOfLines={1} style={styles.locText}>
-                              {l.location}
-                            </Text>
-                          </View>
-                        ) : null}
-                        <View style={styles.metaRow}>
-                          <Text variant="caption" style={styles.priceText}>
-                            {priceLabel}
+                        <Pressable onPress={goToListing} accessibilityRole="button">
+                          <Text variant="bodySemibold" numberOfLines={2} style={styles.wishTitle}>
+                            {l.title}
                           </Text>
-                          <View style={styles.ratingRow}>
-                            <Ionicons name="star" size={12} color={colors.rating.star} />
-                            <Text variant="caption" style={styles.ratingText}>
-                              {formatRating(l)}
+                          <View style={styles.metaRow}>
+                            <Text variant="caption" style={styles.priceText}>
+                              {priceLabel}
                             </Text>
+                            <View style={styles.ratingRow}>
+                              <Ionicons
+                                name="star-outline"
+                                size={12}
+                                color={colors.text.caption}
+                              />
+                              <Text variant="caption" style={styles.ratingText}>
+                                {formatRating(l)}
+                              </Text>
+                            </View>
                           </View>
-                        </View>
-                      </Pressable>
-                    );
-                  })}
-                </View>
-              )}
-              <View style={{ height: 32 }} />
+                        </Pressable>
+                      </View>
+                    </View>
+                  );
+                })}
+              </View>
+              <View style={{ height: 28 }} />
             </ScrollView>
           </View>
         ) : (
@@ -303,7 +321,7 @@ export default function WishlistScreen() {
         onClose={() => setLoginModalVisible(false)}
         onAuthenticated={async () => {
           await queryClient.invalidateQueries({ queryKey: USER_PROFILE_QUERY_KEY });
-          await queryClient.invalidateQueries({ queryKey: wishlistsQueryKey({ page: 1, limit: 20 }) });
+          await queryClient.invalidateQueries({ queryKey: ['wishlists'] });
         }}
       />
     </SafeAreaView>
@@ -322,12 +340,23 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingTop: spacing['3'],
-    paddingBottom: spacing['3'],
+    paddingBottom: spacing['4'],
     minHeight: 56,
   },
-  headerTitle: {
+  headerTitles: {
     flex: 1,
-    marginLeft: spacing['1'],
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing['2'],
+    minWidth: 0,
+  },
+  headerMainTitle: {
+    textAlign: 'center',
+  },
+  headerSubtitle: {
+    marginTop: 2,
+    color: colors.text.caption,
+    textAlign: 'center',
   },
   bellWrap: {
     width: 40,
@@ -381,86 +410,96 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: spacing['4'],
   },
-  searchWrap: {
-    marginBottom: spacing['3'],
-  },
-  scroll: {
+  whiteSheet: {
     flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: spacing['6'],
-  },
-  sectionLabel: {
-    color: colors.text.primary,
-    marginBottom: spacing['3'],
-  },
-  noMatch: {
-    color: colors.text.secondary,
-    textAlign: 'center',
-    marginTop: spacing['2'],
-  },
-  list: {
-    gap: spacing['4'],
-  },
-  wishCard: {
     backgroundColor: colors.surface.white,
-    borderRadius: borderRadius['2xl'],
+    borderTopLeftRadius: borderRadius['2xl'],
+    borderTopRightRadius: borderRadius['2xl'],
     overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: colors.border.light,
-    paddingBottom: spacing['3'],
     ...Platform.select({
       ios: shadows.card,
       android: shadows.card,
       web: shadows.card,
     }),
   },
+  scroll: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingTop: spacing['5'],
+    paddingBottom: spacing['6'],
+  },
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    rowGap: GRID_GAP,
+  },
+  gridCell: {
+    marginBottom: 0,
+  },
+  wishCard: {
+    width: '100%',
+  },
   wishImageWrap: {
     width: '100%',
-    height: 180,
+    aspectRatio: 1.15,
+    borderRadius: borderRadius.lg,
+    overflow: 'hidden',
     backgroundColor: colors.gray['2'],
-    marginBottom: spacing['3'],
+    marginBottom: spacing['2'],
+  },
+  imagePressable: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: borderRadius.lg,
+    overflow: 'hidden',
   },
   wishImage: {
     width: '100%',
     height: '100%',
   },
-  heartBadge: {
+  heartSquare: {
     position: 'absolute',
-    top: spacing['3'],
-    right: spacing['3'],
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(0,0,0,0.35)',
+    top: spacing['2'],
+    right: spacing['2'],
+    width: 32,
+    height: 32,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.surface.white,
     alignItems: 'center',
     justifyContent: 'center',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.12,
+        shadowRadius: 2,
+      },
+      android: { elevation: 2 },
+      web: {
+        boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
+      },
+    }),
+  },
+  heartSquarePressed: {
+    opacity: 0.85,
+  },
+  heartSquareDisabled: {
+    opacity: 0.5,
   },
   wishTitle: {
     color: colors.text.primary,
-    paddingHorizontal: spacing['4'],
-    marginBottom: spacing['1'],
-  },
-  locRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: spacing['4'],
     marginBottom: spacing['2'],
-  },
-  locText: {
-    flex: 1,
-    color: colors.text.caption,
+    minHeight: 40,
   },
   metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: spacing['4'],
   },
   priceText: {
-    color: colors.text.primary,
-    fontWeight: '600',
+    color: colors.text.secondary,
+    fontWeight: '500',
   },
   ratingRow: {
     flexDirection: 'row',
