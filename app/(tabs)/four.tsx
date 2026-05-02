@@ -1,31 +1,30 @@
-import { LoginSheetModal } from '@/src/components/LoginSheetModal';
 import { Text } from '@/components/ui';
 import { useResponsive } from '@/components/ui/useResponsive';
 import {
-  borderRadius,
-  colors,
-  shadows,
-  spacing,
+    borderRadius,
+    colors,
+    shadows,
+    spacing,
 } from '@/constants/DesignTokens';
+import { logout } from '@/src/api/auth.service';
+import { LoginSheetModal } from '@/src/components/LoginSheetModal';
+import { USER_PROFILE_QUERY_KEY, useUserProfile } from '@/src/hooks/useUserProfile';
+import { getErrorMessage } from '@/src/utils/errorHandler';
 import { Ionicons } from '@expo/vector-icons';
+import { useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
-  Image,
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  View,
+    Image,
+    Modal,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useUserProfile } from '@/src/hooks/useUserProfile';
-import { USER_PROFILE_QUERY_KEY } from '@/src/hooks/useUserProfile';
-import { getErrorMessage } from '@/src/utils/errorHandler';
 import { usePreviousTab } from './_layout';
-import { logout } from '@/src/api/auth.service';
-import { useQueryClient } from '@tanstack/react-query';
 
 
 
@@ -78,7 +77,10 @@ export default function ProfileScreen() {
       setLogoutModalVisible(true);
       return;
     }
-    // TODO: navigate to respective screens
+    if (id === 'account') {
+      router.push('/account-settings');
+      return;
+    }
   };
 
   const handleLogoutConfirm = async () => {
