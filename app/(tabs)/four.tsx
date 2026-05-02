@@ -55,6 +55,11 @@ export default function ProfileScreen() {
   } = useUserProfile();
 
   const isUnauthorized = Boolean(error?.isUnauthorized);
+  const showProfileMenu = Boolean(user) && !isUnauthorized;
+  const visibleProfileMenuItems = PROFILE_MENU_ITEMS.filter((item) => {
+    if (showProfileMenu) return true;
+    return item.id === 'vendor' || item.id === 'support';
+  });
 
   const handleBack = () => {
     if (previousTab === 'index') {
@@ -177,9 +182,8 @@ export default function ProfileScreen() {
           )}
         </View>
 
-        {/* Menu list: icon in rounded grey box + label; Log out in red */}
         <View style={styles.menuCard}>
-          {PROFILE_MENU_ITEMS.map((item, index) => (
+          {visibleProfileMenuItems.map((item, index) => (
             <React.Fragment key={item.id}>
               {index > 0 && <View style={styles.menuDivider} />}
               <Pressable
