@@ -285,3 +285,19 @@ export interface VerifyPaymentResponse {
   data?: unknown;
 }
 
+// --- Wishlists ---
+export interface WishlistListing extends Listing {
+  wishlist_id: string;
+  wishlisted_at: string;
+  is_wishlisted: boolean;
+  /** Listing aggregate rating from API (may be 0). */
+  rating?: number;
+}
+
+export interface WishlistsResponse {
+  success: boolean;
+  message: string;
+  data: WishlistListing[];
+  meta: ListingsMeta;
+}
+

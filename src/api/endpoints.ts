@@ -35,5 +35,8 @@ export const ENDPOINTS = {
     createOrder: '/api/v1/payments/create-order',
     verify: '/api/v1/payments/verify',
   },
+  wishlists: {
+    mine: '/api/v1/wishlists',
+  },
 } as const;
 
