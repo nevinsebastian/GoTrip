@@ -497,6 +497,9 @@ export default function HomeScreen() {
           mode={webAuthModal.mode}
           onClose={() => setWebAuthModal((s) => ({ ...s, visible: false }))}
           onSwitchMode={(m) => setWebAuthModal({ visible: true, mode: m })}
+          onBeforeNavigateToOtp={() =>
+            setWebAuthModal((s) => ({ ...s, visible: false }))
+          }
         />
 
         <ScrollView

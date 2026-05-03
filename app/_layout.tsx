@@ -17,14 +17,9 @@ import 'react-native-reanimated';
 import { useColorScheme } from '@/components/useColorScheme';
 
 export {
-    // Catch any errors thrown by the Layout component.
+    // Catch any errors thrown in the navigation tree.
     ErrorBoundary
 } from 'expo-router';
-
-export const unstable_settings = {
-  // Set login as initial route
-  initialRouteName: 'login',
-};
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();

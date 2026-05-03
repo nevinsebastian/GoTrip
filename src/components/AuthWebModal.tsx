@@ -35,9 +35,15 @@ export type AuthWebModalMode = 'login' | 'signup';
 export type AuthWebModalProps = {
   visible: boolean;
   mode: AuthWebModalMode;
+  /** Backdrop, close control, and Android back — not used when starting the OTP flow. */
   onClose: () => void;
   /** Switch between login and signup without closing (links under the form). */
   onSwitchMode: (mode: AuthWebModalMode) => void;
+  /**
+   * Optional: run right before navigating to `/otp` (e.g. hide modal on home).
+   * Full-route web (`login.web.tsx`) omits this so `onClose` is not called before OTP.
+   */
+  onBeforeNavigateToOtp?: () => void;
 };
 
 export function AuthWebModal({
@@ -45,6 +51,7 @@ export function AuthWebModal({
   mode,
   onClose,
   onSwitchMode,
+  onBeforeNavigateToOtp,
 }: AuthWebModalProps) {
   const [loginMode, setLoginMode] = useState<'phone' | 'email'>('phone');
   const [signupMode, setSignupMode] = useState<'phone' | 'email'>('phone');
@@ -89,7 +96,7 @@ export function AuthWebModal({
     sendOtp(payload, {
       onSuccess: (res) => {
         if (res?.success) {
-          close();
+          onBeforeNavigateToOtp?.();
           router.push({
             pathname: '/otp',
             params: {
@@ -123,7 +130,7 @@ export function AuthWebModal({
       {
         onSuccess: (res) => {
           if (res?.success) {
-            close();
+            onBeforeNavigateToOtp?.();
             router.push({
               pathname: '/otp',
               params: {
