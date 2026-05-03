@@ -11,6 +11,7 @@ import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
+import { Platform } from 'react-native';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/components/useColorScheme';
@@ -50,7 +51,10 @@ export default function RootLayout() {
     }
   }, [loaded]);
 
-  if (!loaded) {
+  // Web: must render the root navigator on the first paint. Returning null until fonts load
+  // leaves no Slot/Stack mounted and breaks reloads (e.g. /login) with "Attempted to navigate
+  // before mounting the Root Layout". iOS/Android keep the previous wait-for-fonts behavior.
+  if (!loaded && Platform.OS !== 'web') {
     return null;
   }
 

@@ -38,6 +38,7 @@ import { useCategoriesByType } from '@/src/hooks/useCategoriesByType';
 import { useListings } from '@/src/hooks/useListings';
 import { useRootCategories } from '@/src/hooks/useRootCategories';
 import { USER_PROFILE_QUERY_KEY, useUserProfile } from '@/src/hooks/useUserProfile';
+import { AuthWebModal } from '@/src/components/AuthWebModal';
 import { useQueryClient } from '@tanstack/react-query';
 
 const ResortImage = require('../../assets/images/resort.jpg');
@@ -253,6 +254,10 @@ export default function HomeScreen() {
   const isUnauthorized = Boolean(profileError?.isUnauthorized);
   const isLoggedIn = Boolean(user) && !isUnauthorized;
   const [webMenuOpen, setWebMenuOpen] = useState(false);
+  const [webAuthModal, setWebAuthModal] = useState<{
+    visible: boolean;
+    mode: 'login' | 'signup';
+  }>({ visible: false, mode: 'login' });
   const [roomsMode, setRoomsMode] = useState(false);
   const [selectedRoomType, setSelectedRoomType] = useState<string | null>(null); // id of selected type
 
@@ -487,6 +492,13 @@ export default function HomeScreen() {
           </Pressable>
         </Modal>
 
+        <AuthWebModal
+          visible={webAuthModal.visible}
+          mode={webAuthModal.mode}
+          onClose={() => setWebAuthModal((s) => ({ ...s, visible: false }))}
+          onSwitchMode={(m) => setWebAuthModal({ visible: true, mode: m })}
+        />
+
         <ScrollView
           style={stylesWeb.scroll}
           contentContainerStyle={stylesWeb.scrollContent}
@@ -494,7 +506,9 @@ export default function HomeScreen() {
         >
           <View style={stylesWeb.container}>
             {/* Header */}
-            <View style={stylesWeb.header}>
+            <View
+              style={[stylesWeb.header, !isLoggedIn ? stylesWeb.headerLoggedOut : null]}
+            >
               {Platform.OS === 'web' ? (
                 <Image source={WebLogo} style={stylesWeb.logoImg} resizeMode="contain" />
               ) : (
@@ -503,33 +517,55 @@ export default function HomeScreen() {
               <View style={stylesWeb.searchWrap}>
                 <Input
                   placeholder="Search"
-                  style={stylesWeb.searchInput}
+                  style={[
+                    stylesWeb.searchInput,
+                    !isLoggedIn ? stylesWeb.searchInputLoggedOut : null,
+                  ]}
                   placeholderTextColor="rgba(28,32,36,0.7)"
                 />
                 <View style={stylesWeb.searchIcon}>
                   <Ionicons name="search" size={16} color={colors.primary} />
                 </View>
               </View>
-              <View style={stylesWeb.headerActions}>
-                <Pressable style={stylesWeb.iconBtn} accessibilityLabel="Notifications">
-                  <BellIcon width={18} height={18} />
-                </Pressable>
-                {isLoggedIn ? (
+              {isLoggedIn ? (
+                <View style={stylesWeb.headerActions}>
+                  <Pressable style={stylesWeb.iconBtn} accessibilityLabel="Notifications">
+                    <BellIcon width={18} height={18} />
+                  </Pressable>
                   <Pressable
                     style={[stylesWeb.iconBtn, stylesWeb.avatarBtn]}
                     accessibilityLabel="Profile"
                   >
                     <Ionicons name="person-outline" size={18} color={colors.surface.white} />
                   </Pressable>
-                ) : null}
-                <Pressable
-                  style={stylesWeb.menuBtn}
-                  accessibilityLabel="Menu"
-                  onPress={() => setWebMenuOpen(true)}
-                >
-                  <Ionicons name="menu" size={22} color={colors.primary} />
-                </Pressable>
-              </View>
+                  <Pressable
+                    style={stylesWeb.menuBtn}
+                    accessibilityLabel="Menu"
+                    onPress={() => setWebMenuOpen(true)}
+                  >
+                    <Ionicons name="menu" size={22} color={colors.primary} />
+                  </Pressable>
+                </View>
+              ) : (
+                <View style={stylesWeb.headerAuthActions}>
+                  <Button
+                    variant="outline"
+                    size="compact"
+                    onPress={() => setWebAuthModal({ visible: true, mode: 'login' })}
+                    accessibilityLabel="Log in"
+                  >
+                    Log in
+                  </Button>
+                  <Button
+                    variant="primary"
+                    size="compact"
+                    onPress={() => setWebAuthModal({ visible: true, mode: 'signup' })}
+                    accessibilityLabel="Sign up"
+                  >
+                    Sign Up
+                  </Button>
+                </View>
+              )}
             </View>
 
             {/* Category tiles */}
@@ -1229,6 +1265,21 @@ const stylesWeb = StyleSheet.create({
     justifyContent: 'space-between',
     gap: spacing['4'],
   },
+  // Logged-out desktop nav (Figma 179-3423): full-width bottom divider; auth CTAs replace bell/profile/menu.
+  headerLoggedOut: {
+    marginHorizontal: -16,
+    paddingHorizontal: 16,
+    paddingBottom: spacing['4'],
+    marginBottom: spacing['3'],
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border.light,
+  },
+  headerAuthActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing['2'],
+    flexShrink: 0,
+  },
   searchWrap: {
     flex: 1,
     maxWidth: 720,
@@ -1241,6 +1292,11 @@ const stylesWeb = StyleSheet.create({
     borderWidth: 0,
     paddingLeft: spacing['4'],
     paddingRight: 44,
+  },
+  searchInputLoggedOut: {
+    borderWidth: 1,
+    borderColor: colors.border.primary,
+    backgroundColor: colors.surface.lightPink,
   },
   searchIcon: {
     position: 'absolute',
