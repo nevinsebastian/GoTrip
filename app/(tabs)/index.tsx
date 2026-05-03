@@ -23,15 +23,22 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import ArrowTopRight from '@/assets/images/arrow-top-right.svg';
 import BagIll from '@/assets/images/bag ill 1.svg';
 import BellIcon from '@/assets/images/bell.svg';
+import BellBadgeIcon from '@/assets/images/bell-badge.svg';
 import HeartIcon from '@/assets/images/heart.svg';
+import HeartFilledIcon from '@/assets/images/heart-filled.svg';
+import LogoutIcon from '@/assets/images/logout.svg';
+import TicketConfirmationIcon from '@/assets/images/ticket-confirmation.svg';
 import HillIll from '@/assets/images/hill ill 1.svg';
 import Logo from '@/assets/images/logogotrip.svg';
 import RoomsIll from '@/assets/images/Rooms ill 1.svg';
 import TypeIcon from '@/assets/images/type.svg';
 import type { Listing, ListingMedia } from '@/src/api/types';
+import { logout } from '@/src/api/auth.service';
 import { useCategoriesByType } from '@/src/hooks/useCategoriesByType';
 import { useListings } from '@/src/hooks/useListings';
 import { useRootCategories } from '@/src/hooks/useRootCategories';
+import { USER_PROFILE_QUERY_KEY } from '@/src/hooks/useUserProfile';
+import { useQueryClient } from '@tanstack/react-query';
 
 const ResortImage = require('../../assets/images/resort.jpg');
 const WebLogo = require('../../assets/images/logogotrip.png');
@@ -241,6 +248,7 @@ function SectionRow({
 
 export default function HomeScreen() {
   const { isMobile, isTablet, isDesktop, width } = useResponsive();
+  const queryClient = useQueryClient();
   const [webMenuOpen, setWebMenuOpen] = useState(false);
   const [roomsMode, setRoomsMode] = useState(false);
   const [selectedRoomType, setSelectedRoomType] = useState<string | null>(null); // id of selected type
@@ -293,7 +301,63 @@ export default function HomeScreen() {
 
   // Desktop web-only home (Figma 158-11304). Must not affect iOS/Android/mobile web.
   const isDesktopWeb = Platform.OS === 'web' && isDesktop;
+
+  const handleWebMenuLogout = async () => {
+    setWebMenuOpen(false);
+    try {
+      await logout();
+    } catch {
+      // still clear local session
+    } finally {
+      queryClient.removeQueries({ queryKey: USER_PROFILE_QUERY_KEY });
+      queryClient.clear();
+      router.replace('/(tabs)');
+    }
+  };
+
   if (isDesktopWeb) {
+    const webMenuItems: {
+      key: string;
+      label: string;
+      node: React.ReactNode;
+      onPress: () => void;
+      labelPrimary?: boolean;
+    }[] = [
+      {
+        key: 'notifications',
+        label: 'Notifications',
+        node: <BellBadgeIcon width={22} height={22} />,
+        onPress: () => setWebMenuOpen(false),
+      },
+      {
+        key: 'wishlist',
+        label: 'Wishlist',
+        node: <HeartFilledIcon width={22} height={22} />,
+        onPress: () => {
+          setWebMenuOpen(false);
+          router.push('/(tabs)/two');
+        },
+      },
+      {
+        key: 'tickets',
+        label: 'Tickets',
+        node: <TicketConfirmationIcon width={22} height={22} />,
+        onPress: () => {
+          setWebMenuOpen(false);
+          router.push('/(tabs)/three');
+        },
+      },
+      {
+        key: 'logout',
+        label: 'Logout',
+        node: <LogoutIcon width={22} height={22} />,
+        onPress: () => {
+          void handleWebMenuLogout();
+        },
+        labelPrimary: true,
+      },
+    ];
+
     const listings = listingsRes?.data ?? [];
     const suggested = listings.slice(0, 6);
     const topRated = listings.slice(0, 5);
@@ -373,52 +437,35 @@ export default function HomeScreen() {
         <Modal
           visible={webMenuOpen}
           transparent
-          animationType="fade"
+          animationType="none"
           onRequestClose={() => setWebMenuOpen(false)}
         >
           <Pressable style={stylesWeb.menuOverlay} onPress={() => setWebMenuOpen(false)}>
             <Pressable style={stylesWeb.menuPanel} onPress={(e) => e.stopPropagation()}>
-              <View style={stylesWeb.menuHeader}>
-                <Text variant="bodySemibold" style={stylesWeb.menuTitle}>
-                  Menu
-                </Text>
-                <Pressable
-                  onPress={() => setWebMenuOpen(false)}
-                  hitSlop={10}
-                  accessibilityLabel="Close menu"
-                  style={stylesWeb.menuClose}
-                >
-                  <Ionicons name="close" size={20} color={colors.primary} />
-                </Pressable>
-              </View>
-
-              <View style={stylesWeb.menuDivider} />
-
-              {[
-                { label: 'Home', icon: 'home-outline' as const, onPress: () => router.replace('/(tabs)') },
-                { label: 'Resorts', icon: 'bed-outline' as const, onPress: () => router.push('/resorts') },
-                { label: 'Packages', icon: 'airplane-outline' as const, onPress: () => router.push('/packages') },
-                { label: 'Wishlist', icon: 'heart-outline' as const, onPress: () => router.push('/(tabs)/two') },
-                { label: 'Tickets', icon: 'ticket-outline' as const, onPress: () => router.push('/(tabs)/three') },
-                { label: 'Profile', icon: 'person-outline' as const, onPress: () => router.push('/(tabs)/four') },
-              ].map((item) => (
-                <Pressable
-                  key={item.label}
-                  style={({ pressed }) => [stylesWeb.menuRow, pressed && stylesWeb.menuRowPressed]}
-                  onPress={() => {
-                    setWebMenuOpen(false);
-                    item.onPress();
-                  }}
-                  accessibilityLabel={item.label}
-                >
-                  <View style={stylesWeb.menuIconBox}>
-                    <Ionicons name={item.icon} size={18} color={colors.primary} />
-                  </View>
-                  <Text variant="body" style={stylesWeb.menuLabel}>
-                    {item.label}
-                  </Text>
-                  <Ionicons name="chevron-forward" size={16} color={colors.text.caption} />
-                </Pressable>
+              {webMenuItems.map((item, index) => (
+                <React.Fragment key={item.key}>
+                  {index > 0 ? <View style={stylesWeb.menuDivider} /> : null}
+                  <Pressable
+                    style={({ pressed }) => [
+                      stylesWeb.menuRow,
+                      pressed && stylesWeb.menuRowPressed,
+                    ]}
+                    onPress={item.onPress}
+                    accessibilityRole="button"
+                    accessibilityLabel={item.label}
+                  >
+                    <View style={stylesWeb.menuIconBox}>{item.node}</View>
+                    <Text
+                      variant="body"
+                      style={[
+                        stylesWeb.menuLabel,
+                        item.labelPrimary ? stylesWeb.menuLabelLogout : null,
+                      ]}
+                    >
+                      {item.label}
+                    </Text>
+                  </Pressable>
+                </React.Fragment>
               ))}
             </Pressable>
           </Pressable>
@@ -1209,18 +1256,25 @@ const stylesWeb = StyleSheet.create({
   },
   menuOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.25)',
+    // Slight darkening; light blur only (heavy blur = jank on some GPUs).
+    backgroundColor: 'rgba(0, 0, 0, 0.42)',
     justifyContent: 'flex-start',
     alignItems: 'flex-end',
     paddingTop: 72,
     paddingRight: 16,
+    ...(Platform.OS === 'web'
+      ? ({
+          backdropFilter: 'blur(4px)',
+          WebkitBackdropFilter: 'blur(4px)',
+        } as Record<string, string>)
+      : {}),
   },
   menuPanel: {
-    width: 320,
-    borderRadius: borderRadius['2xl'],
+    width: 280,
+    borderRadius: borderRadius['3xl'],
     backgroundColor: colors.surface.white,
     borderWidth: 1,
-    borderColor: 'rgba(0, 9, 50, 0.10)',
+    borderColor: 'rgba(0, 9, 50, 0.08)',
     overflow: 'hidden',
     ...Platform.select({
       ios: {
@@ -1233,29 +1287,9 @@ const stylesWeb = StyleSheet.create({
       web: { boxShadow: '0 12px 40px rgba(0,0,0,0.18)' },
     }),
   },
-  menuHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing['4'],
-    paddingVertical: spacing['4'],
-  },
-  menuTitle: {
-    color: colors.text.primary,
-  },
-  menuClose: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(229,77,46,0.08)',
-    borderWidth: 1,
-    borderColor: 'rgba(229,77,46,0.18)',
-  },
   menuDivider: {
-    height: 1,
-    backgroundColor: 'rgba(0, 9, 50, 0.08)',
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: colors.border.light,
   },
   menuRow: {
     flexDirection: 'row',
@@ -1265,21 +1299,24 @@ const stylesWeb = StyleSheet.create({
     gap: spacing['3'],
   },
   menuRowPressed: {
-    backgroundColor: 'rgba(229,77,46,0.06)',
+    backgroundColor: 'rgba(229,77,46,0.05)',
   },
   menuIconBox: {
-    width: 34,
-    height: 34,
+    width: 40,
+    height: 40,
     borderRadius: borderRadius.lg,
-    borderWidth: 1,
-    borderColor: 'rgba(229,77,46,0.18)',
-    backgroundColor: 'rgba(229,77,46,0.06)',
+    borderWidth: 0,
+    backgroundColor: 'rgba(255, 92, 55, 0.10)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   menuLabel: {
     flex: 1,
     color: colors.text.primary,
+  },
+  menuLabelLogout: {
+    color: colors.primary,
+    fontWeight: '600',
   },
   tilesRow: {
     marginTop: spacing['5'],
