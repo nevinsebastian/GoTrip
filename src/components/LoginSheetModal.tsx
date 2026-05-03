@@ -255,7 +255,12 @@ export function LoginSheetModal({
                 </>
               ) : (
                 <>
-                  <Text variant="caption" style={styles.otpSubtitle}>
+                  <Text
+                    variant="caption"
+                    style={styles.otpSubtitle}
+                    numberOfLines={2}
+                    ellipsizeMode="tail"
+                  >
                     {loginMode === 'email'
                       ? `Sent to ${loginValue.trim() || 'your email'}`
                       : `Sent to ${loginValue.trim() || 'your phone number'}`}
@@ -355,6 +360,8 @@ const styles = StyleSheet.create({
   },
   sheetBody: {
     gap: spacing['2'],
+    alignSelf: 'stretch',
+    width: '100%',
   },
   loginPhoneInput: {
     height: 40,
@@ -429,16 +436,30 @@ const styles = StyleSheet.create({
   otpSubtitle: {
     color: 'rgba(0, 5, 29, 0.45)',
     marginBottom: spacing['2'],
+    alignSelf: 'stretch',
+    maxWidth: '100%',
+    ...(Platform.OS === 'web'
+      ? ({ overflowWrap: 'anywhere' } as Record<string, string>)
+      : {}),
   },
   otpRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: spacing['2'],
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'stretch',
+    gap: 6,
     marginBottom: spacing['2'],
+    width: '100%',
   },
+  /**
+   * Fixed widths: `flex:1` on TextInput blows up on Safari/RN Web (large intrinsic min-width),
+   * so only ~2 OTP cells were visible.
+   */
   otpBox: {
-    flex: 1,
+    width: 44,
     height: 48,
+    flexGrow: 0,
+    flexShrink: 0,
     borderRadius: 10,
     borderWidth: 1,
     borderColor: 'rgba(0, 9, 50, 0.12)',
@@ -446,6 +467,10 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 18,
     color: colors.text.primary,
+    paddingHorizontal: 0,
+    ...(Platform.OS === 'web'
+      ? ({ boxSizing: 'border-box' as const, minWidth: 0 } as object)
+      : {}),
   },
   changeContactBtn: {
     alignSelf: 'center',

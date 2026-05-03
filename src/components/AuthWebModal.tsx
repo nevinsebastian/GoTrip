@@ -24,6 +24,7 @@ import {
   ScrollView,
   StyleSheet,
   TextInput,
+  useWindowDimensions,
   View,
 } from 'react-native';
 
@@ -31,6 +32,8 @@ const WebLogo = require('@/assets/images/logogotrip.png');
 const isWeb = Platform.OS === 'web';
 const socialIconSize = 20;
 const OTP_LENGTH = 4;
+/** Below this width, use a centered single-column card instead of full-width split panel. */
+const WEB_AUTH_COMPACT_MAX_WIDTH = 640;
 
 function maskContact(value: string, isEmail: boolean): string {
   if (!value.trim()) return isEmail ? 'your email' : '+91 97******10';
@@ -66,6 +69,10 @@ export function AuthWebModal({
   onSwitchMode,
   onAuthenticated,
 }: AuthWebModalProps) {
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+  const compactWeb =
+    isWeb && windowWidth > 0 && windowWidth < WEB_AUTH_COMPACT_MAX_WIDTH;
+
   const [step, setStep] = useState<'credentials' | 'otp'>('credentials');
   const [loginMode, setLoginMode] = useState<'phone' | 'email'>('phone');
   const [signupMode, setSignupMode] = useState<'phone' | 'email'>('phone');
@@ -276,35 +283,50 @@ export function AuthWebModal({
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <Pressable style={styles.overlay} onPress={close}>
-          <Pressable style={styles.cardWrap} onPress={(e) => e.stopPropagation()}>
-            <View style={styles.card}>
-              {/* Brand column */}
-              <View style={styles.brand}>
-                <Image
-                  source={WebLogo}
-                  style={styles.brandLogo}
-                  resizeMode="contain"
-                  accessibilityLabel="GoTrip Holiday"
-                />
-                <Text variant="bodySemibold" style={styles.brandTagline}>
-                  {isLogin ? 'Your travel partner!' : 'Welcome to GoTrip Holiday'}
-                </Text>
-                <View style={styles.brandSpacer} />
-                <View style={styles.brandFeature}>
-                  <Ionicons name="business" size={40} color={colors.surface.white} />
-                  <Text variant="caption" style={styles.brandFeatureLabel}>
-                    Hotels
+          <Pressable
+            style={[
+              styles.cardWrap,
+              compactWeb
+                ? {
+                    maxWidth: Math.min(420, Math.max(0, windowWidth - spacing['4'] * 2)),
+                    maxHeight:
+                      windowHeight > 0
+                        ? Math.min(620, Math.round(windowHeight * 0.88))
+                        : (('88%' as unknown) as number),
+                  }
+                : null,
+            ]}
+            onPress={(e) => e.stopPropagation()}
+          >
+            <View style={[styles.card, compactWeb && styles.cardCompact]}>
+              {!compactWeb ? (
+                <View style={styles.brand}>
+                  <Image
+                    source={WebLogo}
+                    style={styles.brandLogo}
+                    resizeMode="contain"
+                    accessibilityLabel="GoTrip Holiday"
+                  />
+                  <Text variant="bodySemibold" style={styles.brandTagline}>
+                    {isLogin ? 'Your travel partner!' : 'Welcome to GoTrip Holiday'}
                   </Text>
+                  <View style={styles.brandSpacer} />
+                  <View style={styles.brandFeature}>
+                    <Ionicons name="business" size={40} color={colors.surface.white} />
+                    <Text variant="caption" style={styles.brandFeatureLabel}>
+                      Hotels
+                    </Text>
+                  </View>
+                  <View style={styles.dots}>
+                    <View style={[styles.dot, step === 'credentials' && styles.dotActive]} />
+                    <View style={[styles.dot, step === 'otp' && styles.dotActive]} />
+                    <View style={styles.dot} />
+                  </View>
                 </View>
-                <View style={styles.dots}>
-                  <View style={[styles.dot, step === 'credentials' && styles.dotActive]} />
-                  <View style={[styles.dot, step === 'otp' && styles.dotActive]} />
-                  <View style={styles.dot} />
-                </View>
-              </View>
+              ) : null}
 
               {/* Form column */}
-              <View style={styles.formColumn}>
+              <View style={[styles.formColumn, compactWeb && styles.formColumnCompact]}>
                 <Pressable
                   onPress={close}
                   style={styles.closeBtn}
@@ -313,9 +335,25 @@ export function AuthWebModal({
                 >
                   <Ionicons name="close" size={24} color={colors.text.primary} />
                 </Pressable>
+                {compactWeb && step === 'credentials' ? (
+                  <View style={styles.compactLogoRow} accessibilityRole="header">
+                    <Image
+                      source={WebLogo}
+                      style={styles.compactLogo}
+                      resizeMode="contain"
+                      accessibilityLabel="GoTrip Holiday"
+                    />
+                    <Text variant="caption" style={styles.compactTagline}>
+                      {isLogin ? 'Your travel partner!' : 'Welcome to GoTrip Holiday'}
+                    </Text>
+                  </View>
+                ) : null}
                 <ScrollView
                   style={styles.formScroll}
-                  contentContainerStyle={styles.formScrollContent}
+                  contentContainerStyle={[
+                    styles.formScrollContent,
+                    compactWeb && styles.formScrollContentCompact,
+                  ]}
                   keyboardShouldPersistTaps="handled"
                   showsVerticalScrollIndicator={false}
                 >
@@ -335,14 +373,19 @@ export function AuthWebModal({
                       <Text variant="heading2" style={styles.title}>
                         Enter OTP
                       </Text>
-                      <Text variant="caption" style={styles.subtitle}>
+                      <Text
+                        variant="caption"
+                        style={[styles.subtitle, compactWeb && styles.subtitleOtpCompact]}
+                        numberOfLines={compactWeb ? 5 : undefined}
+                        ellipsizeMode="tail"
+                      >
                         Code sent to{' '}
                         {pendingVerify.channel === 'email'
                           ? pendingVerify.contact
                           : maskContact(pendingVerify.contact, false)}{' '}
                         {pendingVerify.channel === 'email' ? 'via email' : 'via SMS'}.
                       </Text>
-                      <View style={styles.otpRow}>
+                      <View style={[styles.otpRow, compactWeb && styles.otpRowCompact]}>
                         {otpDigits.map((d, idx) => (
                           <TextInput
                             key={idx}
@@ -356,7 +399,7 @@ export function AuthWebModal({
                             }
                             keyboardType="number-pad"
                             maxLength={2}
-                            style={styles.otpBox}
+                            style={[styles.otpBox, compactWeb && styles.otpBoxCompact]}
                             placeholder="•"
                             placeholderTextColor="rgba(0, 5, 29, 0.25)"
                           />
@@ -643,6 +686,11 @@ const styles = StyleSheet.create({
       },
     }),
   },
+  cardCompact: {
+    flexDirection: 'column',
+    minHeight: 0,
+    flexShrink: 1,
+  },
   brand: {
     flex: 1,
     minWidth: 260,
@@ -700,6 +748,27 @@ const styles = StyleSheet.create({
     paddingTop: spacing['6'],
     paddingBottom: spacing['5'],
   },
+  formColumnCompact: {
+    minWidth: 0,
+    paddingHorizontal: spacing['4'],
+    paddingTop: spacing['4'],
+    paddingBottom: spacing['4'],
+  },
+  compactLogoRow: {
+    alignItems: 'center',
+    paddingTop: spacing['6'],
+    paddingBottom: spacing['2'],
+    paddingHorizontal: spacing['2'],
+  },
+  compactLogo: {
+    width: 132,
+    height: 48,
+  },
+  compactTagline: {
+    marginTop: spacing['2'],
+    color: colors.text.secondary,
+    textAlign: 'center',
+  },
   closeBtn: {
     position: 'absolute',
     top: spacing['4'],
@@ -715,6 +784,10 @@ const styles = StyleSheet.create({
     paddingRight: spacing['2'],
     paddingBottom: spacing['4'],
   },
+  formScrollContentCompact: {
+    paddingTop: spacing['2'],
+    width: '100%',
+  },
   title: {
     color: colors.text.primary,
     marginBottom: spacing['2'],
@@ -722,6 +795,14 @@ const styles = StyleSheet.create({
   subtitle: {
     color: colors.neutral.alpha['9'],
     marginBottom: spacing['4'],
+  },
+  /** Stops long email/phone from widening scroll content and clipping the OTP row on narrow web. */
+  subtitleOtpCompact: {
+    alignSelf: 'stretch',
+    maxWidth: '100%',
+    ...(Platform.OS === 'web'
+      ? ({ overflowWrap: 'anywhere' } as Record<string, string>)
+      : {}),
   },
   formStack: {
     gap: spacing['3'],
@@ -786,6 +867,14 @@ const styles = StyleSheet.create({
     marginBottom: spacing['2'],
     maxWidth: '100%',
   },
+  /** Narrow web: smaller fixed boxes so 4×width + gaps fit (flex width did not override otpBox). */
+  otpRowCompact: {
+    alignSelf: 'stretch',
+    width: '100%',
+    justifyContent: 'center',
+    gap: 6,
+    paddingHorizontal: 0,
+  },
   /** Fixed width so all 4 digits stay on one row inside the modal (no flex stretch). */
   otpBox: {
     width: 44,
@@ -803,5 +892,13 @@ const styles = StyleSheet.create({
     ...(Platform.OS === 'web'
       ? ({ boxSizing: 'border-box' as const } as object)
       : {}),
+  },
+  otpBoxCompact: {
+    width: 36,
+    height: 42,
+    flexGrow: 0,
+    flexShrink: 0,
+    fontSize: 15,
+    paddingHorizontal: 0,
   },
 });
