@@ -37,7 +37,7 @@ import { logout } from '@/src/api/auth.service';
 import { useCategoriesByType } from '@/src/hooks/useCategoriesByType';
 import { useListings } from '@/src/hooks/useListings';
 import { useRootCategories } from '@/src/hooks/useRootCategories';
-import { USER_PROFILE_QUERY_KEY } from '@/src/hooks/useUserProfile';
+import { USER_PROFILE_QUERY_KEY, useUserProfile } from '@/src/hooks/useUserProfile';
 import { useQueryClient } from '@tanstack/react-query';
 
 const ResortImage = require('../../assets/images/resort.jpg');
@@ -249,6 +249,9 @@ function SectionRow({
 export default function HomeScreen() {
   const { isMobile, isTablet, isDesktop, width } = useResponsive();
   const queryClient = useQueryClient();
+  const { data: user, error: profileError } = useUserProfile();
+  const isUnauthorized = Boolean(profileError?.isUnauthorized);
+  const isLoggedIn = Boolean(user) && !isUnauthorized;
   const [webMenuOpen, setWebMenuOpen] = useState(false);
   const [roomsMode, setRoomsMode] = useState(false);
   const [selectedRoomType, setSelectedRoomType] = useState<string | null>(null); // id of selected type
@@ -347,15 +350,28 @@ export default function HomeScreen() {
           router.push('/(tabs)/three');
         },
       },
-      {
-        key: 'logout',
-        label: 'Logout',
-        node: <LogoutIcon width={22} height={22} />,
-        onPress: () => {
-          void handleWebMenuLogout();
-        },
-        labelPrimary: true,
-      },
+      isLoggedIn
+        ? {
+            key: 'logout',
+            label: 'Logout',
+            node: <LogoutIcon width={22} height={22} />,
+            onPress: () => {
+              void handleWebMenuLogout();
+            },
+            labelPrimary: true,
+          }
+        : {
+            key: 'login',
+            label: 'Login',
+            node: (
+              <Ionicons name="log-in-outline" size={22} color={colors.primary} />
+            ),
+            onPress: () => {
+              setWebMenuOpen(false);
+              router.push('/login');
+            },
+            labelPrimary: true,
+          },
     ];
 
     const listings = listingsRes?.data ?? [];
@@ -498,9 +514,14 @@ export default function HomeScreen() {
                 <Pressable style={stylesWeb.iconBtn} accessibilityLabel="Notifications">
                   <BellIcon width={18} height={18} />
                 </Pressable>
-                <Pressable style={[stylesWeb.iconBtn, stylesWeb.avatarBtn]} accessibilityLabel="Profile">
-                  <Ionicons name="person-outline" size={18} color={colors.surface.white} />
-                </Pressable>
+                {isLoggedIn ? (
+                  <Pressable
+                    style={[stylesWeb.iconBtn, stylesWeb.avatarBtn]}
+                    accessibilityLabel="Profile"
+                  >
+                    <Ionicons name="person-outline" size={18} color={colors.surface.white} />
+                  </Pressable>
+                ) : null}
                 <Pressable
                   style={stylesWeb.menuBtn}
                   accessibilityLabel="Menu"
