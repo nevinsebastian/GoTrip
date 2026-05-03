@@ -497,8 +497,8 @@ export default function HomeScreen() {
           mode={webAuthModal.mode}
           onClose={() => setWebAuthModal((s) => ({ ...s, visible: false }))}
           onSwitchMode={(m) => setWebAuthModal({ visible: true, mode: m })}
-          onBeforeNavigateToOtp={() =>
-            setWebAuthModal((s) => ({ ...s, visible: false }))
+          onAuthenticated={() =>
+            queryClient.invalidateQueries({ queryKey: USER_PROFILE_QUERY_KEY })
           }
         />
 
@@ -532,9 +532,6 @@ export default function HomeScreen() {
               </View>
               {isLoggedIn ? (
                 <View style={stylesWeb.headerActions}>
-                  <Pressable style={stylesWeb.iconBtn} accessibilityLabel="Notifications">
-                    <BellIcon width={18} height={18} />
-                  </Pressable>
                   <Pressable
                     style={[stylesWeb.iconBtn, stylesWeb.avatarBtn]}
                     accessibilityLabel="Profile"

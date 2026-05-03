@@ -1,6 +1,6 @@
 /**
  * Desktop web login / signup modal (Figma split-panel).
- * Reuses the same OTP flow as app/login.tsx and app/signup.tsx (useSendOtp → /otp).
+ * Send OTP + verify OTP stay in this modal on web (no /otp navigation).
  */
 
 import { Button, Divider, Input, Text } from '@/components/ui';
@@ -11,10 +11,10 @@ import GoogleIcon from '@/assets/images/google.svg';
 import MailIcon from '@/assets/images/mail.svg';
 import MobileIcon from '@/assets/images/mobile.svg';
 import { useSendOtp } from '@/src/hooks/useSendOtp';
+import { useVerifyOtp } from '@/src/hooks/useVerifyOtp';
 import { getErrorMessage } from '@/src/utils/errorHandler';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Image,
   KeyboardAvoidingView,
@@ -23,27 +23,40 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  TextInput,
   View,
 } from 'react-native';
 
 const WebLogo = require('@/assets/images/logogotrip.png');
 const isWeb = Platform.OS === 'web';
 const socialIconSize = 20;
+const OTP_LENGTH = 4;
+
+function maskContact(value: string, isEmail: boolean): string {
+  if (!value.trim()) return isEmail ? 'your email' : '+91 97******10';
+  if (isEmail) {
+    const at = value.indexOf('@');
+    if (at <= 0) return value.charAt(0) + '***';
+    return value.charAt(0) + '***' + value.slice(at);
+  }
+  const digits = value.replace(/\D/g, '').slice(-10);
+  if (digits.length < 2) return '+91 ******' + digits;
+  const first2 = digits.slice(0, 2);
+  const last2 = digits.slice(-2);
+  return '+91 ' + first2 + '******' + last2;
+}
 
 export type AuthWebModalMode = 'login' | 'signup';
 
 export type AuthWebModalProps = {
   visible: boolean;
   mode: AuthWebModalMode;
-  /** Backdrop, close control, and Android back — not used when starting the OTP flow. */
+  /** Backdrop, close control, and Android back. */
   onClose: () => void;
   /** Switch between login and signup without closing (links under the form). */
   onSwitchMode: (mode: AuthWebModalMode) => void;
-  /**
-   * Optional: run right before navigating to `/otp` (e.g. hide modal on home).
-   * Full-route web (`login.web.tsx`) omits this so `onClose` is not called before OTP.
-   */
-  onBeforeNavigateToOtp?: () => void;
+  /** After OTP verification stores tokens (e.g. invalidate `useUserProfile`). */
+  onAuthenticated?: () => void | Promise<void>;
 };
 
 export function AuthWebModal({
@@ -51,16 +64,29 @@ export function AuthWebModal({
   mode,
   onClose,
   onSwitchMode,
-  onBeforeNavigateToOtp,
+  onAuthenticated,
 }: AuthWebModalProps) {
+  const [step, setStep] = useState<'credentials' | 'otp'>('credentials');
   const [loginMode, setLoginMode] = useState<'phone' | 'email'>('phone');
   const [signupMode, setSignupMode] = useState<'phone' | 'email'>('phone');
   const [loginValue, setLoginValue] = useState('');
   const [fullName, setFullName] = useState('');
   const [contactValue, setContactValue] = useState('');
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [otpDigits, setOtpDigits] = useState<string[]>(() =>
+    Array.from({ length: OTP_LENGTH }, () => ''),
+  );
+  /** Snapshot at “Get OTP” time for verify request */
+  const [pendingVerify, setPendingVerify] = useState<{
+    channel: 'email' | 'phone';
+    contact: string;
+    fullName?: string;
+  } | null>(null);
+
+  const otpRefs = useRef<(TextInput | null)[]>([]);
 
   const { mutate: sendOtp, isPending: isSendingOtp } = useSendOtp();
+  const { mutate: verifyOtp, isPending: isVerifyingOtp } = useVerifyOtp();
 
   const isLogin = mode === 'login';
   const isEmailLogin = isLogin && loginMode === 'email';
@@ -69,17 +95,100 @@ export function AuthWebModal({
   useEffect(() => {
     if (visible) {
       setSubmitError(null);
+      setStep('credentials');
       setLoginMode('phone');
       setSignupMode('phone');
       setLoginValue('');
       setFullName('');
       setContactValue('');
+      setOtpDigits(Array.from({ length: OTP_LENGTH }, () => ''));
+      setPendingVerify(null);
     }
   }, [visible, mode]);
 
+  useEffect(() => {
+    if (visible && step === 'otp') {
+      const t = setTimeout(() => otpRefs.current[0]?.focus?.(), 150);
+      return () => clearTimeout(t);
+    }
+  }, [visible, step]);
+
   const close = () => {
     setSubmitError(null);
+    setStep('credentials');
+    setOtpDigits(Array.from({ length: OTP_LENGTH }, () => ''));
+    setPendingVerify(null);
     onClose();
+  };
+
+  const goBackToCredentials = () => {
+    setSubmitError(null);
+    setStep('credentials');
+    setOtpDigits(Array.from({ length: OTP_LENGTH }, () => ''));
+    setPendingVerify(null);
+  };
+
+  const handleOtpDigitChange = (index: number, value: string) => {
+    const num = value.replace(/\D/g, '');
+    if (num.length > 1) {
+      const chars = num.slice(0, OTP_LENGTH).split('');
+      const next = [...otpDigits];
+      chars.forEach((c, i) => {
+        if (index + i < OTP_LENGTH) next[index + i] = c;
+      });
+      setOtpDigits(next);
+      const nextFocus = Math.min(index + chars.length, OTP_LENGTH - 1);
+      otpRefs.current[nextFocus]?.focus?.();
+      return;
+    }
+    const next = [...otpDigits];
+    next[index] = num;
+    setOtpDigits(next);
+    if (num && index < OTP_LENGTH - 1) otpRefs.current[index + 1]?.focus?.();
+  };
+
+  const handleOtpKeyPress = (index: number, key: string) => {
+    if (key === 'Backspace' && !otpDigits[index] && index > 0) {
+      otpRefs.current[index - 1]?.focus?.();
+    }
+  };
+
+  const handleVerifyOtpPress = () => {
+    if (isVerifyingOtp || !pendingVerify) return;
+    const code = otpDigits.join('');
+    if (code.length !== OTP_LENGTH) return;
+    setSubmitError(null);
+
+    verifyOtp(
+      {
+        ...(pendingVerify.fullName != null && pendingVerify.fullName !== ''
+          ? { full_name: pendingVerify.fullName }
+          : {}),
+        channel: pendingVerify.channel,
+        otp: code,
+        ...(pendingVerify.channel === 'email'
+          ? { email: pendingVerify.contact }
+          : { phone: pendingVerify.contact }),
+      },
+      {
+        onSuccess: async (res) => {
+          if (res?.success && res?.data?.access_token) {
+            try {
+              await onAuthenticated?.();
+            } finally {
+              setSubmitError(null);
+              setStep('credentials');
+              setOtpDigits(Array.from({ length: OTP_LENGTH }, () => ''));
+              setPendingVerify(null);
+              onClose();
+            }
+            return;
+          }
+          setSubmitError(res?.message ?? 'Invalid or expired OTP.');
+        },
+        onError: (err) => setSubmitError(getErrorMessage(err)),
+      },
+    );
   };
 
   const handleLoginGetOtp = () => {
@@ -96,14 +205,12 @@ export function AuthWebModal({
     sendOtp(payload, {
       onSuccess: (res) => {
         if (res?.success) {
-          onBeforeNavigateToOtp?.();
-          router.push({
-            pathname: '/otp',
-            params: {
-              contact: trimmed,
-              isEmail: isEmailLogin ? '1' : '0',
-            },
+          setPendingVerify({
+            channel: isEmailLogin ? 'email' : 'phone',
+            contact: trimmed,
           });
+          setOtpDigits(Array.from({ length: OTP_LENGTH }, () => ''));
+          setStep('otp');
           return;
         }
         setSubmitError(res?.message ?? 'Failed to send OTP. Please try again.');
@@ -130,15 +237,13 @@ export function AuthWebModal({
       {
         onSuccess: (res) => {
           if (res?.success) {
-            onBeforeNavigateToOtp?.();
-            router.push({
-              pathname: '/otp',
-              params: {
-                contact: trimmedContact,
-                isEmail: isEmailSignup ? '1' : '0',
-                fullName: trimmedName,
-              },
+            setPendingVerify({
+              channel: isEmailSignup ? 'email' : 'phone',
+              contact: trimmedContact,
+              fullName: trimmedName,
             });
+            setOtpDigits(Array.from({ length: OTP_LENGTH }, () => ''));
+            setStep('otp');
             return;
           }
           setSubmitError(res?.message ?? 'Failed to send OTP. Please try again.');
@@ -192,8 +297,8 @@ export function AuthWebModal({
                   </Text>
                 </View>
                 <View style={styles.dots}>
-                  <View style={[styles.dot, styles.dotActive]} />
-                  <View style={styles.dot} />
+                  <View style={[styles.dot, step === 'credentials' && styles.dotActive]} />
+                  <View style={[styles.dot, step === 'otp' && styles.dotActive]} />
                   <View style={styles.dot} />
                 </View>
               </View>
@@ -214,7 +319,78 @@ export function AuthWebModal({
                   keyboardShouldPersistTaps="handled"
                   showsVerticalScrollIndicator={false}
                 >
-                  {isLogin ? (
+                  {step === 'otp' && pendingVerify ? (
+                    <>
+                      <Pressable
+                        onPress={goBackToCredentials}
+                        style={styles.otpBackRow}
+                        accessibilityRole="button"
+                        accessibilityLabel="Back to phone or email"
+                      >
+                        <Ionicons name="chevron-back" size={22} color={colors.primary} />
+                        <Text variant="bodySemibold" style={styles.otpBackText}>
+                          Back
+                        </Text>
+                      </Pressable>
+                      <Text variant="heading2" style={styles.title}>
+                        Enter OTP
+                      </Text>
+                      <Text variant="caption" style={styles.subtitle}>
+                        Code sent to{' '}
+                        {pendingVerify.channel === 'email'
+                          ? pendingVerify.contact
+                          : maskContact(pendingVerify.contact, false)}{' '}
+                        {pendingVerify.channel === 'email' ? 'via email' : 'via SMS'}.
+                      </Text>
+                      <View style={styles.otpRow}>
+                        {otpDigits.map((d, idx) => (
+                          <TextInput
+                            key={idx}
+                            ref={(r) => {
+                              otpRefs.current[idx] = r;
+                            }}
+                            value={d}
+                            onChangeText={(v) => handleOtpDigitChange(idx, v)}
+                            onKeyPress={({ nativeEvent }) =>
+                              handleOtpKeyPress(idx, nativeEvent.key)
+                            }
+                            keyboardType="number-pad"
+                            maxLength={2}
+                            style={styles.otpBox}
+                            placeholder="•"
+                            placeholderTextColor="rgba(0, 5, 29, 0.25)"
+                          />
+                        ))}
+                      </View>
+                      {submitError ? (
+                        <Text variant="caption" style={styles.errorText}>
+                          {submitError}
+                        </Text>
+                      ) : null}
+                      <Button
+                        variant="primary"
+                        size="default"
+                        style={styles.primaryCta}
+                        onPress={handleVerifyOtpPress}
+                        disabled={
+                          isVerifyingOtp ||
+                          otpDigits.join('').length !== OTP_LENGTH
+                        }
+                      >
+                        {isVerifyingOtp ? 'Verifying...' : 'Verify & continue'}
+                      </Button>
+                      <Pressable
+                        onPress={goBackToCredentials}
+                        style={styles.switchLink}
+                        accessibilityRole="button"
+                      >
+                        <Text variant="caption" style={styles.switchLinkText}>
+                          Wrong number or email?{' '}
+                          <Text style={styles.switchLinkBold}>Change</Text>
+                        </Text>
+                      </Pressable>
+                    </>
+                  ) : isLogin ? (
                     <>
                       <Text variant="heading2" style={styles.title}>
                         Welcome Back!
@@ -589,5 +765,43 @@ const styles = StyleSheet.create({
   switchLinkBold: {
     color: colors.primary,
     fontWeight: '600',
+  },
+  otpBackRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing['1'],
+    marginBottom: spacing['3'],
+    alignSelf: 'flex-start',
+  },
+  otpBackText: {
+    color: colors.primary,
+  },
+  otpRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    alignSelf: 'center',
+    flexWrap: 'nowrap',
+    gap: spacing['2'],
+    marginBottom: spacing['2'],
+    maxWidth: '100%',
+  },
+  /** Fixed width so all 4 digits stay on one row inside the modal (no flex stretch). */
+  otpBox: {
+    width: 44,
+    height: 44,
+    flexGrow: 0,
+    flexShrink: 0,
+    borderRadius: borderRadius['3'],
+    borderWidth: 1,
+    borderColor: colors.neutral.alpha['5'],
+    backgroundColor: colors.surface.card,
+    textAlign: 'center',
+    fontSize: 17,
+    color: colors.text.primary,
+    paddingHorizontal: 0,
+    ...(Platform.OS === 'web'
+      ? ({ boxSizing: 'border-box' as const } as object)
+      : {}),
   },
 });
