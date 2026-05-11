@@ -32,6 +32,7 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -39,9 +40,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 const WebLogo = require('@/assets/images/logogotrip.png');
 const FALLBACK_PLACEHOLDER = require('@/assets/images/resort.jpg');
 
-const WISHLIST_DESKTOP_MAX = 1200;
-const CARD_GAP = 18;
 const COLUMNS = 5;
+/** Match home desktop horizontal rhythm (`stylesWeb.container`). */
+const PAGE_PAD = 16;
+/** Figma wishlist cards ~225px; home desktop cards use 280 — cap so slots never become ultra-wide strips. */
+const CARD_MAX_WIDTH = 280;
+const CARD_IMAGE_ASPECT = 225 / 163;
 
 const CHIPS: { type: CategoryType; label: string; Icon: React.ComponentType<{ width?: number; height?: number }> }[] =
   [
@@ -84,7 +88,6 @@ function formatRating(listing: WishlistListing) {
 }
 
 export type WishlistDesktopShellProps = {
-  width: number;
   profileLoading: boolean;
   profileError: unknown;
   refetchProfile: () => void;
@@ -104,7 +107,6 @@ export type WishlistDesktopShellProps = {
 };
 
 export function WishlistDesktopShell({
-  width,
   profileLoading,
   profileError,
   refetchProfile,
@@ -122,6 +124,7 @@ export function WishlistDesktopShell({
   showWishlistCount,
   queryClient,
 }: WishlistDesktopShellProps) {
+  const { width: viewportW } = useWindowDimensions();
   const [wishCategory, setWishCategory] = useState<CategoryType>('hotel');
   const [wishlistLocalQuery, setWishlistLocalQuery] = useState('');
   const [webMenuOpen, setWebMenuOpen] = useState(false);
@@ -132,15 +135,20 @@ export function WishlistDesktopShell({
 
   const isLoggedIn = Boolean(user) && !isUnauthorized;
 
+  /** Fixed-width slots (Figma-style grid); avoids one card stretching edge-to-edge. */
+  const cardSlotWidth = useMemo(() => {
+    const gap = spacing['4'];
+    const inner = Math.max(0, viewportW - 2 * PAGE_PAD);
+    const equal = (inner - (COLUMNS - 1) * gap) / COLUMNS;
+    return Math.min(CARD_MAX_WIDTH, Math.max(160, Math.floor(equal)));
+  }, [viewportW]);
+
   const filtered = useMemo(() => {
     let list = items.filter((l) => l.category?.type === wishCategory);
     const q = wishlistLocalQuery.trim().toLowerCase();
     if (q) list = list.filter((l) => l.title.toLowerCase().includes(q));
     return list;
   }, [items, wishCategory, wishlistLocalQuery]);
-
-  const contentW = Math.min(WISHLIST_DESKTOP_MAX, width - 80);
-  const cardW = (contentW - (COLUMNS - 1) * CARD_GAP) / COLUMNS;
 
   const handleWebMenuLogout = async () => {
     setWebMenuOpen(false);
@@ -218,7 +226,7 @@ export function WishlistDesktopShell({
     const goToListing = () => router.push({ pathname: '/resort/[id]', params: { id: l.id } });
 
     return (
-      <View key={l.wishlist_id} style={{ width: cardW }}>
+      <View key={l.wishlist_id} style={[dw.cardCell, { width: cardSlotWidth }]}>
         <View style={dw.cardCol}>
           <View style={dw.cardImageShell}>
             <Pressable onPress={goToListing} style={StyleSheet.absoluteFill} accessibilityLabel={l.title}>
@@ -234,20 +242,20 @@ export function WishlistDesktopShell({
               disabled={isRemoving}
               accessibilityLabel="Remove from wishlist"
             >
-              <HeartIcon width={12} height={12} />
+              <HeartIcon width={16} height={16} />
             </Pressable>
           </View>
           <Pressable onPress={goToListing} accessibilityRole="button">
-            <Text variant="caption" numberOfLines={2} style={dw.cardTitle}>
+            <Text variant="bodySemibold" numberOfLines={2} style={dw.cardTitle}>
               {l.title}
             </Text>
             <View style={dw.cardMeta}>
-              <Text variant="caption" style={dw.cardPrice} numberOfLines={1}>
+              <Text variant="body" style={dw.cardPrice} numberOfLines={1}>
                 {priceLabel}
               </Text>
               <View style={dw.cardRating}>
-                <Ionicons name="star-outline" size={12} color="rgba(28,32,36,0.8)" />
-                <Text variant="caption" style={dw.cardRatingText}>
+                <Ionicons name="star-outline" size={14} color={colors.text.secondary} />
+                <Text variant="body" style={dw.cardRatingText}>
                   {formatRating(l)}
                 </Text>
               </View>
@@ -346,12 +354,10 @@ export function WishlistDesktopShell({
     if (canFetchWishlist && filtered.length > 0) {
       return (
         <View style={dw.mainStack}>
-          <View style={[dw.cardRow, { width: contentW }]}>
-            {firstRow.map((l) => renderCard(l))}
-          </View>
+          <View style={dw.cardRow}>{firstRow.map((l) => renderCard(l))}</View>
           {secondRow.length > 0 ? (
             <>
-              <View style={[dw.sectionHead, { width: contentW }]}>
+              <View style={dw.sectionHead}>
                 <Text variant="bodySemibold" style={dw.sectionTitle}>
                   Top rated stays
                 </Text>
@@ -362,7 +368,7 @@ export function WishlistDesktopShell({
                   <Ionicons name="chevron-forward" size={14} color={colors.primary} />
                 </Pressable>
               </View>
-              <View style={[dw.cardRow, { width: contentW }]}>{secondRow.map((l) => renderCard(l))}</View>
+              <View style={dw.cardRow}>{secondRow.map((l) => renderCard(l))}</View>
             </>
           ) : null}
         </View>
@@ -415,8 +421,13 @@ export function WishlistDesktopShell({
         }
       />
 
-      <ScrollView style={dw.scroll} contentContainerStyle={dw.scrollContent} showsVerticalScrollIndicator>
-        <View style={[dw.inner, { maxWidth: WISHLIST_DESKTOP_MAX }]}>
+      <View style={dw.columnFill}>
+        <ScrollView
+          style={dw.scrollFlex}
+          contentContainerStyle={dw.scrollContent}
+          showsVerticalScrollIndicator
+        >
+          <View style={dw.container}>
           <View style={[dw.header, !isLoggedIn ? dw.headerLoggedOut : null]}>
             <Pressable onPress={() => router.replace('/(tabs)')} accessibilityLabel="Home">
               <Image source={WebLogo} style={dw.logoImg} resizeMode="contain" />
@@ -429,16 +440,16 @@ export function WishlistDesktopShell({
                 editable={false}
               />
               <View style={dw.searchIcon}>
-                <Ionicons name="search" size={16} color={colors.primary} />
+                <Ionicons name="search" size={18} color={colors.primary} />
               </View>
             </View>
             {isLoggedIn ? (
               <View style={dw.headerActions}>
                 <Pressable style={[dw.iconBtn, dw.avatarBtn]} accessibilityLabel="Profile">
-                  <Ionicons name="person-outline" size={18} color={colors.surface.white} />
+                  <Ionicons name="person-outline" size={20} color={colors.surface.white} />
                 </Pressable>
                 <Pressable style={dw.menuBtn} accessibilityLabel="Menu" onPress={() => setWebMenuOpen(true)}>
-                  <Ionicons name="menu" size={22} color={colors.primary} />
+                  <Ionicons name="menu" size={24} color={colors.primary} />
                 </Pressable>
               </View>
             ) : (
@@ -483,15 +494,15 @@ export function WishlistDesktopShell({
                 const on = colors.surface.white;
                 const chipIcon =
                   c.type === 'hotel' && active ? (
-                    <Ionicons name="business" size={24} color={on} />
+                    <Ionicons name="business" size={26} color={on} />
                   ) : c.type === 'package' && active ? (
-                    <Ionicons name="airplane" size={22} color={on} />
+                    <Ionicons name="airplane" size={24} color={on} />
                   ) : c.type === 'camping' && active ? (
-                    <Ionicons name="image-outline" size={22} color={on} />
+                    <Ionicons name="image-outline" size={24} color={on} />
                   ) : c.type === 'activity' && active ? (
-                    <Ionicons name="boat-outline" size={22} color={on} />
+                    <Ionicons name="boat-outline" size={24} color={on} />
                   ) : (
-                    <Icon width={24} height={24} />
+                    <Icon width={26} height={26} />
                   );
                 return (
                   <Pressable
@@ -516,17 +527,18 @@ export function WishlistDesktopShell({
                   placeholderTextColor="rgba(28,32,36,0.7)"
                 />
                 <View style={dw.inlineSearchIcon}>
-                  <Ionicons name="search" size={16} color={colors.primary} />
+                  <Ionicons name="search" size={18} color={colors.primary} />
                 </View>
               </View>
               <Pressable style={dw.filterBtn} accessibilityLabel="Filter">
-                <FilterIcon width={20} height={20} />
+                <FilterIcon width={22} height={22} />
               </Pressable>
             </View>
           </View>
 
           {mainBody()}
-        </View>
+          </View>
+        </ScrollView>
 
         <View style={dw.footer}>
           <View style={dw.footerInner}>
@@ -560,22 +572,27 @@ export function WishlistDesktopShell({
             © Copyright 2026 Gotrip Holiday - All Rights Reserved.
           </Text>
         </View>
-      </ScrollView>
+      </View>
     </SafeAreaView>
   );
 }
 
 const dw = StyleSheet.create({
   page: { flex: 1, backgroundColor: colors.surface.white },
-  scroll: { flex: 1 },
-  scrollContent: { paddingBottom: spacing['6'] },
-  inner: {
+  /** Fills viewport under safe area; footer sits at bottom like a sticky chrome bar. */
+  columnFill: { flex: 1, flexDirection: 'column', minHeight: 0 },
+  scrollFlex: { flex: 1, minHeight: 0 },
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: spacing['8'],
+  },
+  /** Same as home desktop `stylesWeb.container`: full width, modest side padding. */
+  container: {
     width: '100%',
-    alignSelf: 'center',
-    paddingHorizontal: 40,
-    paddingTop: spacing['4'],
+    paddingHorizontal: PAGE_PAD,
   },
   header: {
+    marginTop: spacing['4'],
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -583,15 +600,17 @@ const dw = StyleSheet.create({
     marginBottom: spacing['5'],
   },
   headerLoggedOut: {
+    marginHorizontal: -PAGE_PAD,
+    paddingHorizontal: PAGE_PAD,
     paddingBottom: spacing['4'],
     marginBottom: spacing['3'],
     borderBottomWidth: 1,
     borderBottomColor: colors.border.light,
   },
-  logoImg: { width: 110, height: 50 },
-  searchWrap: { flex: 1, maxWidth: 520, position: 'relative' },
+  logoImg: { width: 120, height: 54 },
+  searchWrap: { flex: 1, maxWidth: 720, position: 'relative' },
   searchInput: {
-    height: 40,
+    height: 44,
     borderRadius: borderRadius.pill,
     backgroundColor: 'rgba(229,77,46,0.10)',
     borderWidth: 0,
@@ -600,8 +619,8 @@ const dw = StyleSheet.create({
   },
   searchInputLoggedOut: {
     borderWidth: 1,
-    borderColor: 'rgba(0,7,20,0.25)',
-    backgroundColor: 'rgba(229,77,46,0.10)',
+    borderColor: colors.border.primary,
+    backgroundColor: colors.surface.lightPink,
   },
   searchIcon: {
     position: 'absolute',
@@ -614,8 +633,8 @@ const dw = StyleSheet.create({
   },
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: spacing['3'] },
   iconBtn: {
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
     borderRadius: borderRadius.lg,
     borderWidth: 1,
     borderColor: colors.primary,
@@ -628,12 +647,17 @@ const dw = StyleSheet.create({
   headerAuthActions: { flexDirection: 'row', alignItems: 'center', gap: spacing['2'] },
   pageTitle: {
     color: colors.primary,
-    fontSize: 24,
-    lineHeight: 32,
-    fontWeight: '600',
-    marginBottom: spacing['1'],
+    fontSize: 32,
+    lineHeight: 40,
+    fontWeight: '700',
+    marginBottom: spacing['2'],
   },
-  pageSubtitle: { color: colors.text.caption, marginBottom: spacing['4'] },
+  pageSubtitle: {
+    color: colors.text.secondary,
+    fontSize: 15,
+    lineHeight: 22,
+    marginBottom: spacing['5'],
+  },
   filterBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -642,25 +666,25 @@ const dw = StyleSheet.create({
     marginBottom: spacing['6'],
     width: '100%',
   },
-  chipTrayScroll: { flex: 1, minWidth: 0, maxWidth: 700 },
+  chipTrayScroll: { flex: 1, minWidth: 0 },
   chipTray: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: spacing['3'],
     backgroundColor: 'rgba(223,38,0,0.05)',
     borderRadius: borderRadius.pill,
-    padding: 10,
+    padding: spacing['3'],
     paddingRight: spacing['2'],
   },
   typeChip: {
     flex: 1,
-    minWidth: 120,
+    minWidth: 0,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
+    gap: spacing['3'],
+    paddingVertical: spacing['3'],
+    paddingHorizontal: spacing['4'],
     borderRadius: borderRadius.pill,
     borderWidth: 1,
     borderColor: colors.primary,
@@ -671,7 +695,7 @@ const dw = StyleSheet.create({
     borderColor: colors.primary,
   },
   typeChipLabel: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '600',
     color: colors.primary,
   },
@@ -681,13 +705,12 @@ const dw = StyleSheet.create({
     alignItems: 'center',
     gap: spacing['2'],
     flexShrink: 0,
-    minWidth: 200,
-    maxWidth: 400,
-    flex: 1,
+    width: 380,
+    maxWidth: '38%',
   },
   inlineSearchWrap: { flex: 1, position: 'relative' },
   inlineSearchInput: {
-    height: 40,
+    height: 44,
     borderRadius: borderRadius.pill,
     backgroundColor: 'rgba(229,77,46,0.10)',
     borderWidth: 1,
@@ -705,8 +728,8 @@ const dw = StyleSheet.create({
     width: 32,
   },
   filterBtn: {
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
     borderRadius: 24,
     borderWidth: 1,
     borderColor: 'rgba(28,32,36,0.25)',
@@ -714,12 +737,20 @@ const dw = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  mainStack: { gap: spacing['5'], marginBottom: spacing['6'] },
-  cardRow: { flexDirection: 'row', flexWrap: 'nowrap', gap: CARD_GAP, alignSelf: 'center' },
-  cardCol: { gap: 8 },
+  mainStack: { gap: spacing['6'], marginBottom: spacing['6'], width: '100%' },
+  cardRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'flex-start',
+    gap: spacing['4'],
+    width: '100%',
+    alignSelf: 'stretch',
+  },
+  cardCell: { flexShrink: 0 },
+  cardCol: { gap: spacing['2'], width: '100%' },
   cardImageShell: {
     width: '100%',
-    aspectRatio: 225 / 163,
+    aspectRatio: CARD_IMAGE_ASPECT,
     borderRadius: borderRadius.lg,
     overflow: 'hidden',
     backgroundColor: colors.gray['2'],
@@ -739,10 +770,10 @@ const dw = StyleSheet.create({
   cardImage: { width: '100%', height: '100%' },
   heartFab: {
     position: 'absolute',
-    top: 6,
-    right: 6,
-    width: 24,
-    height: 24,
+    top: spacing['2'],
+    right: spacing['2'],
+    width: 30,
+    height: 30,
     borderRadius: 6,
     backgroundColor: colors.surface.white,
     alignItems: 'center',
@@ -761,8 +792,9 @@ const dw = StyleSheet.create({
   cardTitle: {
     color: colors.text.primary,
     fontWeight: '600',
-    fontSize: 12,
-    lineHeight: 16,
+    fontSize: 15,
+    lineHeight: 22,
+    marginTop: spacing['1'],
   },
   cardMeta: {
     flexDirection: 'row',
@@ -770,23 +802,25 @@ const dw = StyleSheet.create({
     justifyContent: 'space-between',
     marginTop: 4,
   },
-  cardPrice: { color: 'rgba(28,32,36,0.8)', fontSize: 12 },
-  cardRating: { flexDirection: 'row', alignItems: 'center', gap: 2 },
-  cardRatingText: { color: 'rgba(28,32,36,0.8)', fontSize: 12 },
+  cardPrice: { color: colors.text.secondary, fontSize: 15, fontWeight: '500' },
+  cardRating: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  cardRatingText: { color: colors.text.secondary, fontSize: 15 },
   sectionHead: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    alignSelf: 'center',
+    width: '100%',
   },
-  sectionTitle: { color: colors.text.primary, fontSize: 16 },
+  sectionTitle: { color: colors.text.primary, fontSize: 18, lineHeight: 24 },
   viewAll: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  viewAllText: { color: colors.primary, fontSize: 12 },
+  viewAllText: { color: colors.primary, fontSize: 14 },
   centerBlock: {
-    minHeight: 280,
+    flexGrow: 1,
+    minHeight: 320,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: spacing['6'],
+    paddingVertical: spacing['7'],
+    width: '100%',
   },
   messageCard: {
     backgroundColor: colors.surface.white,
@@ -844,26 +878,31 @@ const dw = StyleSheet.create({
   menuLabel: { flex: 1, color: colors.text.primary },
   menuLabelLogout: { color: colors.primary, fontWeight: '600' },
   footer: {
-    marginTop: spacing['7'],
-    backgroundColor: '#FFE8E0',
+    marginTop: 0,
+    backgroundColor: colors.primary,
     paddingVertical: spacing['5'],
-    paddingHorizontal: 40,
+    paddingBottom: spacing['6'],
   },
   footerInner: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     justifyContent: 'space-between',
     gap: spacing['5'],
-    maxWidth: WISHLIST_DESKTOP_MAX,
-    alignSelf: 'center',
     width: '100%',
+    paddingHorizontal: PAGE_PAD,
   },
-  footerGroup: { gap: spacing['3'], minWidth: 120 },
-  footerLink: { color: colors.primary },
+  footerGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing['4'],
+    minWidth: 200,
+    flexWrap: 'wrap',
+  },
+  footerLink: { color: colors.surface.white, fontSize: 14 },
   footerBrand: {
-    color: colors.primary,
-    letterSpacing: 3,
-    fontSize: 11,
+    color: colors.surface.white,
+    letterSpacing: 4,
+    fontSize: 13,
     fontWeight: '700',
     textAlign: 'center',
     flex: 1,
@@ -871,6 +910,8 @@ const dw = StyleSheet.create({
   footerCopyright: {
     marginTop: spacing['4'],
     textAlign: 'center',
-    color: colors.text.secondary,
+    color: 'rgba(255,255,255,0.85)',
+    fontSize: 12,
+    paddingHorizontal: PAGE_PAD,
   },
 });

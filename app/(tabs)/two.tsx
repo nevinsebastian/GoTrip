@@ -135,7 +135,6 @@ export default function WishlistScreen() {
   if (isDesktopWeb) {
     return (
       <WishlistDesktopShell
-        width={width}
         profileLoading={profileLoading}
         profileError={profileError}
         refetchProfile={refetchProfile}
