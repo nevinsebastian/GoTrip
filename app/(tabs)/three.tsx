@@ -2,13 +2,16 @@ import BellIcon from '@/assets/images/bell.svg';
 import { IconButton, Input, Text } from '@/components/ui';
 import { useResponsive } from '@/components/ui/useResponsive';
 import { borderRadius, colors, spacing } from '@/constants/DesignTokens';
+import { TicketsDesktopShell } from '@/src/components/TicketsDesktopShell';
 import { useBookings } from '@/src/hooks/useBookings';
 import { getErrorMessage } from '@/src/utils/errorHandler';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
-import { Ionicons } from '@expo/vector-icons';
 import {
     Image,
+    Platform,
     Pressable,
     ScrollView,
     StyleSheet,
@@ -16,7 +19,6 @@ import {
     View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 
 // Light peach/orange background from Figma Ticket details screen
 const TICKETS_BG = '#FFF8F6';
@@ -28,12 +30,14 @@ export default function TicketsScreen() {
   const [activeTab, setActiveTab] = useState<TabKey>('active');
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const { width, isMobile, isTablet } = useResponsive();
+  const { width, isMobile, isTablet, isDesktop } = useResponsive();
   const { height } = useWindowDimensions();
+  const isDesktopWeb = Platform.OS === 'web' && isDesktop;
 
   const contentPadding = isMobile ? spacing['4'] : isTablet ? spacing['5'] : spacing['6'];
   const bellIconSize = isMobile ? 24 : isTablet ? 26 : 28;
-  const { data: bookingsRes, isLoading, error } = useBookings({ page: 1, limit: 20 });
+  /** Desktop web uses `TicketsDesktopShell` for this query (avoids duplicate fetch). */
+  const { data: bookingsRes, isLoading, error } = useBookings({ page: 1, limit: 20 }, !isDesktopWeb);
 
   const toDateOnly = (input: string) => {
     const d = new Date(input);
@@ -88,6 +92,10 @@ export default function TicketsScreen() {
         title: 'No Bookings yet',
         subtitle: 'Your past tickets & booking details will appear here.',
       };
+
+  if (isDesktopWeb) {
+    return <TicketsDesktopShell />;
+  }
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: TICKETS_BG }]} edges={['top']}>
