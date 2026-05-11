@@ -3,6 +3,7 @@ import { Button, IconButton, Text } from '@/components/ui';
 import { useResponsive } from '@/components/ui/useResponsive';
 import { borderRadius, colors, shadows, spacing } from '@/constants/DesignTokens';
 import type { ListingMedia, WishlistListing } from '@/src/api/types';
+import { WishlistDesktopShell } from '@/src/components/WishlistDesktopShell';
 import { LoginSheetModal } from '@/src/components/LoginSheetModal';
 import { useRemoveWishlist } from '@/src/hooks/useRemoveWishlist';
 import { USER_PROFILE_QUERY_KEY, useUserProfile } from '@/src/hooks/useUserProfile';
@@ -14,14 +15,14 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Image,
-    Platform,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    View,
+  ActivityIndicator,
+  Alert,
+  Image,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -68,7 +69,8 @@ function formatRating(listing: WishlistListing) {
 }
 
 export default function WishlistScreen() {
-  const { width, isMobile, isTablet } = useResponsive();
+  const { width, isMobile, isTablet, isDesktop } = useResponsive();
+  const isDesktopWeb = Platform.OS === 'web' && isDesktop;
   const queryClient = useQueryClient();
   const [loginModalVisible, setLoginModalVisible] = useState(false);
 
@@ -129,6 +131,30 @@ export default function WishlistScreen() {
       },
     );
   };
+
+  if (isDesktopWeb) {
+    return (
+      <WishlistDesktopShell
+        width={width}
+        profileLoading={profileLoading}
+        profileError={profileError}
+        refetchProfile={refetchProfile}
+        user={user}
+        wishlistLoading={wishlistLoading}
+        wishlistError={wishlistError}
+        refetchWishlists={refetchWishlists}
+        items={items}
+        canFetchWishlist={canFetchWishlist}
+        isUnauthorized={isUnauthorized}
+        profileFetchError={profileFetchError}
+        isRemoving={isRemoving}
+        onRemoveHeart={handleRemoveHeart}
+        itemCountLabel={itemCountLabel}
+        showWishlistCount={showWishlistCount}
+        queryClient={queryClient}
+      />
+    );
+  }
 
   const headerBlock = (
     <View
