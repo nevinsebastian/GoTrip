@@ -7,7 +7,6 @@ import {
     spacing,
 } from '@/constants/DesignTokens';
 import { logout } from '@/src/api/auth.service';
-import { LoginSheetModal } from '@/src/components/LoginSheetModal';
 import { USER_PROFILE_QUERY_KEY, useUserProfile } from '@/src/hooks/useUserProfile';
 import { getErrorMessage } from '@/src/utils/errorHandler';
 import { Ionicons } from '@expo/vector-icons';
@@ -43,14 +42,11 @@ export default function ProfileScreen() {
   const { isMobile, isTablet } = useResponsive();
   const contentPadding = isMobile ? spacing['4'] : isTablet ? spacing['5'] : spacing['6'];
   const [logoutModalVisible, setLogoutModalVisible] = useState(false);
-  const [loginModalVisible, setLoginModalVisible] = useState(false);
   const queryClient = useQueryClient();
 
   const {
     data: user,
-    isLoading,
     error,
-    refetch,
   } = useUserProfile();
 
   const isUnauthorized = Boolean(error?.isUnauthorized);
@@ -92,7 +88,6 @@ export default function ProfileScreen() {
       // Ensure UI is logged out even if API logout fails.
       queryClient.removeQueries({ queryKey: USER_PROFILE_QUERY_KEY });
       queryClient.clear();
-      setLoginModalVisible(false);
       router.replace('/(tabs)');
     }
   };
@@ -101,8 +96,8 @@ export default function ProfileScreen() {
     setLogoutModalVisible(false);
   };
 
-  const openLoginModal = () => {
-    setLoginModalVisible(true);
+  const openLogin = () => {
+    router.push('/login');
   };
 
   return (
@@ -152,7 +147,7 @@ export default function ProfileScreen() {
               </Text>
               <Pressable
                 style={({ pressed }) => [styles.loginCta, pressed && styles.loginCtaPressed]}
-                onPress={openLoginModal}
+                onPress={openLogin}
                 accessibilityLabel="Login or sign up"
               >
                 <Text variant="bodySemibold" style={styles.loginCtaText}>
@@ -220,14 +215,6 @@ export default function ProfileScreen() {
           ))}
         </View>
       </ScrollView>
-
-      <LoginSheetModal
-        visible={loginModalVisible}
-        onClose={() => setLoginModalVisible(false)}
-        onAuthenticated={async () => {
-          await refetch();
-        }}
-      />
 
       {/* Log Out confirmation modal with dimmed/blurred overlay */}
       <Modal

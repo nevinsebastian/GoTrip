@@ -95,11 +95,15 @@ const styles = StyleSheet.create({
     borderColor: colors.border.light,
     borderRadius: borderRadius.lg,
     paddingHorizontal: components.input.padding.horizontal,
-    paddingVertical: components.input.padding.vertical,
+    paddingVertical: Platform.OS === 'android' ? 0 : components.input.padding.vertical,
     fontSize: 16, // Typography/3
     fontFamily: 'poppins',
     fontWeight: '400',
     color: colors.text.primary,
+    ...(Platform.OS === 'android' && {
+      textAlignVertical: 'center',
+      includeFontPadding: false,
+    }),
     ...(Platform.OS === 'web' && {
       cursor: 'text',
       outlineStyle: 'none',

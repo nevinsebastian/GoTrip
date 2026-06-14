@@ -1,8 +1,11 @@
 import { Input, Text } from '@/components/ui';
 import { borderRadius, colors, spacing, typography } from '@/constants/DesignTokens';
 import { AuthMobileHero } from '@/src/components/AuthMobileHero';
+import { OtpEntryModal } from '@/src/components/OtpEntryModal';
+import type { OtpChannel } from '@/src/api/types';
+import { authFieldInputStyle } from '@/src/constants/authInputStyles';
 import { router } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -30,6 +33,11 @@ const DESIGN_WIDTH = 402;
 
 type LoginMode = 'phone' | 'email';
 
+type OtpSession = {
+  contact: string;
+  channel: OtpChannel;
+};
+
 function OrDivider() {
   return (
     <View style={styles.orDivider}>
@@ -43,13 +51,36 @@ function OrDivider() {
 export function MobileLoginScreen() {
   const contentPadding = spacing['4'];
   const socialIconSize = 16;
+  const scrollRef = useRef<ScrollView>(null);
+  const [keyboardPadding, setKeyboardPadding] = useState(0);
 
   const [loginMode, setLoginMode] = useState<LoginMode>('phone');
   const [inputValue, setInputValue] = useState('');
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [otpSession, setOtpSession] = useState<OtpSession | null>(null);
 
   const isEmailMode = loginMode === 'email';
   const { mutate: sendOtp, isPending: isSendingOtp } = useSendOtp();
+
+  useEffect(() => {
+    if (isWeb) return;
+    const showSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      (e) => setKeyboardPadding(e.endCoordinates.height),
+    );
+    const hideSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => setKeyboardPadding(0),
+    );
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
+
+  const scrollToForm = () => {
+    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 80);
+  };
 
   const switchMode = () => {
     setInputValue('');
@@ -68,20 +99,16 @@ export function MobileLoginScreen() {
       return;
     }
 
+    const channel: OtpChannel = isEmailMode ? 'email' : 'phone';
     const payload = isEmailMode
-      ? { channel: 'email' as const, email: trimmed }
-      : { channel: 'phone' as const, phone: trimmed };
+      ? { channel, email: trimmed }
+      : { channel, phone: trimmed };
 
     sendOtp(payload, {
       onSuccess: (res) => {
         if (res?.success) {
-          router.push({
-            pathname: '/otp',
-            params: {
-              contact: trimmed,
-              isEmail: isEmailMode ? '1' : '0',
-            },
-          });
+          Keyboard.dismiss();
+          setOtpSession({ contact: trimmed, channel });
           return;
         }
         setSubmitError(res?.message ?? 'Failed to send OTP. Please try again.');
@@ -101,15 +128,21 @@ export function MobileLoginScreen() {
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={isIOS ? 8 : 0}
+        keyboardVerticalOffset={0}
       >
         <ScrollView
+          ref={scrollRef}
           style={styles.flex}
           contentContainerStyle={[
             styles.scrollContent,
-            { paddingHorizontal: contentPadding },
+            {
+              paddingHorizontal: contentPadding,
+              paddingBottom: spacing['6'] + keyboardPadding,
+            },
           ]}
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          automaticallyAdjustKeyboardInsets={isIOS}
           showsVerticalScrollIndicator={false}
         >
           <AuthMobileHero />
@@ -129,10 +162,11 @@ export function MobileLoginScreen() {
                     keyboardType={isEmailMode ? 'email-address' : 'phone-pad'}
                     autoCapitalize="none"
                     autoCorrect={false}
-                    placeholderTextColor={colors.text.primary}
-                    style={styles.phoneInput}
+                    placeholderTextColor={colors.text.placeholder}
+                    style={authFieldInputStyle.field}
                     value={inputValue}
                     onChangeText={setInputValue}
+                    onFocus={scrollToForm}
                   />
 
                   <Text style={styles.helper}>
@@ -215,6 +249,13 @@ export function MobileLoginScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <OtpEntryModal
+        visible={otpSession !== null}
+        onClose={() => setOtpSession(null)}
+        contact={otpSession?.contact ?? ''}
+        channel={otpSession?.channel ?? 'phone'}
+      />
     </SafeAreaView>
   );
 
@@ -238,7 +279,6 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     paddingTop: 10,
-    paddingBottom: spacing['6'],
     gap: 18,
     width: '100%',
     maxWidth: DESIGN_WIDTH,
@@ -266,15 +306,6 @@ const styles = StyleSheet.create({
     lineHeight: typography.lineHeight['1'],
     letterSpacing: typography.letterSpacing['1'],
     color: colors.text.primary,
-  },
-  phoneInput: {
-    height: 40,
-    borderRadius: 24,
-    borderColor: 'rgba(0, 0, 47, 0.15)',
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    paddingHorizontal: spacing['2'],
-    fontSize: typography.fontSize['1'],
-    lineHeight: typography.lineHeight['3'],
   },
   helper: {
     fontFamily: typography.fontFamily.text,

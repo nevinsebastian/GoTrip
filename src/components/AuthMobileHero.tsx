@@ -1,4 +1,4 @@
-import { borderRadius, colors, spacing, typography } from '@/constants/DesignTokens';
+import { colors, spacing, typography } from '@/constants/DesignTokens';
 import React from 'react';
 import {
   Image,
@@ -46,8 +46,10 @@ export function AuthMobileHero() {
             resizeMode="contain"
           />
           <View style={styles.topBarActions}>
-            <BellLoginIcon width={18} height={18} />
-            <View style={styles.menuButton}>
+            <View style={styles.headerIconButton}>
+              <BellLoginIcon width={18} height={18} />
+            </View>
+            <View style={styles.headerIconButton}>
               <MenuLoginIcon width={24} height={24} />
             </View>
           </View>
@@ -134,14 +136,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+    flexShrink: 0,
   },
-  menuButton: {
-    width: 22,
-    height: 40,
+  headerIconButton: {
+    width: 24,
+    height: 24,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: borderRadius.lg,
-    overflow: 'hidden',
   },
   orangeFrameHero: {
     backgroundColor: colors.accent.main,
