@@ -4,9 +4,8 @@ import {
   Text
 } from '@/components/ui';
 import { useResponsive } from '@/components/ui/useResponsive';
-import { borderRadius, colors, components, spacing, typography } from '@/constants/DesignTokens';
+import { borderRadius, colors, spacing } from '@/constants/DesignTokens';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
@@ -22,7 +21,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import ArrowTopRight from '@/assets/images/arrow-top-right.svg';
 import BagIll from '@/assets/images/bag ill 1.svg';
-import BellIcon from '@/assets/images/bell.svg';
 import BellBadgeIcon from '@/assets/images/bell-badge.svg';
 import HeartIcon from '@/assets/images/heart.svg';
 import HeartFilledIcon from '@/assets/images/heart-filled.svg';
@@ -31,29 +29,15 @@ import TicketConfirmationIcon from '@/assets/images/ticket-confirmation.svg';
 import HillIll from '@/assets/images/hill ill 1.svg';
 import Logo from '@/assets/images/logogotrip.svg';
 import RoomsIll from '@/assets/images/Rooms ill 1.svg';
-import TypeIcon from '@/assets/images/type.svg';
 import type { Listing, ListingMedia } from '@/src/api/types';
 import { logout } from '@/src/api/auth.service';
-import { useCategoriesByType } from '@/src/hooks/useCategoriesByType';
 import { useListings } from '@/src/hooks/useListings';
-import { useRootCategories } from '@/src/hooks/useRootCategories';
 import { USER_PROFILE_QUERY_KEY, useUserProfile } from '@/src/hooks/useUserProfile';
 import { AuthWebModal } from '@/src/components/AuthWebModal';
+import { MobileHotelsHome } from '@/src/screens/MobileHotelsHome';
 import { useQueryClient } from '@tanstack/react-query';
 
-const ResortImage = require('../../assets/images/resort.jpg');
 const WebLogo = require('../../assets/images/logogotrip.png');
-
-const TYPE_ICON_BG = '#FFD49A';
-const TYPE_LABEL_COLOR = '#545454';
-const TYPE_ICON_SIZE = 56;
-// Gradient for types section (Figma 110-792): blend from screen bg, lighter → darker below types
-const TYPES_GRADIENT_TOP = '#FFFBF9';
-const TYPES_GRADIENT_BOTTOM = '#FFE8E0';
-const TYPES_GRADIENT_BLUR_RADIUS = 10; // soft edge at bottom (height of fade strip ≈ 2× radius)
-// 3-stop gradient so top blends with screen (no visible start line)
-const TYPES_GRADIENT_COLORS = [colors.surface.lightPink, TYPES_GRADIENT_TOP, TYPES_GRADIENT_BOTTOM] as const;
-const TYPES_GRADIENT_LOCATIONS = [0, 0.25, 1] as const;
 
 type CategoryIconKey = 'rooms' | 'packages' | 'glamping' | 'activities';
 
@@ -89,21 +73,6 @@ function routeForCategory(iconKey: CategoryIconKey) {
       return null;
   }
 }
-
-// Room type cards (Figma 110-801): icon type.svg + label, same icon for all.
-const ROOM_TYPES: Array<{ id: string; label: string }> = [
-  { id: 'budget', label: 'Budget' },
-  { id: 'private', label: 'Private' },
-  { id: 'luxury', label: 'Luxury' },
-  { id: 'beach', label: 'Beach' },
-  { id: 'hillstation', label: 'Hill station' },
-];
-
-const STAYS = [
-  { title: 'Luxury stay in Wayanad', price: '₹1199/night', rating: '4.5' },
-  { title: 'Luxury stay in Wayanad', price: '₹1199/night', rating: '4.5' },
-  { title: 'Luxury stay in Wayanad', price: '₹1199/night', rating: '4.5' },
-];
 
 function CategoryCard({
   title,
@@ -150,105 +119,18 @@ function CategoryCard({
   );
 }
 
-function StayCard({
-  title,
-  price,
-  rating,
-  imageUrl,
-  onPress,
-  cardStyle,
-  containerPadding = 0,
-}: {
-  title: string;
-  price: string;
-  rating: string;
-  imageUrl?: string | null;
-  onPress: () => void;
-  cardStyle?: any;
-  containerPadding?: number;
-}) {
-  const { width, isMobile, isTablet } = useResponsive();
-  
-  // Calculate card width to show 2 cards at once
-  // Account for container padding and gap between cards
-  const gap = spacing['3']; // 12px gap between cards
-  const availableWidth = width - (containerPadding * 2);
-  
-  // For mobile: ensure 2 cards fit with spacing
-  // Each card = (available width - gap) / 2, capped at maxWidth
-  const calculatedWidth = isMobile
-    ? Math.floor((availableWidth - gap) / 2)
-    : isTablet
-    ? Math.floor((availableWidth - gap * 2) / 3) // 3 cards on tablet
-    : Math.floor((availableWidth - gap * 3) / 4); // 4 cards on desktop
-  
-  const cardWidth = Math.min(components.resortCard.maxWidth, calculatedWidth);
-  
-  // Responsive icon sizes
-  const heartIconSize = isMobile ? 20 : 24;
-  const starIconSize = isMobile ? 14 : 16;
-  
-  return (
-    <Pressable onPress={onPress} style={[styles.stayCardWrap, { width: cardWidth }, cardStyle]}>
-      {/* Image: rectangle with all sides rounded (separate from text) */}
-      <View style={styles.stayImageWrap}>
-        {imageUrl ? (
-          <Image
-            source={{ uri: imageUrl }}
-            style={styles.stayImage}
-            resizeMode="cover"
-          />
-        ) : (
-          <View style={styles.stayImagePlaceholder} accessibilityLabel="Listing image placeholder">
-            <Ionicons name="image-outline" size={26} color={colors.text.caption} />
-          </View>
-        )}
-        <View style={styles.favoriteBadge}>
-          <HeartIcon width={heartIconSize} height={heartIconSize} />
-        </View>
-      </View>
-      {/* Text below the image - not in the same card */}
-      <View style={styles.stayContent}>
-        <Text variant="bodySemibold" numberOfLines={2} style={styles.stayTitle}>
-          {title}
-        </Text>
-        <View style={styles.stayMeta}>
-          <Text variant="price" style={styles.stayPrice}>
-            {price}
-          </Text>
-          <View style={styles.ratingRow}>
-            <Ionicons name="star-outline" size={starIconSize} color={colors.rating.star} />
-            <Text variant="ratingValue" style={styles.stayRating}>
-              {rating}
-            </Text>
-          </View>
-        </View>
-      </View>
-    </Pressable>
-  );
-}
-
-function SectionRow({
-  title,
-  onViewAll,
-}: {
-  title: string;
-  onViewAll: () => void;
-}) {
-  return (
-    <View style={styles.sectionRow}>
-      <Text variant="sectionTitle" style={styles.sectionTitle}>
-        {title}
-      </Text>
-      <Button variant="link" icon="chevron-forward" iconPosition="right" onPress={onViewAll}>
-        View all
-      </Button>
-    </View>
-  );
-}
-
 export default function HomeScreen() {
-  const { isMobile, isTablet, isDesktop, width } = useResponsive();
+  const { isDesktop } = useResponsive();
+  const isDesktopWeb = Platform.OS === 'web' && isDesktop;
+
+  if (!isDesktopWeb) {
+    return <MobileHotelsHome />;
+  }
+
+  return <DesktopHomeScreen />;
+}
+
+function DesktopHomeScreen() {
   const queryClient = useQueryClient();
   const { data: user, error: profileError } = useUserProfile();
   const isUnauthorized = Boolean(profileError?.isUnauthorized);
@@ -258,30 +140,9 @@ export default function HomeScreen() {
     visible: boolean;
     mode: 'login' | 'signup';
   }>({ visible: false, mode: 'login' });
-  const [roomsMode, setRoomsMode] = useState(false);
-  const [selectedRoomType, setSelectedRoomType] = useState<string | null>(null); // id of selected type
 
-  const { data: categoriesRes, isLoading: isCategoriesLoading } = useCategoriesByType(
-    'hotel',
-    roomsMode,
-  );
-
-  const { data: rootCategoriesRes } = useRootCategories(!roomsMode);
-  const { data: listingsRes } = useListings({ page: 1, limit: 20 }, !roomsMode);
-  const { data: nearYouRes } = useListings(
-    { location: 'varkala', page: 1, limit: 20 },
-    !roomsMode,
-  );
-  const { data: economicRes } = useListings({ max_price: 2499, page: 1, limit: 20 }, !roomsMode);
-
-  const categoryMetaById = (() => {
-    const parents = rootCategoriesRes?.data ?? [];
-    const map = new Map<string, { name: string; sortOrder: number; type?: string | null }>();
-    parents.forEach((c) => {
-      map.set(c.id, { name: c.name, sortOrder: c.sort_order ?? 0, type: c.type ?? null });
-    });
-    return map;
-  })();
+  const { data: listingsRes } = useListings({ page: 1, limit: 20 });
+  const { data: economicRes } = useListings({ max_price: 2499, page: 1, limit: 20 });
 
   const getPrimaryImage = (media?: ListingMedia[]) => {
     if (!media?.length) return null;
@@ -307,9 +168,6 @@ export default function HomeScreen() {
     return first?.url ?? null;
   };
 
-  // Desktop web-only home (Figma 158-11304). Must not affect iOS/Android/mobile web.
-  const isDesktopWeb = Platform.OS === 'web' && isDesktop;
-
   const handleWebMenuLogout = async () => {
     setWebMenuOpen(false);
     try {
@@ -323,8 +181,7 @@ export default function HomeScreen() {
     }
   };
 
-  if (isDesktopWeb) {
-    const webMenuItems: {
+  const webMenuItems: {
       key: string;
       label: string;
       node: React.ReactNode;
@@ -453,7 +310,7 @@ export default function HomeScreen() {
       </View>
     );
 
-    return (
+  return (
       <SafeAreaView style={stylesWeb.page} edges={['top']}>
         <Modal
           visible={webMenuOpen}
@@ -624,504 +481,10 @@ export default function HomeScreen() {
           </View>
         </ScrollView>
       </SafeAreaView>
-    );
-  }
-
-  const groupedListings = (() => {
-    const list = listingsRes?.data ?? [];
-    const byCategory = new Map<
-      string,
-      { categoryId: string; categoryName: string; sortOrder: number; items: Listing[] }
-    >();
-
-    list.forEach((l) => {
-      const categoryId = l.category?.id ?? l.category_id;
-      const meta = categoryId ? categoryMetaById.get(categoryId) : undefined;
-      const categoryName = meta?.name ?? l.category?.name ?? 'Listings';
-      const sortOrder = meta?.sortOrder ?? Number.MAX_SAFE_INTEGER;
-      const key = categoryId || categoryName;
-      const existing = byCategory.get(key);
-      if (existing) existing.items.push(l);
-      else byCategory.set(key, { categoryId, categoryName, sortOrder, items: [l] });
-    });
-
-    return Array.from(byCategory.values())
-      .filter((g) => g.items.length)
-      .filter((g) => {
-        const meta = g.categoryId ? categoryMetaById.get(g.categoryId) : undefined;
-        // Don't show Packages section on home; package has its own bento tile
-        return (meta?.type ?? null) !== 'package' && g.categoryName.toLowerCase() !== 'packages';
-      })
-      .sort((a, b) => a.sortOrder - b.sortOrder || a.categoryName.localeCompare(b.categoryName));
-  })();
-
-  const economicListings = (() => {
-    const list = economicRes?.data ?? [];
-    return list.filter((l) => (l.category?.type ?? null) !== 'package');
-  })();
-
-  const nearYouListings = (() => {
-    const list = nearYouRes?.data ?? [];
-    return list.filter((l) => (l.category?.type ?? null) !== 'package');
-  })();
-
-  const apiRoomTypes = (() => {
-    const parents = categoriesRes?.data ?? [];
-    const roomsCategory = parents[0];
-    const children = roomsCategory?.children ?? [];
-    const active = children.filter((c) => c.is_active !== false);
-    const sorted = [...active].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
-    return sorted.map((c) => ({
-      id: c.slug || c.id,
-      label: c.name,
-    }));
-  })();
-
-  const roomTypesToRender = apiRoomTypes.length ? apiRoomTypes : ROOM_TYPES;
-
-  // Responsive padding based on screen size
-  const contentPadding = isMobile 
-    ? spacing['4'] 
-    : isTablet 
-    ? spacing['5'] 
-    : spacing['6'];
-  
-  // Responsive logo size
-  const logoWidth = isMobile ? Math.min(100, width * 0.25) : isTablet ? 120 : 140;
-  const logoHeight = logoWidth * 0.36; // Maintain aspect ratio
-  
-  // Responsive icon sizes
-  const bellIconSize = isMobile ? 24 : isTablet ? 26 : 28;
-  
-  // Responsive category card min height
-  const categoryMinHeight = isMobile ? 100 : isTablet ? 120 : 140;
-
-  return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <LinearGradient
-        colors={[colors.surface.lightPink, colors.surface.background]}
-        style={styles.gradient}
-      >
-        {roomsMode ? (
-          <View style={styles.typesSectionWrap}>
-            <LinearGradient
-              colors={TYPES_GRADIENT_COLORS}
-              locations={TYPES_GRADIENT_LOCATIONS}
-              style={styles.typesSectionGradient}
-            >
-              <View style={[styles.topFixed, { paddingHorizontal: contentPadding }]}>
-                <View style={styles.header}>
-                  <View style={styles.headerLeft}>
-                    <Pressable
-                      style={styles.backButton}
-                      onPress={() => { setRoomsMode(false); setSelectedRoomType(null); }}
-                      hitSlop={12}
-                      accessibilityLabel="Back to categories"
-                    >
-                      <Ionicons name="chevron-back" size={24} color={colors.primary} />
-                    </Pressable>
-                    <Text variant="header" style={styles.resortTitle}>Resorts</Text>
-                  </View>
-                  <Pressable onPress={() => {}} style={styles.bellWrap}>
-                    <BellIcon width={bellIconSize} height={bellIconSize} />
-                  </Pressable>
-                </View>
-                <View style={styles.searchWrap}>
-                  <Input
-                    variant="search"
-                    showSearchIcon
-                    placeholder="Search"
-                    placeholderTextColor={colors.text.placeholder}
-                  />
-                </View>
-              </View>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                style={styles.roomTypesScroll}
-                contentContainerStyle={[styles.roomTypesContent, { paddingRight: contentPadding, paddingHorizontal: contentPadding }]}
-              >
-                {(isCategoriesLoading ? ROOM_TYPES : roomTypesToRender).map((type) => {
-                  const isSelected = selectedRoomType === type.id;
-                  return (
-                    <Pressable
-                      key={type.id}
-                      style={[
-                        styles.roomTypeCard,
-                        isSelected && styles.roomTypeCardSelected,
-                      ]}
-                      onPress={() => setSelectedRoomType(isSelected ? null : type.id)}
-                    >
-                      <View style={styles.roomTypeIconWrap}>
-                        <TypeIcon width={TYPE_ICON_SIZE} height={TYPE_ICON_SIZE} />
-                      </View>
-                      <Text
-                        variant="body"
-                        style={[
-                          styles.roomTypeLabel,
-                          isSelected && styles.roomTypeLabelSelected,
-                        ]}
-                        numberOfLines={1}
-                      >
-                        {type.label}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </ScrollView>
-            </LinearGradient>
-            <LinearGradient
-              colors={[TYPES_GRADIENT_BOTTOM, colors.surface.lightPink]}
-              style={[styles.typesSectionBlurEdge, { height: TYPES_GRADIENT_BLUR_RADIUS * 2 }]}
-              pointerEvents="none"
-            />
-          </View>
-        ) : (
-        <View style={[styles.topFixed, { paddingHorizontal: contentPadding }]}>
-          <View style={styles.header}>
-            <View style={styles.logoWrap}>
-            {Platform.OS === 'web' ? (
-              <Image source={WebLogo} style={[styles.webLogo, { width: logoWidth, height: logoHeight }]} resizeMode="contain" />
-            ) : (
-              <Logo width={logoWidth} height={logoHeight} />
-            )}
-            </View>
-            <Pressable onPress={() => {}} style={styles.bellWrap}>
-              <BellIcon width={bellIconSize} height={bellIconSize} />
-            </Pressable>
-          </View>
-          <View style={styles.searchWrap}>
-            <Input
-              variant="search"
-              showSearchIcon
-              placeholder="Search"
-              placeholderTextColor={colors.text.placeholder}
-            />
-          </View>
-        </View>
-        )}
-
-        <ScrollView
-          style={styles.scroll}
-          contentContainerStyle={[
-            styles.scrollContent,
-            { paddingHorizontal: contentPadding },
-          ]}
-          showsVerticalScrollIndicator={false}
-        >
-          {roomsMode ? (
-          <View style={styles.roomTypesBottomSpacer} />
-          ) : (
-          <View style={styles.bentoGrid}>
-            <View style={styles.bentoRow}>
-              <View style={styles.bentoCell2}>
-                <CategoryCard
-                  title={CATEGORIES[0].title}
-                  subtitle={CATEGORIES[0].subtitle}
-                  bg={CATEGORIES[0].bg}
-                  iconKey={CATEGORIES[0].iconKey}
-                  onPress={() => router.push('/resorts')}
-                />
-              </View>
-              <View style={styles.bentoCell1}>
-                <CategoryCard
-                  title={CATEGORIES[1].title}
-                  subtitle={CATEGORIES[1].subtitle}
-                  bg={CATEGORIES[1].bg}
-                  iconKey={CATEGORIES[1].iconKey}
-                  onPress={() => router.push('/packages')}
-                />
-              </View>
-            </View>
-            <View style={styles.bentoRow}>
-              <View style={styles.bentoCell1}>
-                <CategoryCard
-                  title={CATEGORIES[2].title}
-                  subtitle={CATEGORIES[2].subtitle}
-                  bg={CATEGORIES[2].bg}
-                  iconKey={CATEGORIES[2].iconKey}
-                  onPress={() => {}}
-                />
-              </View>
-              <View style={styles.bentoCell2}>
-                <CategoryCard
-                  title={CATEGORIES[3].title}
-                  subtitle={CATEGORIES[3].subtitle}
-                  bg={CATEGORIES[3].bg}
-                  iconKey={CATEGORIES[3].iconKey}
-                  onPress={() => {}}
-                />
-              </View>
-            </View>
-          </View>
-          )}
-
-          {!roomsMode ? (
-            <>
-              {economicListings.length ? (
-                <View key="economic">
-                  <SectionRow title="Economic" onViewAll={() => {}} />
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={[styles.horizontalList, { paddingHorizontal: 0 }]}
-                  >
-                    {economicListings.map((listing) => (
-                      <StayCard
-                        key={listing.id}
-                        title={listing.title}
-                        price={`₹${Number(listing.price_start ?? 0).toLocaleString('en-IN')}/night`}
-                        rating={'4.5'}
-                        imageUrl={getPrimaryImage(listing.media)}
-                        onPress={() =>
-                          router.push({
-                            pathname: '/resort/[id]',
-                            params: {
-                              id: listing.id,
-                              title: listing.title,
-                              price: `₹${Number(listing.price_start ?? 0).toLocaleString('en-IN')}`,
-                              rating: '4.5',
-                            },
-                          })
-                        }
-                        containerPadding={contentPadding}
-                      />
-                    ))}
-                  </ScrollView>
-                </View>
-              ) : null}
-
-              {nearYouListings.length ? (
-                <View key="near-you">
-                  <SectionRow title="Near you" onViewAll={() => {}} />
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={[styles.horizontalList, { paddingHorizontal: 0 }]}
-                  >
-                    {nearYouListings.map((listing) => (
-                      <StayCard
-                        key={listing.id}
-                        title={listing.title}
-                        price={`₹${Number(listing.price_start ?? 0).toLocaleString('en-IN')}/night`}
-                        rating={'4.5'}
-                        imageUrl={getPrimaryImage(listing.media)}
-                        onPress={() =>
-                          router.push({
-                            pathname: '/resort/[id]',
-                            params: {
-                              id: listing.id,
-                              title: listing.title,
-                              price: `₹${Number(listing.price_start ?? 0).toLocaleString('en-IN')}`,
-                              rating: '4.5',
-                            },
-                          })
-                        }
-                        containerPadding={contentPadding}
-                      />
-                    ))}
-                  </ScrollView>
-                </View>
-              ) : null}
-
-              {groupedListings.map((group) => (
-                <View key={group.categoryId || group.categoryName}>
-                  <SectionRow title={group.categoryName} onViewAll={() => {}} />
-                  {isMobile ? (
-                    <ScrollView
-                      horizontal
-                      showsHorizontalScrollIndicator={false}
-                      contentContainerStyle={[styles.horizontalList, { paddingHorizontal: 0 }]}
-                    >
-                      {group.items.map((listing) => (
-                        <StayCard
-                          key={listing.id}
-                          title={listing.title}
-                          price={`₹${Number(listing.price_start ?? 0).toLocaleString('en-IN')}/night`}
-                          rating={'4.5'}
-                          imageUrl={getPrimaryImage(listing.media)}
-                          onPress={() =>
-                            router.push({
-                              pathname: '/resort/[id]',
-                              params: {
-                                id: listing.id,
-                                title: listing.title,
-                                price: `₹${Number(listing.price_start ?? 0).toLocaleString('en-IN')}`,
-                                rating: '4.5',
-                              },
-                            })
-                          }
-                          cardStyle={{}}
-                          containerPadding={contentPadding}
-                        />
-                      ))}
-                    </ScrollView>
-                  ) : (
-                    <View style={styles.staysGrid}>
-                      {group.items.map((listing) => (
-                        <StayCard
-                          key={listing.id}
-                          title={listing.title}
-                          price={`₹${Number(listing.price_start ?? 0).toLocaleString('en-IN')}/night`}
-                          rating={'4.5'}
-                          imageUrl={getPrimaryImage(listing.media)}
-                          onPress={() =>
-                            router.push({
-                              pathname: '/resort/[id]',
-                              params: {
-                                id: listing.id,
-                                title: listing.title,
-                                price: `₹${Number(listing.price_start ?? 0).toLocaleString('en-IN')}`,
-                                rating: '4.5',
-                              },
-                            })
-                          }
-                          cardStyle={styles.stayCardGrid}
-                          containerPadding={contentPadding}
-                        />
-                      ))}
-                    </View>
-                  )}
-                </View>
-              ))}
-            </>
-          ) : null}
-
-        </ScrollView>
-      </LinearGradient>
-    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.surface.lightPink,
-  },
-  gradient: {
-    flex: 1,
-  },
-  typesSectionWrap: {
-    width: '100%',
-    position: 'relative',
-  },
-  typesSectionGradient: {
-    width: '100%',
-  },
-  typesSectionBlurEdge: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    width: '100%',
-  },
-  topFixed: {
-    paddingTop: spacing['6'],
-  },
-  scroll: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingTop: spacing['4'],
-    paddingBottom: spacing['4'], // Minimal padding so content ends at Luxury resorts, no gap before navbar
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: spacing['3'],
-  },
-  headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing['1'],
-  },
-  resortTitle: {
-    fontFamily: typography.fontFamily.text,
-    fontWeight: typography.fontWeight.medium,
-    fontSize: 16,
-    lineHeight: 24,
-    color: '#FF383C',
-  },
-  backButton: {
-    padding: spacing['2'],
-    marginLeft: -spacing['2'],
-  },
-  logoWrap: {
-    flexDirection: 'column',
-  },
-  webLogo: {
-    alignSelf: 'flex-start',
-  },
-  logoSub: {
-    color: colors.text.primary,
-    marginTop: 2,
-  },
-  bellWrap: {
-    padding: spacing['2'],
-    borderRadius: borderRadius.lg,
-    borderWidth: 1,
-    borderColor: colors.primary,
-    backgroundColor: 'transparent',
-  },
-  searchWrap: {
-    width: '100%',
-    marginBottom: spacing['5'],
-  },
-  roomTypesScroll: {
-    marginBottom: spacing['4'],
-  },
-  roomTypesContent: {
-    flexDirection: 'row',
-    gap: spacing['3'],
-    paddingRight: spacing['4'],
-  },
-  roomTypeCard: {
-    width: 88,
-    alignItems: 'center',
-    borderRadius: borderRadius.xl,
-  },
-  roomTypeCardSelected: {
-    opacity: 1,
-  },
-  roomTypeIconWrap: {
-    width: TYPE_ICON_SIZE + 16,
-    height: TYPE_ICON_SIZE + 16,
-    borderRadius: borderRadius.xl,
-    backgroundColor: TYPE_ICON_BG,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing['2'],
-  },
-  roomTypeLabel: {
-    color: TYPE_LABEL_COLOR,
-    fontSize: 13,
-    fontWeight: '500',
-    textAlign: 'center',
-  },
-  roomTypeLabelSelected: {
-    color: TYPE_LABEL_COLOR,
-  },
-  roomTypesBottomSpacer: {
-    height: spacing['2'],
-  },
-  bentoGrid: {
-    flexDirection: 'column',
-    gap: spacing['3'],
-    marginBottom: spacing['6'],
-  },
-  bentoRow: {
-    flexDirection: 'row',
-    gap: spacing['3'],
-  },
-  bentoCell1: {
-    flex: 1,
-    minWidth: 0,
-  },
-  bentoCell2: {
-    flex: 2,
-    minWidth: 0,
-  },
   categoryCard: {
     flex: 1,
     borderRadius: borderRadius['2xl'],
@@ -1129,7 +492,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     overflow: 'hidden',
     position: 'relative',
-    minHeight: 100, // Base min height, will be overridden responsively
+    minHeight: 100,
     borderWidth: 1,
     borderColor: colors.border.gray6,
   },
@@ -1154,88 +517,6 @@ const styles = StyleSheet.create({
   categorySubtitle: {
     color: colors.text.secondary,
     marginTop: 2,
-  },
-  sectionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: spacing['3'],
-  },
-  sectionTitle: {
-    color: colors.text.primary,
-  },
-  horizontalList: {
-    paddingBottom: spacing['4'],
-    gap: spacing['3'],
-    paddingRight: spacing['4'], // Right padding to match container padding
-  },
-  stayCardWrap: {
-    marginRight: spacing['3'],
-  },
-  staysGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing['4'],
-    marginBottom: spacing['4'],
-  },
-  stayCardGrid: {
-    marginRight: 0,
-    flex: 1,
-    minWidth: 200,
-    maxWidth: '100%',
-  },
-  stayImageWrap: {
-    position: 'relative',
-    width: '100%',
-    aspectRatio: components.resortCard.imageAspectRatio,
-    overflow: 'hidden',
-    borderRadius: borderRadius.xl, // All sides rounded
-  },
-  stayImage: {
-    width: '100%',
-    height: '100%',
-  },
-  stayImagePlaceholder: {
-    width: '100%',
-    height: '100%',
-    backgroundColor: colors.gray['2'],
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  favoriteBadge: {
-    position: 'absolute',
-    top: components.resortCard.favoriteIconOffset,
-    right: components.resortCard.favoriteIconOffset,
-    width: 32,
-    height: 32,
-    borderRadius: borderRadius['3'],
-    backgroundColor: colors.surface.white,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stayContent: {
-    paddingTop: spacing['2'],
-    paddingHorizontal: 0,
-  },
-  stayTitle: {
-    color: colors.text.primary,
-  },
-  stayMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: spacing['2'],
-  },
-  stayPrice: {
-    color: colors.text.primary,
-  },
-  ratingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  stayRating: {
-    color: colors.text.primary,
   },
 });
 
