@@ -10,10 +10,11 @@ import { router } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { RESORT_PLACEHOLDER_IMAGE } from '@/src/constants/placeholderImages';
 
 const BG_TOP = '#FCFCFC';
 const BG_BOTTOM = '#FFDCD3';
-const ResortImage = require('../assets/images/resort.jpg');
+const ResortImage = RESORT_PLACEHOLDER_IMAGE;
 
 export default function PackagesScreen() {
   const { isMobile, isTablet, width } = useResponsive();

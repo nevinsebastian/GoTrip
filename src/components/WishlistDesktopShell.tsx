@@ -36,9 +36,10 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { RESORT_PLACEHOLDER_IMAGE } from '@/src/constants/placeholderImages';
 
 const WebLogo = require('@/assets/images/logogotrip.png');
-const FALLBACK_PLACEHOLDER = require('@/assets/images/resort.jpg');
+const FALLBACK_PLACEHOLDER = RESORT_PLACEHOLDER_IMAGE;
 
 const COLUMNS = 5;
 /** Match home desktop horizontal rhythm (`stylesWeb.container`). */

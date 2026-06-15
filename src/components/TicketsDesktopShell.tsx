@@ -32,9 +32,10 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { RESORT_PLACEHOLDER_IMAGE } from '@/src/constants/placeholderImages';
 
 const WebLogo = require('@/assets/images/logogotrip.png');
-const ResortImage = require('@/assets/images/resort.jpg');
+const ResortImage = RESORT_PLACEHOLDER_IMAGE;
 
 const PAGE_PAD = 16;
 const GRID_COLS = 3;

@@ -26,7 +26,9 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const FALLBACK_PLACEHOLDER = require('@/assets/images/resort.jpg');
+import { RESORT_PLACEHOLDER_IMAGE } from '@/src/constants/placeholderImages';
+
+const FALLBACK_PLACEHOLDER = RESORT_PLACEHOLDER_IMAGE;
 const GRID_GAP = spacing['3'];
 const WISHLIST_PAGE_SIZE = 50;
 

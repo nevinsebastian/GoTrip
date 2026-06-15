@@ -32,9 +32,10 @@ import {
     View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { RESORT_PLACEHOLDER_IMAGE } from '@/src/constants/placeholderImages';
 
 const TICKETS_BG = '#FFF8F6';
-const ResortImage = require('../assets/images/resort.jpg');
+const ResortImage = RESORT_PLACEHOLDER_IMAGE;
 const WebLogo = require('../assets/images/logogotrip.png');
 
 function getPrimaryImage(media?: ListingMedia[]) {

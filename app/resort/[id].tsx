@@ -1,4 +1,5 @@
 import { Text } from '@/components/ui';
+import { useResponsive } from '@/components/ui/useResponsive';
 import {
     borderRadius,
     colors,
@@ -11,8 +12,10 @@ import { RazorpayCheckoutModal } from '@/src/components/RazorpayCheckoutModal';
 import { useCreateBooking } from '@/src/hooks/useCreateBooking';
 import { useCreateOrder } from '@/src/hooks/useCreateOrder';
 import { useListingDetails } from '@/src/hooks/useListingDetails';
+import { useListings } from '@/src/hooks/useListings';
 import { useSendOtp } from '@/src/hooks/useSendOtp';
 import { useVerifyPayment } from '@/src/hooks/useVerifyPayment';
+import { MobileResortDetailsScreen } from '@/src/screens/MobileResortDetails';
 import { getErrorMessage } from '@/src/utils/errorHandler';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -23,6 +26,7 @@ import {
     Modal,
     NativeScrollEvent,
     NativeSyntheticEvent,
+    Platform,
     Pressable,
     ScrollView,
     StyleSheet,
@@ -32,7 +36,9 @@ import {
 import { Calendar, DateData } from 'react-native-calendars';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const ResortImage = require('@/assets/images/resort.jpg');
+import { RESORT_PLACEHOLDER_IMAGE } from '@/src/constants/placeholderImages';
+
+const ResortImage = RESORT_PLACEHOLDER_IMAGE;
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -52,6 +58,8 @@ const HOST_DESCRIPTION =
   'Mr. Ashish Kumar is an experienced host with 5 years of managing multiple luxury resorts in Wayanad.';
 
 export default function ResortDetailsScreen() {
+  const { isDesktop } = useResponsive();
+  const isDesktopWeb = Platform.OS === 'web' && isDesktop;
   const params = useLocalSearchParams<{
     id?: string;
     title?: string;
@@ -63,6 +71,13 @@ export default function ResortDetailsScreen() {
   const listingId = typeof params.id === 'string' ? params.id : undefined;
   const { data: listingRes } = useListingDetails(listingId);
   const listing = listingRes?.data;
+  const { data: relatedRes } = useListings(
+    { location: (listing?.location ?? 'varkala').split(',')[0]?.trim().toLowerCase(), page: 1, limit: 8 },
+    Boolean(listing?.location || listingId),
+  );
+  const relatedListings = (relatedRes?.data ?? []).filter(
+    (l) => (l.category?.type ?? null) !== 'package',
+  );
   const [carouselIndex, setCarouselIndex] = useState(0);
   const scrollRef = useRef<ScrollView | null>(null);
   const [dateModalVisible, setDateModalVisible] = useState(false);
@@ -438,8 +453,8 @@ export default function ResortDetailsScreen() {
     );
   };
 
-  return (
-    <View style={styles.container}>
+  const bookingModals = (
+    <>
       <PaymentResultModal
         visible={Boolean(paymentResult)}
         status={paymentResult?.status ?? 'success'}
@@ -538,6 +553,25 @@ export default function ResortDetailsScreen() {
           );
         }}
       />
+    </>
+  );
+
+  return (
+    <View style={styles.container}>
+      {bookingModals}
+      {!isDesktopWeb ? (
+        <MobileResortDetailsScreen
+          listing={listing}
+          listingId={listingId}
+          title={title}
+          rating={rating}
+          locationLabel={locationLabel}
+          carouselImages={carouselImages}
+          relatedListings={relatedListings}
+          onBookNow={openDateModal}
+        />
+      ) : (
+        <>
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
@@ -708,6 +742,8 @@ export default function ResortDetailsScreen() {
           </Pressable>
         </View>
       </SafeAreaView>
+        </>
+      )}
 
       {/* Date selection modal */}
       <Modal

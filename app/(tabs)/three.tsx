@@ -19,10 +19,10 @@ import {
     View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { RESORT_PLACEHOLDER_IMAGE } from '@/src/constants/placeholderImages';
 
-// Light peach/orange background from Figma Ticket details screen
 const TICKETS_BG = '#FFF8F6';
-const ResortImage = require('../../assets/images/resort.jpg');
+const ResortImage = RESORT_PLACEHOLDER_IMAGE;
 
 type TabKey = 'active' | 'past';
 
