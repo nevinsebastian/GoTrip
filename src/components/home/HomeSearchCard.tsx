@@ -1,7 +1,6 @@
 import { Text } from '@/components/ui';
 import { colors, typography } from '@/constants/DesignTokens';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { Calendar, type DateData } from 'react-native-calendars';
@@ -17,6 +16,7 @@ import {
   type GuestCounts,
   type HomeCategoryTab,
 } from '@/src/components/home/homeSearchConfig';
+import { useHomeSearch } from '@/src/components/home/HomeSearchContext';
 import { useHomeScale } from '@/src/components/home/useHomeScale';
 
 function clamp(n: number, min: number, max: number) {
@@ -40,6 +40,7 @@ function applyTabDefaults(tab: HomeCategoryTab) {
 
 export function HomeSearchCard({ activeTab }: { activeTab: HomeCategoryTab }) {
   const { s } = useHomeScale();
+  const { enterSearchMode } = useHomeSearch();
   const config = HOME_SEARCH_BY_TAB[activeTab];
   const locationInputRef = useRef<TextInput>(null);
 
@@ -150,7 +151,13 @@ export function HomeSearchCard({ activeTab }: { activeTab: HomeCategoryTab }) {
 
   const handleSearch = () => {
     setExpanded(null);
-    router.push(config.searchRoute);
+    enterSearchMode({
+      location,
+      checkIn,
+      checkOut,
+      guests,
+      tab: activeTab,
+    });
   };
 
   const checkInDisplay = formatSearchDate(checkIn);

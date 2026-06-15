@@ -2,7 +2,7 @@ import { colors } from '@/constants/DesignTokens';
 import type { Listing } from '@/src/api/types';
 import { useListings } from '@/src/hooks/useListings';
 import { router } from 'expo-router';
-import React from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -14,11 +14,34 @@ import {
   HomeSuggestedSection,
 } from '@/src/components/home/HomeListingSections';
 import { HomeHeroSection } from '@/src/components/home/HomeHeroSection';
+import { HomeSearchProvider, useHomeSearch } from '@/src/components/home/HomeSearchContext';
+import { HomeSearchResults } from '@/src/components/home/HomeSearchResults';
+import { SearchModeHeader } from '@/src/components/home/SearchModeHeader';
 
-export function MobileHotelsHome() {
+function filterListingsByLocation(listings: Listing[], query: string) {
+  const q = query.trim().toLowerCase();
+  if (!q) return listings;
+  return listings.filter(
+    (l) =>
+      l.title.toLowerCase().includes(q) ||
+      (l.location?.toLowerCase().includes(q) ?? false) ||
+      (l.description?.toLowerCase().includes(q) ?? false),
+  );
+}
+
+function MobileHotelsHomeContent() {
+  const scrollRef = useRef<ScrollView>(null);
+  const { searchMode, searchParams } = useHomeSearch();
+
   const { data: listingsRes } = useListings({ page: 1, limit: 20 });
   const { data: economicRes } = useListings({ max_price: 2499, page: 1, limit: 20 });
   const { data: nearYouRes } = useListings({ location: 'varkala', page: 1, limit: 20 });
+
+  const locationQuery = searchParams?.location?.trim() ?? '';
+  const { data: searchRes, isLoading: searchLoading } = useListings(
+    { location: locationQuery.toLowerCase(), page: 1, limit: 20 },
+    searchMode && Boolean(locationQuery),
+  );
 
   const listings = (listingsRes?.data ?? []).filter(
     (l) => (l.category?.type ?? null) !== 'package',
@@ -30,8 +53,25 @@ export function MobileHotelsHome() {
     (l) => (l.category?.type ?? null) !== 'package',
   );
 
+  const searchListings = useMemo(() => {
+    const isPackageSearch = searchParams?.tab === 'packages';
+    const apiResults = searchRes?.data ?? [];
+    const pool = apiResults.length ? apiResults : listings;
+    const typed = pool.filter((l) =>
+      isPackageSearch ? l.category?.type === 'package' : (l.category?.type ?? null) !== 'package',
+    );
+    const filtered = filterListingsByLocation(typed, locationQuery);
+    return filtered.length ? filtered : filterListingsByLocation(typed, '');
+  }, [searchRes?.data, listings, locationQuery, searchParams?.tab]);
+
   const suggested = listings.slice(0, 8);
   const destinations = nearYouListings.length ? nearYouListings : listings;
+
+  useEffect(() => {
+    if (searchMode) {
+      scrollRef.current?.scrollTo({ y: 0, animated: true });
+    }
+  }, [searchMode, locationQuery]);
 
   const goToListing = (listing: Listing) => {
     router.push({
@@ -50,19 +90,43 @@ export function MobileHotelsHome() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView
+        ref={scrollRef}
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
-        <HomeHeroSection />
-        <HomePromoCarousel />
-        <HomeMoodGrid onMoodPress={() => router.push('/resorts')} />
-        <HomeSuggestedSection listings={suggested} onListingPress={goToListing} />
-        <HomeDestinationsSection listings={destinations} onListingPress={goToListing} />
-        <HomeBudgetGrid listings={economicListings} onListingPress={goToListing} />
+        {searchMode ? (
+          <>
+            <SearchModeHeader />
+            <HomeSearchResults
+              listings={searchListings}
+              locationLabel={locationQuery || 'Varkala'}
+              loading={searchLoading}
+              onListingPress={goToListing}
+            />
+          </>
+        ) : (
+          <>
+            <HomeHeroSection />
+            <HomePromoCarousel />
+            <HomeMoodGrid onMoodPress={() => router.push('/resorts')} />
+            <HomeSuggestedSection listings={suggested} onListingPress={goToListing} />
+            <HomeDestinationsSection listings={destinations} onListingPress={goToListing} />
+            <HomeBudgetGrid listings={economicListings} onListingPress={goToListing} />
+          </>
+        )}
         <View style={styles.bottomSpacer} />
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+export function MobileHotelsHome() {
+  return (
+    <HomeSearchProvider>
+      <MobileHotelsHomeContent />
+    </HomeSearchProvider>
   );
 }
 
