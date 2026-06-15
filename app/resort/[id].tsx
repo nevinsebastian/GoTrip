@@ -191,6 +191,16 @@ export default function ResortDetailsScreen() {
     setLoginError(null);
   };
   const openDateModal = () => {
+    if (!isDesktopWeb) {
+      router.push({
+        pathname: '/booking/review',
+        params: {
+          listingId: listingId ?? '',
+          imageUri: carouselImages[0] ?? '',
+        },
+      });
+      return;
+    }
     setDateModalStep('dates');
     setDateModalVisible(true);
   };

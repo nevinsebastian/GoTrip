@@ -1,0 +1,27 @@
+export const FIGMA_BOOKING = {
+  screenTitle: 'Review and continue',
+  roomName: 'Deluxe Room',
+  guests: 2,
+  rooms: 1,
+  locationBreadcrumb: 'Kerala > Varkala',
+  rating: '4.5',
+  customersLabel: '500+ customers',
+  priceLabel: '₹ 2,420/night',
+  taxLabel: 'including tax',
+  cancellationText: 'Free Cancellation Before : 15-Jun-2026',
+  checkIn: {
+    label: 'Check In',
+    dayLabel: 'Tue, April 3, 2026',
+    timeLabel: '2:00 PM – 11:00 PM',
+    iso: '2026-04-03',
+  },
+  checkOut: {
+    label: 'Check Out',
+    dayLabel: 'Thu, April 5, 2026',
+    timeLabel: '12:00 AM – 11:00 AM',
+    iso: '2026-04-05',
+  },
+  defaultAdults: 2,
+  defaultChildren: 0,
+  defaultInfants: 0,
+};
