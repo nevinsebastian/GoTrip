@@ -13,7 +13,7 @@ export function MobileBottomTabBar({ activeTab = 'index' }: { activeTab?: string
     <MobileFloatingTabBar
       activeTab={activeTab}
       variant="overlay"
-      onTabPress={(tabId) => router.push(`/(tabs)/${tabId}` as any)}
+      onTabPress={(tabId) => router.push((tabId === 'index' ? '/(tabs)' : `/(tabs)/${tabId}`) as any)}
     />
   );
 }

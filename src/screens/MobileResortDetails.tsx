@@ -17,6 +17,7 @@ import {
 import HeartIcon from '@/assets/images/heart.svg';
 
 import { useHomeScale } from '@/src/components/home/useHomeScale';
+import { MobileBottomTabBar } from '@/src/components/navigation/MobileBottomTabBar';
 import { ResortAmenitiesSection } from '@/src/components/resort/ResortAmenitiesSection';
 import { ResortDetailHeader } from '@/src/components/resort/ResortDetailHeader';
 import { ResortExploreMore } from '@/src/components/resort/ResortExploreMore';
@@ -84,16 +85,22 @@ export function MobileResortDetailsScreen({
         contentContainerStyle={[styles.scrollContent, { paddingBottom: s(100) }]}
         showsVerticalScrollIndicator={false}
       >
-        <View style={[styles.heroWrap, { height: s(280) }]}>
+        <View
+          style={[
+            styles.heroWrap,
+            { height: s(312), marginHorizontal: s(16), marginTop: s(8), borderRadius: s(24) },
+          ]}
+        >
           <ScrollView
             ref={carouselRef}
             horizontal
             pagingEnabled
             showsHorizontalScrollIndicator={false}
             onMomentumScrollEnd={onCarouselScroll}
+            style={{ borderRadius: s(24), overflow: 'hidden' }}
           >
             {slides.map((uri, i) => (
-              <View key={i} style={{ width: SCREEN_WIDTH, height: s(280) }}>
+              <View key={i} style={{ width: SCREEN_WIDTH - s(32), height: s(312) }}>
                 {uri ? (
                   <Image source={{ uri }} style={styles.heroImage} resizeMode="cover" />
                 ) : (
@@ -103,30 +110,47 @@ export function MobileResortDetailsScreen({
             ))}
           </ScrollView>
 
-          <View style={[styles.coupleBadge, { paddingVertical: s(6), paddingHorizontal: s(12), borderRadius: s(24), top: s(12), left: s(16) }]}>
+          <View
+            style={[
+              styles.coupleBadge,
+              {
+                paddingVertical: s(6),
+                paddingHorizontal: s(16),
+                borderRadius: s(24),
+                bottom: s(8),
+                left: s(8),
+              },
+            ]}
+          >
             <Ionicons name="heart-outline" size={s(10)} color="#FFFFFF" />
-            <Text style={[styles.coupleBadgeText, { fontSize: s(9) }]}>COUPLE FRIENDLY</Text>
+            <Text style={[styles.coupleBadgeText, { fontSize: s(8) }]}>COUPLE FRIENDLY</Text>
           </View>
 
-          <View style={[styles.heroActions, { top: s(12), right: s(16), gap: s(8) }]}>
-            <Pressable style={[styles.heroIconBtn, { width: s(40), height: s(40), borderRadius: s(20) }]}>
-              <Ionicons name="share-social-outline" size={s(18)} color={colors.text.primary} />
+          <View style={[styles.heroActions, { top: s(8), right: s(8), gap: s(8) }]}>
+            <Pressable style={[styles.heroIconBtn, { width: s(30), height: s(30), borderRadius: s(12) }]}>
+              <Ionicons name="share-social-outline" size={s(14)} color={colors.text.primary} />
             </Pressable>
-            <Pressable style={[styles.heroIconBtn, { width: s(40), height: s(40), borderRadius: s(20) }]}>
-              <HeartIcon width={s(16)} height={s(16)} />
+            <Pressable style={[styles.heroIconBtn, { width: s(30), height: s(30), borderRadius: s(12) }]}>
+              <HeartIcon width={s(14)} height={s(14)} />
             </Pressable>
           </View>
 
           {slides.length > 1 ? (
             <>
               <Pressable
-                style={[styles.carouselArrow, styles.carouselArrowLeft, { width: s(32), height: s(32), borderRadius: s(16), left: s(12) }]}
+                style={[
+                  styles.carouselArrow,
+                  { width: s(32), height: s(32), borderRadius: s(16), left: s(12) },
+                ]}
                 onPress={() => goToSlide('prev')}
               >
                 <Ionicons name="chevron-back" size={s(18)} color={colors.text.primary} />
               </Pressable>
               <Pressable
-                style={[styles.carouselArrow, styles.carouselArrowRight, { width: s(32), height: s(32), borderRadius: s(16), right: s(12) }]}
+                style={[
+                  styles.carouselArrow,
+                  { width: s(32), height: s(32), borderRadius: s(16), right: s(12) },
+                ]}
                 onPress={() => goToSlide('next')}
               >
                 <Ionicons name="chevron-forward" size={s(18)} color={colors.text.primary} />
@@ -134,7 +158,7 @@ export function MobileResortDetailsScreen({
             </>
           ) : null}
 
-          <View style={styles.carouselDots}>
+          <View style={[styles.carouselDots, { bottom: s(12) }]}>
             {slides.map((_, i) => (
               <View key={i} style={[styles.dot, i === carouselIndex && styles.dotActive]} />
             ))}
@@ -199,6 +223,8 @@ export function MobileResortDetailsScreen({
 
         <ResortExploreMore onCardPress={goToListing} />
       </ScrollView>
+
+      <MobileBottomTabBar />
     </View>
   );
 }
@@ -216,7 +242,9 @@ const styles = StyleSheet.create({
   },
   heroWrap: {
     width: '100%',
-    backgroundColor: colors.gray['2'],
+    overflow: 'hidden',
+    borderWidth: 4,
+    borderColor: 'rgba(255, 255, 255, 0.4)',
     position: 'relative',
   },
   heroImage: {
@@ -227,14 +255,16 @@ const styles = StyleSheet.create({
     position: 'absolute',
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    backgroundColor: 'rgba(28, 32, 36, 0.45)',
+    gap: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   coupleBadgeText: {
     fontFamily: typography.fontFamily.text,
-    fontWeight: typography.fontWeight.medium,
+    fontWeight: typography.fontWeight.semibold,
     color: '#FFFFFF',
-    letterSpacing: 0.5,
+    letterSpacing: 0,
   },
   heroActions: {
     position: 'absolute',
@@ -245,6 +275,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface.white,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12.5,
+    elevation: 4,
   },
   carouselArrow: {
     position: 'absolute',
@@ -253,12 +288,14 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface.white,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12.5,
+    elevation: 3,
   },
-  carouselArrowLeft: {},
-  carouselArrowRight: {},
   carouselDots: {
     position: 'absolute',
-    bottom: 12,
     left: 0,
     right: 0,
     flexDirection: 'row',
@@ -266,14 +303,16 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
     backgroundColor: 'rgba(255,255,255,0.5)',
   },
   dotActive: {
     backgroundColor: colors.surface.white,
-    width: 20,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
   content: {
     width: '100%',
