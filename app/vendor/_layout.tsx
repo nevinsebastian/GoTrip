@@ -4,6 +4,7 @@ export default function VendorLayout() {
   return (
     <Stack>
       <Stack.Screen name="index" options={{ headerShown: false }} />
+      <Stack.Screen name="describe-property" options={{ headerShown: false }} />
       <Stack.Screen name="select-location" options={{ headerShown: false }} />
     </Stack>
   );

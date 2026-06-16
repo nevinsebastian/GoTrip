@@ -552,6 +552,10 @@ export function MobileBecomeVendorScreen() {
     setIsProceedingCategory(true);
     try {
       await activateVendorSession(listingCategory);
+      if (listingCategory === 'property') {
+        router.replace('/vendor/describe-property');
+        return;
+      }
       router.replace('/vendor/select-location');
     } finally {
       setIsProceedingCategory(false);
