@@ -63,8 +63,8 @@ export const HOME_SEARCH_BY_TAB: Record<HomeCategoryTab, HomeSearchConfig> = {
     searchRoute: '/resorts',
   },
   activities: {
-    locationLabel: 'Activity or City',
-    defaultLocation: 'Varkala',
+    locationLabel: 'Enter your dream destination',
+    defaultLocation: 'Scuba Diving',
     defaultCheckIn: '2026-04-03',
     defaultCheckOut: '2026-04-03',
     guestsLabel: 'Participants',
@@ -74,7 +74,7 @@ export const HOME_SEARCH_BY_TAB: Record<HomeCategoryTab, HomeSearchConfig> = {
     defaultChildren: 0,
     defaultInfants: 0,
     defaultRooms: 1,
-    showPriceFilter: false,
+    showPriceFilter: true,
     searchRoute: '/resorts',
   },
 };

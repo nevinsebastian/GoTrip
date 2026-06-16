@@ -12,15 +12,32 @@ import React, { useEffect, useState } from 'react';
 import { View } from 'react-native';
 
 import { FIGMA_PROPERTY } from '@/src/components/resort/resortConstants';
+import { FIGMA_PACKAGE_DETAIL } from '@/src/constants/packageDetailConstants';
 import { RESORT_PLACEHOLDER_IMAGE } from '@/src/constants/placeholderImages';
+import { getPackageFixedDates } from '@/src/utils/packageDates';
 
 export default function BookingReviewRoute() {
-  const params = useLocalSearchParams<{ listingId?: string; imageUri?: string }>();
+  const params = useLocalSearchParams<{
+    listingId?: string;
+    imageUri?: string;
+    listingType?: string;
+    title?: string;
+    checkIn?: string;
+    checkOut?: string;
+  }>();
   const listingId = typeof params.listingId === 'string' ? params.listingId : undefined;
   const imageUriParam = typeof params.imageUri === 'string' ? params.imageUri : undefined;
+  const listingTypeParam = typeof params.listingType === 'string' ? params.listingType : undefined;
 
   const { data: listingRes } = useListingDetails(listingId);
   const listing = listingRes?.data;
+  const isPackageListing =
+    listingTypeParam === 'package' || listing?.category?.type === 'package';
+  const packageDates = getPackageFixedDates(listingId);
+  const fixedCheckIn =
+    typeof params.checkIn === 'string' ? params.checkIn : packageDates.startDate;
+  const fixedCheckOut =
+    typeof params.checkOut === 'string' ? params.checkOut : packageDates.endDate;
 
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -69,7 +86,9 @@ export default function BookingReviewRoute() {
     return imageUriParam ?? img ?? null;
   })();
 
-  const title = FIGMA_PROPERTY.title;
+  const title = isPackageListing
+    ? (typeof params.title === 'string' ? params.title : FIGMA_PACKAGE_DETAIL.title)
+    : FIGMA_PROPERTY.title;
 
   const handleConfirm = ({
     checkIn,
@@ -251,6 +270,10 @@ export default function BookingReviewRoute() {
 
       <MobileBookingReviewScreen
         imageUri={carouselImage}
+        listingType={isPackageListing ? 'package' : 'hotel'}
+        propertyTitle={title}
+        fixedCheckIn={fixedCheckIn}
+        fixedCheckOut={fixedCheckOut}
         onConfirm={handleConfirm}
         isSubmitting={isCreatingBooking || isCreatingOrder}
         errorMessage={errorMessage}

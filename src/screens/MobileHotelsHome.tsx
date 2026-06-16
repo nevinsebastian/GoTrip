@@ -18,6 +18,7 @@ import { HomeSearchProvider, useHomeSearch } from '@/src/components/home/HomeSea
 import { HomeSearchResults } from '@/src/components/home/HomeSearchResults';
 import { SearchModeHeader } from '@/src/components/home/SearchModeHeader';
 import { AppTopHeader } from '@/src/components/navigation/AppTopHeader';
+import { MOCK_ACTIVITY_LISTINGS } from '@/src/constants/homeActivityConfig';
 import { MOCK_PACKAGE_LISTINGS } from '@/src/constants/homePackageConfig';
 import { MOCK_GLAMPING_LISTINGS } from '@/src/constants/homeGlampingConfig';
 
@@ -37,6 +38,7 @@ function MobileHotelsHomeContent() {
   const { searchMode, searchParams, activeCategoryTab } = useHomeSearch();
   const isPackages = activeCategoryTab === 'packages';
   const isGlamping = activeCategoryTab === 'glamping';
+  const isActivities = activeCategoryTab === 'activities';
 
   const { data: listingsRes } = useListings({ page: 1, limit: 20 });
   const { data: economicRes } = useListings({ max_price: 2499, page: 1, limit: 20 });
@@ -50,12 +52,17 @@ function MobileHotelsHomeContent() {
 
   const allListings = listingsRes?.data ?? [];
   const hotelListings = allListings.filter(
-    (l) => (l.category?.type ?? null) !== 'package' && (l.category?.type ?? null) !== 'camping',
+    (l) =>
+      (l.category?.type ?? null) !== 'package' &&
+      (l.category?.type ?? null) !== 'camping' &&
+      (l.category?.type ?? null) !== 'activity',
   );
   const apiPackageListings = allListings.filter((l) => l.category?.type === 'package');
   const packageListings = apiPackageListings.length ? apiPackageListings : MOCK_PACKAGE_LISTINGS;
   const apiGlampingListings = allListings.filter((l) => l.category?.type === 'camping');
   const glampingListings = apiGlampingListings.length ? apiGlampingListings : MOCK_GLAMPING_LISTINGS;
+  const apiActivityListings = allListings.filter((l) => l.category?.type === 'activity');
+  const activityListings = apiActivityListings.length ? apiActivityListings : MOCK_ACTIVITY_LISTINGS;
 
   const economicListings = (economicRes?.data ?? []).filter(
     (l) => (l.category?.type ?? null) !== 'package',
@@ -74,6 +81,7 @@ function MobileHotelsHomeContent() {
   const searchListings = useMemo(() => {
     const isPackageSearch = searchParams?.tab === 'packages';
     const isGlampingSearch = searchParams?.tab === 'glamping';
+    const isActivitySearch = searchParams?.tab === 'activities';
     const apiResults = searchRes?.data ?? [];
     const pool = apiResults.length
       ? apiResults
@@ -81,33 +89,51 @@ function MobileHotelsHomeContent() {
         ? packageListings
         : isGlampingSearch
           ? glampingListings
-          : hotelListings;
+          : isActivitySearch
+            ? activityListings
+            : hotelListings;
     const typed = pool.filter((l) => {
       if (isPackageSearch) return l.category?.type === 'package';
       if (isGlampingSearch) return l.category?.type === 'camping';
-      return (l.category?.type ?? null) !== 'package' && (l.category?.type ?? null) !== 'camping';
+      if (isActivitySearch) return l.category?.type === 'activity';
+      return (
+        (l.category?.type ?? null) !== 'package' &&
+        (l.category?.type ?? null) !== 'camping' &&
+        (l.category?.type ?? null) !== 'activity'
+      );
     });
     const filtered = filterListingsByLocation(typed, locationQuery);
     if (filtered.length) return filtered;
     if (isPackageSearch) return filterListingsByLocation(packageListings, '');
     if (isGlampingSearch) return filterListingsByLocation(glampingListings, '');
+    if (isActivitySearch) return filterListingsByLocation(activityListings, '');
     return filterListingsByLocation(typed, '');
-  }, [searchRes?.data, hotelListings, packageListings, glampingListings, locationQuery, searchParams?.tab]);
+  }, [searchRes?.data, hotelListings, packageListings, glampingListings, activityListings, locationQuery, searchParams?.tab]);
 
-  const listingVariant = isPackages ? 'packages' : isGlamping ? 'glamping' : 'hotels';
+  const listingVariant = isPackages ? 'packages' : isGlamping ? 'glamping' : isActivities ? 'activities' : 'hotels';
   const suggested = isPackages
     ? packageListings.slice(0, 8)
     : isGlamping
       ? glampingListings.slice(0, 8)
-      : hotelListings.slice(0, 8);
+      : isActivities
+        ? activityListings.slice(0, 8)
+        : hotelListings.slice(0, 8);
   const destinations = isPackages
     ? packageDestinations
     : isGlamping
       ? glampingListings
-      : nearYouListings.length
-        ? nearYouListings
-        : hotelListings;
-  const budgetItems = isPackages ? budgetPackages : isGlamping ? glampingListings.slice(0, 2) : economicListings;
+      : isActivities
+        ? activityListings
+        : nearYouListings.length
+          ? nearYouListings
+          : hotelListings;
+  const budgetItems = isPackages
+    ? budgetPackages
+    : isGlamping
+      ? glampingListings.slice(0, 2)
+      : isActivities
+        ? activityListings.slice(0, 2)
+        : economicListings;
 
   useEffect(() => {
     if (searchMode) {
@@ -118,8 +144,15 @@ function MobileHotelsHomeContent() {
   const goToListing = (listing: Listing) => {
     const isPackageListing = listing.category?.type === 'package';
     const isCampingListing = listing.category?.type === 'camping';
+    const isActivityListing = listing.category?.type === 'activity';
     router.push({
-      pathname: isPackageListing ? '/package/[id]' : isCampingListing ? '/glamping/[id]' : '/resort/[id]',
+      pathname: isPackageListing
+        ? '/package/[id]'
+        : isCampingListing
+          ? '/glamping/[id]'
+          : isActivityListing
+            ? '/activity/[id]'
+            : '/resort/[id]',
       params: {
         id: listing.id,
         title: listing.title,
@@ -147,7 +180,7 @@ function MobileHotelsHomeContent() {
               listings={searchListings}
               locationLabel={
                 locationQuery ||
-                (isPackages ? 'Singapore' : isGlamping ? 'Wildlife safari camps' : 'Varkala')
+                (isPackages ? 'Singapore' : isGlamping ? 'Wildlife safari camps' : isActivities ? 'Scuba Diving' : 'Varkala')
               }
               loading={searchLoading}
               variant={listingVariant}

@@ -19,13 +19,14 @@ export function HomeSearchResults({
   locationLabel: string;
   loading?: boolean;
   onListingPress: (listing: Listing) => void;
-  variant?: 'hotels' | 'packages' | 'glamping';
+  variant?: 'hotels' | 'packages' | 'glamping' | 'activities';
 }) {
   const { s } = useHomeScale();
   const gap = s(12);
   const cardW = (s(367) - gap) / 2;
   const isPackages = variant === 'packages';
   const isGlamping = variant === 'glamping';
+  const isActivities = variant === 'activities';
 
   const rows: Listing[][] = [];
   for (let i = 0; i < listings.length; i += 2) {
@@ -41,14 +42,18 @@ export function HomeSearchResults({
               ? 'Packages That Match Your Mood'
               : isGlamping
                 ? 'Camps That Match Your Mood'
-                : 'Stays That Match Your Mood'}
+                : isActivities
+                  ? 'Activities That Match Your Mood'
+                  : 'Stays That Match Your Mood'}
           </Text>
           <Text style={[styles.subtitle, { fontSize: s(12), lineHeight: s(16) }]}>
             {isPackages
-              ? 'Curated Travel Packages'
+              ? 'Curated travel packages with fixed vendor departure dates'
               : isGlamping
                 ? 'Curated Glamping Experiences'
-                : 'Curated Travel Experiences'}
+                : isActivities
+                  ? 'Curated Adventure Experiences'
+                  : 'Curated Travel Experiences'}
           </Text>
         </View>
         <Pressable
@@ -73,7 +78,7 @@ export function HomeSearchResults({
                   listing={listing}
                   width={cardW}
                   locationLabel={locationLabel}
-                  priceSuffix={isPackages ? '/person' : '/night'}
+                  priceSuffix={isPackages || isActivities ? '/person' : '/night'}
                   onPress={() => onListingPress(listing)}
                 />
               ))}
@@ -83,7 +88,7 @@ export function HomeSearchResults({
         </View>
       ) : (
         <Text style={[styles.emptyText, { fontSize: s(14) }]}>
-          No {isPackages ? 'packages' : isGlamping ? 'camps' : 'stays'} found for &quot;{locationLabel}&quot;. Try another location.
+          No {isPackages ? 'packages' : isGlamping ? 'camps' : isActivities ? 'activities' : 'stays'} found for &quot;{locationLabel}&quot;. Try another location.
         </Text>
       )}
 
@@ -103,7 +108,9 @@ export function HomeSearchResults({
       <Text style={[styles.footerText, { fontSize: s(10), lineHeight: s(14), marginTop: s(8) }]}>
         {isPackages
           ? 'From budget getaways to international adventures, curated packages with stays, transfers, and experiences — GoTrip offers it all.'
-          : 'From luxurious escapes to budget-friendly stays, hotels with stunning views to vibrant city hubs, and so much more— GoTrip offers it all.'}
+          : isActivities
+            ? 'From scuba diving to paragliding, curated activities with guides, equipment, and unforgettable experiences — GoTrip offers it all.'
+            : 'From luxurious escapes to budget-friendly stays, hotels with stunning views to vibrant city hubs, and so much more— GoTrip offers it all.'}
       </Text>
     </View>
   );

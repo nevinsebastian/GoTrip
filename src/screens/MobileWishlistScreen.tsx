@@ -98,8 +98,15 @@ export function MobileWishlistScreen() {
   const goToListing = (listing: WishlistListing) => {
     const isPackage = listing.category?.type === 'package';
     const isGlamping = listing.category?.type === 'camping';
+    const isActivity = listing.category?.type === 'activity';
     router.push({
-      pathname: isPackage ? '/package/[id]' : isGlamping ? '/glamping/[id]' : '/resort/[id]',
+      pathname: isPackage
+        ? '/package/[id]'
+        : isGlamping
+          ? '/glamping/[id]'
+          : isActivity
+            ? '/activity/[id]'
+            : '/resort/[id]',
       params: {
         id: listing.id,
         title: listing.title,

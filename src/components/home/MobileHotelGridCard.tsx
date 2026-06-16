@@ -16,6 +16,7 @@ import {
   PACKAGE_HERO_BACKGROUND,
   RESORT_PLACEHOLDER_IMAGE,
 } from '@/src/constants/placeholderImages';
+import { formatPackageDateRange, getPackageFixedDates } from '@/src/utils/packageDates';
 
 export function MobileHotelGridCard({
   listing,
@@ -43,6 +44,12 @@ export function MobileHotelGridCard({
     listing.price_start != null
       ? `₹ ${Number(listing.price_start).toLocaleString('en-IN')}${priceSuffix}`
       : `₹ 1199${priceSuffix}`;
+  const packageDatesLabel = isPackage
+    ? formatPackageDateRange(
+        getPackageFixedDates(listing.id).startDate,
+        getPackageFixedDates(listing.id).endDate,
+      )
+    : null;
 
   return (
     <Pressable
@@ -112,6 +119,14 @@ export function MobileHotelGridCard({
               <Text style={[styles.rating, { fontSize: s(12), lineHeight: s(12) }]}>4.5</Text>
             </View>
           </View>
+          {packageDatesLabel ? (
+            <View style={styles.packageDatesRow}>
+              <Ionicons name="calendar-outline" size={s(10)} color={colors.accent.main} />
+              <Text style={[styles.packageDates, { fontSize: s(10), lineHeight: s(12) }]} numberOfLines={1}>
+                {packageDatesLabel}
+              </Text>
+            </View>
+          ) : null}
           <Text style={[styles.price, { fontSize: s(14), lineHeight: s(16) }]}>{price}</Text>
         </View>
         <PillButton
@@ -200,6 +215,17 @@ const styles = StyleSheet.create({
     fontFamily: typography.fontFamily.text,
     fontWeight: typography.fontWeight.medium,
     color: colors.accent.main,
+  },
+  packageDatesRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  packageDates: {
+    fontFamily: typography.fontFamily.text,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.accent.main,
+    flex: 1,
   },
   price: {
     fontFamily: typography.fontFamily.text,

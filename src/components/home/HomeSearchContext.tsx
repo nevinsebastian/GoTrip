@@ -8,6 +8,7 @@ export type HomeSearchSubmit = {
   guests: GuestCounts;
   tab: HomeCategoryTab;
   packageMood?: string;
+  activityMood?: string;
 };
 
 type HomeSearchContextValue = {

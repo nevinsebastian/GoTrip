@@ -23,13 +23,14 @@ import WavesIcon from '@/assets/images/waves.svg';
 import { PACKAGE_DESTINATIONS, PACKAGE_MOODS } from '@/src/constants/homePackageConfig';
 import { GLAMPING_DESTINATIONS, GLAMPING_MOODS } from '@/src/constants/homeGlampingConfig';
 import { GLAMPING_HERO_BACKGROUND, PACKAGE_HERO_BACKGROUND } from '@/src/constants/placeholderImages';
+import { formatPackageDateRange, getPackageFixedDates } from '@/src/utils/packageDates';
 import { GlassSurface } from '@/src/components/home/GlassSurface';
 import { PillButton } from '@/src/components/home/PillButton';
 import { useHomeScale } from '@/src/components/home/useHomeScale';
 
 const OfferBg = require('../../../assets/images/home-figma/hero-bg.png');
 
-export type HomeListingVariant = 'hotels' | 'packages' | 'glamping';
+export type HomeListingVariant = 'hotels' | 'packages' | 'glamping' | 'activities';
 
 const MOODS = [
   { id: 'budget', label: 'Budget', Icon: CashMultipleIcon },
@@ -449,6 +450,12 @@ function SuggestedCard({
       ? `₹${Number(listing.price_start).toLocaleString('en-IN')}${priceSuffix}`
       : isPackages ? '₹24999/person' : isGlamping ? '₹8999/night' : '₹1199/night';
   const location = listing.location ?? (isPackages ? 'Singapore' : isGlamping ? 'Wayanad' : 'Varkala');
+  const packageDatesLabel = isPackages
+    ? formatPackageDateRange(
+        getPackageFixedDates(listing.id).startDate,
+        getPackageFixedDates(listing.id).endDate,
+      )
+    : null;
 
   return (
     <Pressable
@@ -527,6 +534,15 @@ function SuggestedCard({
         <Text style={[styles.breadcrumb, { fontSize: s(12), lineHeight: s(16) }]}>
           Thiruvananthapuram &gt; {location}
         </Text>
+
+        {packageDatesLabel ? (
+          <View style={styles.packageDatesRow}>
+            <Ionicons name="calendar-outline" size={s(12)} color={colors.accent.main} />
+            <Text style={[styles.packageDates, { fontSize: s(11), lineHeight: s(14) }]} numberOfLines={1}>
+              {packageDatesLabel}
+            </Text>
+          </View>
+        ) : null}
 
         <View style={styles.priceBookRow}>
           <Text style={[styles.suggestedPrice, { fontSize: s(16), lineHeight: s(16) }]}>{price}</Text>
@@ -724,6 +740,12 @@ function BudgetCard({
     listing.price_start != null
       ? `₹ ${Number(listing.price_start).toLocaleString('en-IN')}${isPackages ? '/person' : '/night'}`
       : isPackages ? '₹ 24999/person' : isGlamping ? '₹ 8999/night' : '₹ 1199/night';
+  const packageDatesLabel = isPackages
+    ? formatPackageDateRange(
+        getPackageFixedDates(listing.id).startDate,
+        getPackageFixedDates(listing.id).endDate,
+      )
+    : null;
 
   return (
     <Pressable
@@ -797,6 +819,14 @@ function BudgetCard({
               <Text style={[styles.ratingAccent, { fontSize: s(12) }]}>4.5</Text>
             </View>
           </View>
+          {packageDatesLabel ? (
+            <View style={styles.packageDatesRow}>
+              <Ionicons name="calendar-outline" size={s(10)} color={colors.accent.main} />
+              <Text style={[styles.packageDates, { fontSize: s(10), lineHeight: s(12) }]} numberOfLines={1}>
+                {packageDatesLabel}
+              </Text>
+            </View>
+          ) : null}
           <Text style={[styles.suggestedPrice, { fontSize: s(14) }]}>{price}</Text>
         </View>
         <PillButton
@@ -986,6 +1016,17 @@ const styles = StyleSheet.create({
     fontWeight: typography.fontWeight.regular,
     color: colors.accent.main,
     letterSpacing: 0.04,
+  },
+  packageDatesRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  packageDates: {
+    fontFamily: typography.fontFamily.text,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.accent.main,
+    flex: 1,
   },
   priceBookRow: {
     flexDirection: 'row',

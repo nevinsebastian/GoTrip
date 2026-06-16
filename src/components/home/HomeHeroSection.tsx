@@ -10,12 +10,14 @@ import {
 
 import { GlassSurface } from '@/src/components/home/GlassSurface';
 import { HomeCategoryTabs } from '@/src/components/home/HomeCategoryTabs';
+import { HomeActivitySearchCard } from '@/src/components/home/HomeActivitySearchCard';
 import { HomeGlampingSearchCard } from '@/src/components/home/HomeGlampingSearchCard';
 import { HomePackageSearchCard } from '@/src/components/home/HomePackageSearchCard';
 import { HomeSearchCard } from '@/src/components/home/HomeSearchCard';
 import { useHomeSearch } from '@/src/components/home/HomeSearchContext';
 import { PillButton } from '@/src/components/home/PillButton';
 import { useHomeScale } from '@/src/components/home/useHomeScale';
+import { ACTIVITY_HERO } from '@/src/constants/homeActivityConfig';
 import { GLAMPING_HERO } from '@/src/constants/homeGlampingConfig';
 import { PACKAGE_HERO } from '@/src/constants/homePackageConfig';
 import {
@@ -27,6 +29,8 @@ import {
 
 const HotelsHeroBg = require('../../../assets/images/backgroundimagehomehotels.jpg');
 const HotelsPromoDiscount = require('../../../assets/images/home-figma/promo-discount.png');
+const ActivityHeroBg = require('../../../assets/images/activitybg.jpg');
+const ActivityOfferImage = require('../../../assets/images/activityoffer.jpg');
 
 /** Figma Frame 5189 — base frame sizing. */
 const HERO_FRAME_HEIGHT = 762;
@@ -61,12 +65,12 @@ const HERO_BY_TAB = {
     imageOffset: 24,
   },
   activities: {
-    background: HotelsHeroBg,
-    tagline: 'Adventure Awaits Around Every Corner',
+    background: ActivityHeroBg,
+    tagline: ACTIVITY_HERO.tagline,
     taglineSub: null,
-    promoTitle: 'Thrilling Activities at Stunning Discounts',
-    promoSubtitle: 'Where Every Mood Finds Its Perfect Escape',
-    promoImage: HotelsPromoDiscount,
+    promoTitle: ACTIVITY_HERO.promoTitle,
+    promoSubtitle: ACTIVITY_HERO.promoSubtitle,
+    promoImage: ActivityOfferImage,
     imageOffset: 24,
   },
 } as const;
@@ -143,6 +147,8 @@ export function HomeHeroSection() {
             <HomePackageSearchCard />
           ) : activeCategoryTab === 'glamping' ? (
             <HomeGlampingSearchCard />
+          ) : activeCategoryTab === 'activities' ? (
+            <HomeActivitySearchCard />
           ) : (
             <HomeSearchCard activeTab={activeCategoryTab} />
           )}

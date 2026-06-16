@@ -18,6 +18,7 @@ import HeartIcon from '@/assets/images/heart.svg';
 import { useHomeScale } from '@/src/components/home/useHomeScale';
 import { MobileBottomTabBar } from '@/src/components/navigation/MobileBottomTabBar';
 import { PackageDetailHeader } from '@/src/components/package/PackageDetailHeader';
+import { PackageFixedDatesRow } from '@/src/components/package/PackageFixedDatesRow';
 import { ResortAmenitiesSection } from '@/src/components/resort/ResortAmenitiesSection';
 import {
   FIGMA_PACKAGE_DETAIL,
@@ -49,6 +50,7 @@ const PACKAGE_REVIEWS = [
 ];
 
 export type MobilePackageDetailsProps = {
+  listingId?: string;
   title?: string;
   priceLabel?: string;
   onBookNow: () => void;
@@ -57,14 +59,18 @@ export type MobilePackageDetailsProps = {
 function PriceActionBlock({
   onBookNow,
   compact,
+  listingId,
 }: {
   onBookNow: () => void;
   compact?: boolean;
+  listingId?: string;
 }) {
   const { s } = useHomeScale();
 
   return (
     <View style={{ gap: s(compact ? 12 : 18) }}>
+      <PackageFixedDatesRow listingId={listingId} showNote={!compact} />
+
       <View
         style={[
           styles.priceBox,
@@ -127,7 +133,7 @@ function PriceActionBlock({
   );
 }
 
-export function MobilePackageDetailsScreen({ onBookNow }: MobilePackageDetailsProps) {
+export function MobilePackageDetailsScreen({ listingId, onBookNow }: MobilePackageDetailsProps) {
   const { s } = useHomeScale();
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [expandedDay, setExpandedDay] = useState('day-1');
@@ -238,6 +244,8 @@ export function MobilePackageDetailsScreen({ onBookNow }: MobilePackageDetailsPr
             </Text>
           </View>
 
+          <PackageFixedDatesRow listingId={listingId} showNote />
+
           <View style={[styles.overviewCard, { padding: s(16), borderRadius: s(18), gap: s(18) }]}>
             <Text style={[styles.description, { fontSize: s(10), lineHeight: s(12) }]}>
               {FIGMA_PACKAGE_DETAIL.description}
@@ -289,7 +297,7 @@ export function MobilePackageDetailsScreen({ onBookNow }: MobilePackageDetailsPr
               </View>
             </View>
 
-            <PriceActionBlock onBookNow={onBookNow} />
+            <PriceActionBlock onBookNow={onBookNow} listingId={listingId} />
           </View>
 
           <Text style={[styles.sectionTitle, { fontSize: s(20), lineHeight: s(28) }]}>
@@ -461,7 +469,7 @@ export function MobilePackageDetailsScreen({ onBookNow }: MobilePackageDetailsPr
                 {FIGMA_PACKAGE_DETAIL.nightsShort}
               </Text>
             </View>
-            <PriceActionBlock onBookNow={onBookNow} compact />
+            <PriceActionBlock onBookNow={onBookNow} compact listingId={listingId} />
           </View>
 
           <View style={{ paddingVertical: s(24), gap: s(24), alignItems: 'center' }}>
