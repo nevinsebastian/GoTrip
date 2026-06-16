@@ -89,6 +89,7 @@ function RootLayoutNav() {
           <Stack.Screen name="packages" options={{ headerShown: false }} />
           <Stack.Screen name="account-settings" options={{ headerShown: false }} />
           <Stack.Screen name="become-vendor" options={{ headerShown: false }} />
+          <Stack.Screen name="vendor" options={{ headerShown: false }} />
           <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
         </Stack>
       </ThemeProvider>

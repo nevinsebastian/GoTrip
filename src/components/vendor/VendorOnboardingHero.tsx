@@ -15,9 +15,13 @@ import HotelsDividerIcon from '@/assets/images/login-figma/hotels-divider.svg';
 import MenuLoginIcon from '@/assets/images/login-figma/menu-login.svg';
 import SpeechBubbleIcon from '@/assets/images/login-figma/speech-bubble.svg';
 import { Text } from '@/components/ui';
-import { VENDOR_ONBOARDING } from '@/src/constants/vendorOnboardingConstants';
+import {
+  getVendorListingCategory,
+  VENDOR_ONBOARDING,
+  type VendorListingCategoryId,
+} from '@/src/constants/vendorOnboardingConstants';
 
-const VendorHeroImage = require('../../../loginimage.png');
+const DefaultHeroImage = require('../../../loginimage.png');
 const HeaderLogo = require('../../../assets/images/login-figma/logo-header.png');
 const HeroLogoWhite = require('../../../assets/images/login-figma/logo-hero-white.png');
 
@@ -25,7 +29,14 @@ const DESIGN_WIDTH = 402;
 const HERO_HEIGHT = 327;
 const isWeb = Platform.OS === 'web';
 
-export function VendorOnboardingHero() {
+type VendorOnboardingHeroProps = {
+  categoryId?: VendorListingCategoryId;
+};
+
+export function VendorOnboardingHero({ categoryId }: VendorOnboardingHeroProps) {
+  const category = categoryId ? getVendorListingCategory(categoryId) : null;
+  const heroImage = category?.heroImage ?? DefaultHeroImage;
+  const pillLabel = category?.pillLabel ?? 'Hotels';
   const { width } = useWindowDimensions();
   const scale = width / DESIGN_WIDTH;
   const heroHeight = Math.round(HERO_HEIGHT * scale);
@@ -58,7 +69,8 @@ export function VendorOnboardingHero() {
 
       <View style={[styles.orangeFrameHero, { height: heroHeight }]}>
         <ImageBackground
-          source={VendorHeroImage}
+          key={categoryId ?? 'default'}
+          source={heroImage}
           style={[
             styles.heroImage,
             {
@@ -104,7 +116,7 @@ export function VendorOnboardingHero() {
             <HotelsDividerIcon width={21} height={6} />
           </View>
           <HotelIcon width={18} height={18} />
-          <Text style={styles.hotelsPillText}>Hotels</Text>
+          <Text style={styles.hotelsPillText}>{pillLabel}</Text>
         </View>
       </View>
     </>

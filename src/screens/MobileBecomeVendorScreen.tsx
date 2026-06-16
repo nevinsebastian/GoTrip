@@ -1,17 +1,26 @@
 import { Input, Text } from '@/components/ui';
 import { borderRadius, colors, spacing, typography } from '@/constants/DesignTokens';
 import {
+  completeVendorAccountSetup,
   resendVendorRegistrationOtp,
   sendVendorRegistrationOtp,
+  uploadVendorDocument,
   verifyVendorRegistrationOtp,
 } from '@/src/api/vendorOnboarding.service';
+import { VendorDocTypePickerSheet } from '@/src/components/vendor/VendorDocTypePickerSheet';
+import { VendorListingCategorySheet } from '@/src/components/vendor/VendorListingCategorySheet';
 import { VendorOnboardingHero } from '@/src/components/vendor/VendorOnboardingHero';
+import { VendorUploadOptionsSheet } from '@/src/components/vendor/VendorUploadOptionsSheet';
 import { authFieldInputStyle } from '@/src/constants/authInputStyles';
 import {
   EMPTY_VENDOR_FORM,
+  getVendorListingCategory,
   VENDOR_ONBOARDING,
+  type VendorDocumentField,
+  type VendorListingCategoryId,
   type VendorRegistrationForm,
 } from '@/src/constants/vendorOnboardingConstants';
+import { activateVendorSession } from '@/src/utils/vendorSession';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
@@ -41,7 +50,7 @@ const OTP_LENGTH = VENDOR_ONBOARDING.otpLength;
 const isWeb = Platform.OS === 'web';
 const isIOS = Platform.OS === 'ios';
 
-type VendorStep = 'landing' | 'register' | 'otp';
+type VendorStep = 'landing' | 'register' | 'otp' | 'documents' | 'category';
 
 function OrDivider() {
   return (
@@ -204,6 +213,138 @@ function OtpContent({
   );
 }
 
+type DocumentRowProps = {
+  label: string;
+  value: string;
+  fileName?: string;
+  onOpenPicker: () => void;
+  onUpload: () => void;
+  isUploading?: boolean;
+};
+
+function DocumentRow({
+  label,
+  value,
+  fileName,
+  onOpenPicker,
+  onUpload,
+  isUploading,
+}: DocumentRowProps) {
+  return (
+    <View style={styles.documentRow}>
+      <Text style={styles.documentLabel}>{label}</Text>
+      <View style={styles.documentControls}>
+        <Pressable
+          style={({ pressed }) => [styles.documentSelect, pressed && styles.buttonPressed]}
+          onPress={onOpenPicker}
+          accessibilityRole="button"
+        >
+          <Text style={styles.documentSelectText} numberOfLines={1}>
+            {value}
+          </Text>
+          <Ionicons name="chevron-down" size={16} color="rgba(28, 32, 36, 0.45)" />
+        </Pressable>
+        <Pressable
+          style={({ pressed }) => [
+            styles.uploadButton,
+            pressed && styles.buttonPressed,
+            isUploading && styles.buttonDisabled,
+          ]}
+          onPress={onUpload}
+          disabled={isUploading}
+          accessibilityRole="button"
+        >
+          {isUploading ? (
+            <ActivityIndicator color={colors.surface.white} size="small" />
+          ) : (
+            <>
+              <Ionicons name="cloud-upload-outline" size={14} color={colors.surface.white} />
+              <Text style={styles.uploadButtonText}>Upload</Text>
+            </>
+          )}
+        </Pressable>
+      </View>
+      {fileName ? <Text style={styles.uploadedFileName}>{fileName}</Text> : null}
+    </View>
+  );
+}
+
+type DocumentsContentProps = {
+  idType: string;
+  propertyDocType: string;
+  idFileName?: string;
+  propertyFileName?: string;
+  onOpenIdPicker: () => void;
+  onOpenPropertyPicker: () => void;
+  onUploadId: () => void;
+  onUploadProperty: () => void;
+  uploadingField: VendorDocumentField | null;
+  error: string | null;
+};
+
+function DocumentsContent({
+  idType,
+  propertyDocType,
+  idFileName,
+  propertyFileName,
+  onOpenIdPicker,
+  onOpenPropertyPicker,
+  onUploadId,
+  onUploadProperty,
+  uploadingField,
+  error,
+}: DocumentsContentProps) {
+  return (
+    <View style={styles.documentsContent}>
+      <Text style={styles.documentsTitle}>{VENDOR_ONBOARDING.documentsTitle}</Text>
+      <DocumentRow
+        label={VENDOR_ONBOARDING.idTypeLabel}
+        value={idType}
+        fileName={idFileName}
+        onOpenPicker={onOpenIdPicker}
+        onUpload={onUploadId}
+        isUploading={uploadingField === 'id'}
+      />
+      <DocumentRow
+        label={VENDOR_ONBOARDING.propertyDocLabel}
+        value={propertyDocType}
+        fileName={propertyFileName}
+        onOpenPicker={onOpenPropertyPicker}
+        onUpload={onUploadProperty}
+        isUploading={uploadingField === 'property'}
+      />
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
+    </View>
+  );
+}
+
+type CategorySelectionContentProps = {
+  categoryId: VendorListingCategoryId;
+  onOpenPicker: () => void;
+};
+
+function CategorySelectionContent({ categoryId, onOpenPicker }: CategorySelectionContentProps) {
+  const category = getVendorListingCategory(categoryId);
+  return (
+    <View style={styles.categoryContent}>
+      <Text style={styles.categoryTitle}>{VENDOR_ONBOARDING.categoryTitle}</Text>
+      <Text style={styles.categorySubtitle}>{VENDOR_ONBOARDING.categorySubtitle}</Text>
+      <Pressable
+        style={({ pressed }) => [styles.categoryCard, pressed && styles.buttonPressed]}
+        onPress={onOpenPicker}
+        accessibilityRole="button"
+      >
+        <Image source={category.thumbnail} style={styles.categoryThumb} resizeMode="cover" />
+        <View style={styles.categoryCardText}>
+          <Text style={styles.categoryCardTitle}>{category.title}</Text>
+          <Text style={styles.categoryCardSubtitle}>{category.subtitle}</Text>
+        </View>
+        <Ionicons name="chevron-down" size={18} color="rgba(28, 32, 36, 0.45)" />
+      </Pressable>
+    </View>
+  );
+}
+
 export function MobileBecomeVendorScreen() {
   const contentPadding = spacing['4'];
   const scrollRef = useRef<ScrollView>(null);
@@ -217,6 +358,17 @@ export function MobileBecomeVendorScreen() {
   const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
   const [isResending, setIsResending] = useState(false);
   const [keyboardPadding, setKeyboardPadding] = useState(0);
+  const [idType, setIdType] = useState(VENDOR_ONBOARDING.idTypes[0]);
+  const [propertyDocType, setPropertyDocType] = useState(VENDOR_ONBOARDING.propertyDocTypes[0]);
+  const [idFileName, setIdFileName] = useState<string | undefined>();
+  const [propertyFileName, setPropertyFileName] = useState<string | undefined>();
+  const [pickerField, setPickerField] = useState<VendorDocumentField | null>(null);
+  const [uploadField, setUploadField] = useState<VendorDocumentField | null>(null);
+  const [uploadingField, setUploadingField] = useState<VendorDocumentField | null>(null);
+  const [isCompletingSetup, setIsCompletingSetup] = useState(false);
+  const [listingCategory, setListingCategory] = useState<VendorListingCategoryId>('property');
+  const [categoryPickerOpen, setCategoryPickerOpen] = useState(false);
+  const [isProceedingCategory, setIsProceedingCategory] = useState(false);
 
   useEffect(() => {
     if (isWeb) return;
@@ -338,7 +490,7 @@ export function MobileBecomeVendorScreen() {
       const res = await verifyVendorRegistrationOtp({ ...form, otp: code });
       if (res.success) {
         Keyboard.dismiss();
-        router.back();
+        setStep('documents');
         return;
       }
       setSubmitError(res.message ?? 'Invalid or expired OTP.');
@@ -351,6 +503,59 @@ export function MobileBecomeVendorScreen() {
     setSubmitError(null);
     setDigits(Array(OTP_LENGTH).fill(''));
     setStep('register');
+  };
+
+  const handleUploadOption = async (source: 'camera' | 'gallery' | 'files') => {
+    if (!uploadField) return;
+    const field = uploadField;
+    setUploadField(null);
+    setUploadingField(field);
+    setSubmitError(null);
+    try {
+      const documentType = field === 'id' ? idType : propertyDocType;
+      const res = await uploadVendorDocument({ field, source, documentType });
+      if (res.success) {
+        if (field === 'id') setIdFileName(res.fileName);
+        else setPropertyFileName(res.fileName);
+        return;
+      }
+      setSubmitError(res.message ?? 'Upload failed. Please try again.');
+    } finally {
+      setUploadingField(null);
+    }
+  };
+
+  const handleCompleteSetup = async () => {
+    setIsCompletingSetup(true);
+    setSubmitError(null);
+    try {
+      const res = await completeVendorAccountSetup({
+        ...form,
+        documents: [
+          ...(idFileName ? [{ field: 'id' as const, source: 'files' as const, documentType: idType, fileName: idFileName }] : []),
+          ...(propertyFileName
+            ? [{ field: 'property' as const, source: 'files' as const, documentType: propertyDocType, fileName: propertyFileName }]
+            : []),
+        ],
+      });
+      if (res.success) {
+        setStep('category');
+        return;
+      }
+      setSubmitError(res.message ?? 'Could not complete setup. Please try again.');
+    } finally {
+      setIsCompletingSetup(false);
+    }
+  };
+
+  const handleCategoryNext = async () => {
+    setIsProceedingCategory(true);
+    try {
+      await activateVendorSession(listingCategory);
+      router.replace('/vendor/select-location');
+    } finally {
+      setIsProceedingCategory(false);
+    }
   };
 
   const dismissKeyboard = () => {
@@ -395,25 +600,79 @@ export function MobileBecomeVendorScreen() {
         </Pressable>
       );
     }
-    return (
-      <Pressable
-        style={({ pressed }) => [
-          styles.primaryButton,
-          (!canSubmitOtp || isVerifyingOtp) && styles.buttonDisabled,
-          pressed && canSubmitOtp && styles.buttonPressed,
-        ]}
-        onPress={handleSubmitOtp}
-        disabled={!canSubmitOtp}
-        accessibilityRole="button"
-      >
-        {isVerifyingOtp ? (
-          <ActivityIndicator color={colors.surface.white} size="small" />
-        ) : (
-          <Text style={styles.primaryButtonText}>Submit OTP</Text>
-        )}
-      </Pressable>
-    );
+    if (step === 'otp') {
+      return (
+        <Pressable
+          style={({ pressed }) => [
+            styles.primaryButton,
+            (!canSubmitOtp || isVerifyingOtp) && styles.buttonDisabled,
+            pressed && canSubmitOtp && styles.buttonPressed,
+          ]}
+          onPress={handleSubmitOtp}
+          disabled={!canSubmitOtp}
+          accessibilityRole="button"
+        >
+          {isVerifyingOtp ? (
+            <ActivityIndicator color={colors.surface.white} size="small" />
+          ) : (
+            <Text style={styles.primaryButtonText}>Submit OTP</Text>
+          )}
+        </Pressable>
+      );
+    }
+    if (step === 'documents') {
+      return (
+        <Pressable
+          style={({ pressed }) => [
+            styles.landingCta,
+            pressed && styles.buttonPressed,
+            isCompletingSetup && styles.buttonDisabled,
+          ]}
+          onPress={handleCompleteSetup}
+          disabled={isCompletingSetup}
+          accessibilityRole="button"
+        >
+          {isCompletingSetup ? (
+            <ActivityIndicator color={colors.surface.white} size="small" style={styles.completeCtaLoader} />
+          ) : (
+            <>
+              <Text style={styles.landingCtaText}>{VENDOR_ONBOARDING.completeSetupCta}</Text>
+              <View style={styles.landingCtaIcon}>
+                <Ionicons name="arrow-forward" size={16} color={colors.text.primary} />
+              </View>
+            </>
+          )}
+        </Pressable>
+      );
+    }
+    if (step === 'category') {
+      return (
+        <Pressable
+          style={({ pressed }) => [
+            styles.categoryNextButton,
+            pressed && styles.buttonPressed,
+            isProceedingCategory && styles.buttonDisabled,
+          ]}
+          onPress={handleCategoryNext}
+          disabled={isProceedingCategory}
+          accessibilityRole="button"
+        >
+          {isProceedingCategory ? (
+            <ActivityIndicator color={colors.surface.white} size="small" />
+          ) : (
+            <Text style={styles.categoryNextText}>
+              {VENDOR_ONBOARDING.categoryNextCta}
+              <Text style={styles.categoryNextChevron}> {'>'} </Text>
+              {VENDOR_ONBOARDING.categoryNextSuffix}
+            </Text>
+          )}
+        </Pressable>
+      );
+    }
+    return null;
   })();
+
+  const heroCategoryId = step === 'category' ? listingCategory : undefined;
 
   const shell = (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
@@ -435,7 +694,7 @@ export function MobileBecomeVendorScreen() {
             automaticallyAdjustKeyboardInsets={isIOS}
             showsVerticalScrollIndicator={false}
           >
-            <VendorOnboardingHero />
+            <VendorOnboardingHero categoryId={heroCategoryId} />
 
             <View style={styles.contentSlot}>
               {step === 'landing' ? <LandingContent /> : null}
@@ -457,6 +716,26 @@ export function MobileBecomeVendorScreen() {
                   onResend={handleResendOtp}
                   isResending={isResending}
                   error={submitError}
+                />
+              ) : null}
+              {step === 'documents' ? (
+                <DocumentsContent
+                  idType={idType}
+                  propertyDocType={propertyDocType}
+                  idFileName={idFileName}
+                  propertyFileName={propertyFileName}
+                  onOpenIdPicker={() => setPickerField('id')}
+                  onOpenPropertyPicker={() => setPickerField('property')}
+                  onUploadId={() => setUploadField('id')}
+                  onUploadProperty={() => setUploadField('property')}
+                  uploadingField={uploadingField}
+                  error={submitError}
+                />
+              ) : null}
+              {step === 'category' ? (
+                <CategorySelectionContent
+                  categoryId={listingCategory}
+                  onOpenPicker={() => setCategoryPickerOpen(true)}
                 />
               ) : null}
             </View>
@@ -514,6 +793,43 @@ export function MobileBecomeVendorScreen() {
           </View>
         </View>
       </KeyboardAvoidingView>
+
+      <VendorDocTypePickerSheet
+        visible={pickerField === 'id'}
+        title={VENDOR_ONBOARDING.idTypeLabel}
+        options={VENDOR_ONBOARDING.idTypes}
+        selected={idType}
+        onClose={() => setPickerField(null)}
+        onSelect={(value) => {
+          setIdType(value);
+          setPickerField(null);
+        }}
+      />
+      <VendorDocTypePickerSheet
+        visible={pickerField === 'property'}
+        title={VENDOR_ONBOARDING.propertyDocLabel}
+        options={VENDOR_ONBOARDING.propertyDocTypes}
+        selected={propertyDocType}
+        onClose={() => setPickerField(null)}
+        onSelect={(value) => {
+          setPropertyDocType(value);
+          setPickerField(null);
+        }}
+      />
+      <VendorUploadOptionsSheet
+        visible={uploadField !== null}
+        onClose={() => setUploadField(null)}
+        onSelect={handleUploadOption}
+      />
+      <VendorListingCategorySheet
+        visible={categoryPickerOpen}
+        selectedId={listingCategory}
+        onClose={() => setCategoryPickerOpen(false)}
+        onSelect={(id) => {
+          setListingCategory(id);
+          setCategoryPickerOpen(false);
+        }}
+      />
     </SafeAreaView>
   );
 
@@ -728,6 +1044,153 @@ const styles = StyleSheet.create({
     fontWeight: typography.fontWeight.medium,
     color: ACCENT,
     textDecorationLine: 'underline',
+  },
+  documentsContent: {
+    gap: 18,
+    width: '100%',
+  },
+  documentsTitle: {
+    fontFamily: typography.fontFamily.text,
+    fontSize: 20,
+    fontWeight: typography.fontWeight.semibold,
+    lineHeight: 42,
+    letterSpacing: typography.letterSpacing['3'],
+    color: ACCENT,
+  },
+  documentRow: {
+    gap: 8,
+    width: '100%',
+  },
+  documentLabel: {
+    fontFamily: typography.fontFamily.text,
+    fontSize: typography.fontSize['1'],
+    fontWeight: typography.fontWeight.regular,
+    color: 'rgba(28, 32, 36, 0.65)',
+  },
+  documentControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    width: '100%',
+  },
+  documentSelect: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    height: 40,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 47, 0.15)',
+    backgroundColor: colors.surface.white,
+    paddingHorizontal: spacing['3'],
+    gap: 8,
+    ...Platform.select({
+      web: { cursor: 'pointer' as const },
+    }),
+  },
+  documentSelectText: {
+    flex: 1,
+    fontFamily: typography.fontFamily.text,
+    fontSize: typography.fontSize['1'],
+    color: colors.text.primary,
+  },
+  uploadButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    height: 40,
+    borderRadius: 24,
+    backgroundColor: colors.text.primary,
+    paddingHorizontal: spacing['3'],
+    minWidth: 96,
+    ...Platform.select({
+      web: { cursor: 'pointer' as const },
+    }),
+  },
+  uploadButtonText: {
+    fontFamily: typography.fontFamily.text,
+    fontSize: typography.fontSize['1'],
+    fontWeight: typography.fontWeight.medium,
+    color: colors.surface.white,
+  },
+  uploadedFileName: {
+    fontFamily: typography.fontFamily.text,
+    fontSize: 10,
+    color: 'rgba(28, 32, 36, 0.5)',
+  },
+  categoryContent: {
+    gap: 10,
+    width: '100%',
+  },
+  categoryTitle: {
+    fontFamily: typography.fontFamily.text,
+    fontSize: 20,
+    fontWeight: typography.fontWeight.semibold,
+    lineHeight: 30,
+    color: ACCENT,
+  },
+  categorySubtitle: {
+    fontFamily: typography.fontFamily.text,
+    fontSize: typography.fontSize['1'],
+    color: 'rgba(28, 32, 36, 0.55)',
+  },
+  categoryCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(28, 32, 36, 0.15)',
+    borderRadius: borderRadius.xl,
+    backgroundColor: colors.surface.white,
+    padding: spacing['3'],
+    marginTop: 6,
+    ...Platform.select({
+      web: { cursor: 'pointer' as const },
+    }),
+  },
+  categoryThumb: {
+    width: 72,
+    height: 48,
+    borderRadius: 8,
+  },
+  categoryCardText: {
+    flex: 1,
+    gap: 4,
+  },
+  categoryCardTitle: {
+    fontFamily: typography.fontFamily.text,
+    fontSize: typography.fontSize['2'],
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.text.primary,
+  },
+  categoryCardSubtitle: {
+    fontFamily: typography.fontFamily.text,
+    fontSize: 11,
+    color: 'rgba(28, 32, 36, 0.55)',
+  },
+  categoryNextButton: {
+    height: 48,
+    borderRadius: 28,
+    backgroundColor: ACCENT,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing['4'],
+    width: '100%',
+  },
+  categoryNextText: {
+    fontFamily: typography.fontFamily.text,
+    fontSize: typography.fontSize['2'],
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.surface.white,
+    textAlign: 'center',
+  },
+  categoryNextChevron: {
+    fontWeight: typography.fontWeight.bold,
+  },
+  completeCtaLoader: {
+    alignSelf: 'center',
   },
   actionArea: {
     width: '100%',

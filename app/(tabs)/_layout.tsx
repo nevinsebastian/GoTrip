@@ -9,6 +9,7 @@ import {
   MobileTabBarFromNavigation,
   type MobileTabId,
 } from '@/src/components/navigation/MobileBottomTabBar';
+import { useVendorModeRedirect } from '@/src/hooks/useVendorModeRedirect';
 
 type PreviousTabContextValue = {
   previousTab: MobileTabId;
@@ -42,6 +43,7 @@ function CustomTabBar(
 
 export default function TabLayout() {
   const [previousTab, setPreviousTab] = useState<MobileTabId>('index');
+  useVendorModeRedirect();
 
   return (
     <PreviousTabContext.Provider value={{ previousTab, setPreviousTab }}>
