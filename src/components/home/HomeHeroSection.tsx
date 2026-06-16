@@ -24,8 +24,8 @@ import { useHomeSearch } from '@/src/components/home/HomeSearchContext';
 import type { HomeCategoryTab } from '@/src/components/home/homeSearchConfig';
 import { PillButton } from '@/src/components/home/PillButton';
 import { useHomeScale } from '@/src/components/home/useHomeScale';
-import { PACKAGE_HERO } from '@/src/constants/homePackageConfig';
 import { GLAMPING_HERO } from '@/src/constants/homeGlampingConfig';
+import { PACKAGE_HERO } from '@/src/constants/homePackageConfig';
 import {
   GLAMPING_HERO_BACKGROUND,
   GLAMPING_OFFER_IMAGE,
@@ -36,6 +36,10 @@ import {
 const HeaderLogo = require('../../../assets/images/login-figma/logo-header.png');
 const HotelsHeroBg = require('../../../assets/images/backgroundimagehomehotels.jpg');
 const HotelsPromoDiscount = require('../../../assets/images/home-figma/promo-discount.png');
+
+/** Figma Frame 5189 — base frame sizing. */
+const HERO_FRAME_HEIGHT = 762;
+const HERO_FRAME_GAP = 275;
 
 const CATEGORY_TABS: Array<{
   id: HomeCategoryTab;
@@ -52,16 +56,20 @@ const HERO_BY_TAB = {
   hotels: {
     background: HotelsHeroBg,
     tagline: 'Stay Anywhere, Feel at Home',
+    taglineSub: null,
     promoTitle: 'Luxury Hotels at Stunning Discounts',
     promoSubtitle: 'Where Every Mood Meets Its Perfect Stay',
     promoImage: HotelsPromoDiscount,
+    imageOffset: 24,
   },
   packages: {
     background: PACKAGE_HERO_BACKGROUND,
     tagline: PACKAGE_HERO.tagline,
+    taglineSub: null,
     promoTitle: PACKAGE_HERO.promoTitle,
     promoSubtitle: PACKAGE_HERO.promoSubtitle,
     promoImage: PACKAGE_OFFER_IMAGE,
+    imageOffset: 48,
   },
   glamping: {
     background: GLAMPING_HERO_BACKGROUND,
@@ -70,51 +78,26 @@ const HERO_BY_TAB = {
     promoTitle: GLAMPING_HERO.promoTitle,
     promoSubtitle: GLAMPING_HERO.promoSubtitle,
     promoImage: GLAMPING_OFFER_IMAGE,
+    imageOffset: 24,
   },
   activities: {
     background: HotelsHeroBg,
     tagline: 'Adventure Awaits Around Every Corner',
+    taglineSub: null,
     promoTitle: 'Thrilling Activities at Stunning Discounts',
     promoSubtitle: 'Where Every Mood Finds Its Perfect Escape',
     promoImage: HotelsPromoDiscount,
+    imageOffset: 24,
   },
 } as const;
-
-const HERO_LAYOUT: Record<
-  HomeCategoryTab,
-  { frameMinHeight: number; imageTopSpace: number; imageOffset?: number }
-> = {
-  hotels: { frameMinHeight: 762, imageTopSpace: 130, imageOffset: 24 },
-  packages: { frameMinHeight: 762, imageTopSpace: 275, imageOffset: 48 },
-  glamping: { frameMinHeight: 762, imageTopSpace: 130, imageOffset: 24 },
-  activities: { frameMinHeight: 762, imageTopSpace: 130, imageOffset: 24 },
-};
 
 export function HomeHeroSection() {
   const { s } = useHomeScale();
   const { activeCategoryTab, setActiveCategoryTab } = useHomeSearch();
   const hero = HERO_BY_TAB[activeCategoryTab];
-  const layout = HERO_LAYOUT[activeCategoryTab];
-  const imageOffset = layout.imageOffset ?? 0;
 
   return (
-    <View style={[styles.wrap, { paddingHorizontal: s(16), paddingTop: s(10), gap: s(10) }]}>
-      <View style={[styles.headerCard, { padding: s(12), borderRadius: s(10) }]}>
-        <Image
-          source={HeaderLogo}
-          style={{ width: s(68), height: s(32) }}
-          resizeMode="contain"
-        />
-        <View style={styles.topBarActions}>
-          <Pressable style={styles.headerIconButton} accessibilityLabel="Notifications">
-            <BellLoginIcon width={18} height={18} />
-          </Pressable>
-          <Pressable style={styles.headerIconButton} accessibilityLabel="Menu">
-            <MenuLoginIcon width={24} height={24} />
-          </Pressable>
-        </View>
-      </View>
-
+    <View style={[styles.wrap, { paddingHorizontal: s(16), paddingTop: s(10), paddingBottom: s(10) }]}>
       <ImageBackground
         source={hero.background}
         style={[
@@ -122,29 +105,44 @@ export function HomeHeroSection() {
           {
             borderRadius: s(18),
             padding: s(12),
-            minHeight: s(layout.frameMinHeight),
+            height: s(HERO_FRAME_HEIGHT),
+            gap: s(HERO_FRAME_GAP),
           },
         ]}
         imageStyle={[
           { borderRadius: s(14) },
-          imageOffset
-            ? {
-                height: '115%',
-                transform: [{ translateY: -s(imageOffset) }],
-              }
-            : null,
+          {
+            height: '115%',
+            transform: [{ translateY: -s(hero.imageOffset) }],
+          },
         ]}
         resizeMode="cover"
       >
-        <View style={[styles.heroBottom, { gap: s(16), width: '100%', paddingTop: s(layout.imageTopSpace) }]}>
-          <View style={{ gap: s(4) }}>
+        <View style={[styles.headerCard, { padding: s(12), borderRadius: s(10), width: '100%' }]}>
+          <Image
+            source={HeaderLogo}
+            style={{ width: s(68), height: s(32) }}
+            resizeMode="contain"
+          />
+          <View style={styles.topBarActions}>
+            <Pressable style={styles.headerIconButton} accessibilityLabel="Notifications">
+              <BellLoginIcon width={18} height={18} />
+            </Pressable>
+            <Pressable style={styles.headerIconButton} accessibilityLabel="Menu">
+              <MenuLoginIcon width={24} height={24} />
+            </Pressable>
+          </View>
+        </View>
+
+        <View style={{ width: '100%', gap: s(16) }}>
+          <View style={{ width: '100%' }}>
             <Text style={[styles.tagline, { fontSize: s(16), lineHeight: s(28) }]}>{hero.tagline}</Text>
-            {'taglineSub' in hero && hero.taglineSub ? (
+            {hero.taglineSub ? (
               <Text style={[styles.tagline, { fontSize: s(16), lineHeight: s(28) }]}>{hero.taglineSub}</Text>
             ) : null}
           </View>
 
-          <GlassSurface borderRadius={s(12)} style={{ padding: s(10) }}>
+          <GlassSurface borderRadius={s(12)} style={{ padding: s(10), width: '100%' }}>
             <View style={styles.glassPromoRow}>
               <View style={[styles.promoThumbWrap, { width: s(85), height: s(58), borderRadius: s(8) }]}>
                 <Image source={hero.promoImage} style={StyleSheet.absoluteFillObject} resizeMode="cover" />
@@ -175,7 +173,7 @@ export function HomeHeroSection() {
             </View>
           </GlassSurface>
 
-          <View style={[styles.tabsShell, { padding: s(4), borderRadius: s(12), gap: s(2) }]}>
+          <View style={[styles.tabsShell, { padding: s(4), borderRadius: s(12), gap: s(2), width: '100%' }]}>
             {CATEGORY_TABS.map((tab) => {
               const selected = tab.id === activeCategoryTab;
               return (
@@ -246,6 +244,14 @@ const styles = StyleSheet.create({
   wrap: {
     backgroundColor: colors.surface.white,
   },
+  heroFrame: {
+    flexDirection: 'column',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    borderWidth: 4,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    overflow: 'hidden',
+  },
   headerCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -253,6 +259,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface.white,
     borderWidth: 1,
     borderColor: 'rgba(28, 32, 36, 0.1)',
+    alignSelf: 'stretch',
   },
   topBarActions: {
     flexDirection: 'row',
@@ -264,17 +271,6 @@ const styles = StyleSheet.create({
     height: 24,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  heroFrame: {
-    borderWidth: 4,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-    overflow: 'hidden',
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-  },
-  heroBottom: {
-    zIndex: 2,
-    width: '100%',
   },
   tagline: {
     fontFamily: typography.fontFamily.text,

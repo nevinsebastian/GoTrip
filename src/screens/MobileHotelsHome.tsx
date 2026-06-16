@@ -116,8 +116,9 @@ function MobileHotelsHomeContent() {
 
   const goToListing = (listing: Listing) => {
     const isPackageListing = listing.category?.type === 'package';
+    const isCampingListing = listing.category?.type === 'camping';
     router.push({
-      pathname: isPackageListing ? '/package/[id]' : '/resort/[id]',
+      pathname: isPackageListing ? '/package/[id]' : isCampingListing ? '/glamping/[id]' : '/resort/[id]',
       params: {
         id: listing.id,
         title: listing.title,

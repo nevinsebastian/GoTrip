@@ -7,3 +7,4 @@ export const PACKAGE_EXPANDED_IMAGE = require('../../assets/images/packageexpand
 
 export const GLAMPING_HERO_BACKGROUND = require('../../assets/images/glamping.jpg');
 export const GLAMPING_OFFER_IMAGE = require('../../assets/images/glampingoffer.jpg');
+export const GLAMPING_EXPANDED_IMAGE = require('../../assets/images/glampingbg.jpg');
