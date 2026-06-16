@@ -87,6 +87,9 @@ export function MobileProfileScreen({ onBack }: MobileProfileScreenProps) {
     if (id === 'bookings') {
       router.replace('/(tabs)/three');
     }
+    if (id === 'vendor') {
+      router.push('/become-vendor');
+    }
   };
 
   const handleLogoutConfirm = async () => {
