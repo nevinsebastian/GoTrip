@@ -10,20 +10,24 @@ type VendorUploadOptionsSheetProps = {
   visible: boolean;
   onClose: () => void;
   onSelect: (source: 'camera' | 'gallery' | 'files') => void;
+  title?: string;
+  subtitle?: string;
 };
 
 export function VendorUploadOptionsSheet({
   visible,
   onClose,
   onSelect,
+  title = 'Upload document',
+  subtitle = 'Choose how you want to add your file',
 }: VendorUploadOptionsSheetProps) {
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable style={styles.overlay} onPress={onClose}>
         <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
           <View style={styles.handle} />
-          <Text style={styles.title}>Upload document</Text>
-          <Text style={styles.subtitle}>Choose how you want to add your file</Text>
+          <Text style={styles.title}>{title}</Text>
+          <Text style={styles.subtitle}>{subtitle}</Text>
           <View style={styles.options}>
             {VENDOR_ONBOARDING.uploadOptions.map((option) => (
               <Pressable

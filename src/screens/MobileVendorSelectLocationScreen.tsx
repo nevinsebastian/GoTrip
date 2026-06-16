@@ -122,6 +122,10 @@ export function MobileVendorSelectLocationScreen() {
   };
 
   const handleConfirm = () => {
+    if (categoryId === 'property') {
+      router.push('/vendor/guest-room-details');
+      return;
+    }
     router.replace('/vendor');
   };
 
