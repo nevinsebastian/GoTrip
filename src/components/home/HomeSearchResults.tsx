@@ -13,15 +13,18 @@ export function HomeSearchResults({
   locationLabel,
   loading,
   onListingPress,
+  variant = 'hotels',
 }: {
   listings: Listing[];
   locationLabel: string;
   loading?: boolean;
   onListingPress: (listing: Listing) => void;
+  variant?: 'hotels' | 'packages';
 }) {
   const { s } = useHomeScale();
   const gap = s(12);
   const cardW = (s(367) - gap) / 2;
+  const isPackages = variant === 'packages';
 
   const rows: Listing[][] = [];
   for (let i = 0; i < listings.length; i += 2) {
@@ -33,10 +36,10 @@ export function HomeSearchResults({
       <View style={styles.headerRow}>
         <View style={{ flex: 1, gap: s(4) }}>
           <Text style={[styles.title, { fontSize: s(16), lineHeight: s(24) }]}>
-            Stays That Match Your Mood
+            {isPackages ? 'Packages That Match Your Mood' : 'Stays That Match Your Mood'}
           </Text>
           <Text style={[styles.subtitle, { fontSize: s(12), lineHeight: s(16) }]}>
-            Curated Travel Experiences
+            {isPackages ? 'Curated Travel Packages' : 'Curated Travel Experiences'}
           </Text>
         </View>
         <Pressable
@@ -61,6 +64,7 @@ export function HomeSearchResults({
                   listing={listing}
                   width={cardW}
                   locationLabel={locationLabel}
+                  priceSuffix={isPackages ? '/person' : '/night'}
                   onPress={() => onListingPress(listing)}
                 />
               ))}
@@ -70,7 +74,7 @@ export function HomeSearchResults({
         </View>
       ) : (
         <Text style={[styles.emptyText, { fontSize: s(14) }]}>
-          No stays found for &quot;{locationLabel}&quot;. Try another location.
+          No {isPackages ? 'packages' : 'stays'} found for &quot;{locationLabel}&quot;. Try another location.
         </Text>
       )}
 
@@ -88,8 +92,9 @@ export function HomeSearchResults({
       ) : null}
 
       <Text style={[styles.footerText, { fontSize: s(10), lineHeight: s(14), marginTop: s(8) }]}>
-        From luxurious escapes to budget-friendly stays, hotels with stunning views to vibrant city
-        hubs, and so much more— GoTrip offers it all.
+        {isPackages
+          ? 'From budget getaways to international adventures, curated packages with stays, transfers, and experiences — GoTrip offers it all.'
+          : 'From luxurious escapes to budget-friendly stays, hotels with stunning views to vibrant city hubs, and so much more— GoTrip offers it all.'}
       </Text>
     </View>
   );

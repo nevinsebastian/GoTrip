@@ -1,6 +1,6 @@
 import { Text } from '@/components/ui';
 import { colors, typography } from '@/constants/DesignTokens';
-import React, { useState } from 'react';
+import React from 'react';
 import {
   Image,
   ImageBackground,
@@ -17,14 +17,21 @@ import TabGlampingIcon from '@/assets/images/home-figma/tab-glamping.svg';
 import TabHotelsIcon from '@/assets/images/home-figma/tab-hotels.svg';
 import TabPackagesIcon from '@/assets/images/home-figma/tab-packages.svg';
 import { GlassSurface } from '@/src/components/home/GlassSurface';
+import { HomePackageSearchCard } from '@/src/components/home/HomePackageSearchCard';
 import { HomeSearchCard } from '@/src/components/home/HomeSearchCard';
+import { useHomeSearch } from '@/src/components/home/HomeSearchContext';
 import type { HomeCategoryTab } from '@/src/components/home/homeSearchConfig';
 import { PillButton } from '@/src/components/home/PillButton';
 import { useHomeScale } from '@/src/components/home/useHomeScale';
+import { PACKAGE_HERO } from '@/src/constants/homePackageConfig';
+import {
+  PACKAGE_HERO_BACKGROUND,
+  PACKAGE_OFFER_IMAGE,
+} from '@/src/constants/placeholderImages';
 
 const HeaderLogo = require('../../../assets/images/login-figma/logo-header.png');
-const HeroBg = require('../../../assets/images/backgroundimagehomehotels.jpg');
-const PromoDiscount = require('../../../assets/images/home-figma/promo-discount.png');
+const HotelsHeroBg = require('../../../assets/images/backgroundimagehomehotels.jpg');
+const HotelsPromoDiscount = require('../../../assets/images/home-figma/promo-discount.png');
 
 const CATEGORY_TABS: Array<{
   id: HomeCategoryTab;
@@ -37,9 +44,41 @@ const CATEGORY_TABS: Array<{
   { id: 'activities', label: 'Activities', Icon: TabActivitiesIcon },
 ];
 
+const HERO_BY_TAB = {
+  hotels: {
+    background: HotelsHeroBg,
+    tagline: 'Stay Anywhere, Feel at Home',
+    promoTitle: 'Luxury Hotels at Stunning Discounts',
+    promoSubtitle: 'Where Every Mood Meets Its Perfect Stay',
+    promoImage: HotelsPromoDiscount,
+  },
+  packages: {
+    background: PACKAGE_HERO_BACKGROUND,
+    tagline: PACKAGE_HERO.tagline,
+    promoTitle: PACKAGE_HERO.promoTitle,
+    promoSubtitle: PACKAGE_HERO.promoSubtitle,
+    promoImage: PACKAGE_OFFER_IMAGE,
+  },
+  glamping: {
+    background: HotelsHeroBg,
+    tagline: 'Sleep Under the Stars in Style',
+    promoTitle: 'Glamping Escapes at Great Prices',
+    promoSubtitle: 'Where Nature Meets Comfort',
+    promoImage: HotelsPromoDiscount,
+  },
+  activities: {
+    background: HotelsHeroBg,
+    tagline: 'Adventure Awaits Around Every Corner',
+    promoTitle: 'Thrilling Activities at Stunning Discounts',
+    promoSubtitle: 'Where Every Mood Finds Its Perfect Escape',
+    promoImage: HotelsPromoDiscount,
+  },
+} as const;
+
 export function HomeHeroSection() {
   const { s } = useHomeScale();
-  const [activeTab, setActiveTab] = useState<HomeCategoryTab>('hotels');
+  const { activeCategoryTab, setActiveCategoryTab } = useHomeSearch();
+  const hero = HERO_BY_TAB[activeCategoryTab];
 
   return (
     <View style={[styles.wrap, { paddingHorizontal: s(16), paddingTop: s(10), gap: s(10) }]}>
@@ -60,31 +99,25 @@ export function HomeHeroSection() {
       </View>
 
       <ImageBackground
-        source={HeroBg}
+        source={hero.background}
         style={[
           styles.heroFrame,
           {
             borderRadius: s(18),
             padding: s(12),
-            minHeight: s(560),
+            minHeight: activeCategoryTab === 'packages' ? s(580) : s(560),
           },
         ]}
         imageStyle={{ borderRadius: s(14) }}
         resizeMode="cover"
       >
         <View style={[styles.heroBottom, { gap: s(16), paddingTop: s(180) }]}>
-          <Text style={[styles.tagline, { fontSize: s(16), lineHeight: s(28) }]}>
-            Stay Anywhere, Feel at Home
-          </Text>
+          <Text style={[styles.tagline, { fontSize: s(16), lineHeight: s(28) }]}>{hero.tagline}</Text>
 
           <GlassSurface borderRadius={s(12)} style={{ padding: s(10) }}>
             <View style={styles.glassPromoRow}>
               <View style={[styles.promoThumbWrap, { width: s(85), height: s(58), borderRadius: s(8) }]}>
-                <Image
-                  source={PromoDiscount}
-                  style={StyleSheet.absoluteFillObject}
-                  resizeMode="cover"
-                />
+                <Image source={hero.promoImage} style={StyleSheet.absoluteFillObject} resizeMode="cover" />
                 <Text style={[styles.promoThumbText, { fontSize: s(12), lineHeight: s(12) }]}>
                   {'upto\n50% off'}
                 </Text>
@@ -92,14 +125,14 @@ export function HomeHeroSection() {
 
               <View style={[styles.promoCopy, { gap: s(12), paddingVertical: s(3) }]}>
                 <Text style={[styles.promoTitle, { fontSize: s(11), lineHeight: s(16) }]}>
-                  Luxury Hotels at Stunning Discounts
+                  {hero.promoTitle}
                 </Text>
                 <View style={styles.promoBottomRow}>
                   <Text
                     style={[styles.promoSubtitle, { fontSize: s(9), lineHeight: s(12), flex: 1 }]}
                     numberOfLines={2}
                   >
-                    Where Every Mood Meets Its Perfect Stay
+                    {hero.promoSubtitle}
                   </Text>
                   <PillButton label="Explore" variant="white" fontSize={s(12)} height={s(24)} />
                 </View>
@@ -109,7 +142,7 @@ export function HomeHeroSection() {
 
           <View style={[styles.tabsShell, { padding: s(4), borderRadius: s(12), gap: s(2) }]}>
             {CATEGORY_TABS.map((tab) => {
-              const selected = tab.id === activeTab;
+              const selected = tab.id === activeCategoryTab;
               return (
                 <Pressable
                   key={tab.id}
@@ -125,7 +158,7 @@ export function HomeHeroSection() {
                       borderColor: selected ? colors.surface.white : 'rgba(28, 32, 36, 0.2)',
                     },
                   ]}
-                  onPress={() => setActiveTab(tab.id)}
+                  onPress={() => setActiveCategoryTab(tab.id)}
                   accessibilityState={{ selected }}
                 >
                   <View
@@ -161,7 +194,11 @@ export function HomeHeroSection() {
             })}
           </View>
 
-          <HomeSearchCard activeTab={activeTab} />
+          {activeCategoryTab === 'packages' ? (
+            <HomePackageSearchCard />
+          ) : (
+            <HomeSearchCard activeTab={activeCategoryTab} />
+          )}
         </View>
       </ImageBackground>
     </View>

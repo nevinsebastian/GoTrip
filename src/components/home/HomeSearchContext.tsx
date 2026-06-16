@@ -7,11 +7,14 @@ export type HomeSearchSubmit = {
   checkOut: string;
   guests: GuestCounts;
   tab: HomeCategoryTab;
+  packageMood?: string;
 };
 
 type HomeSearchContextValue = {
   searchMode: boolean;
   searchParams: HomeSearchSubmit | null;
+  activeCategoryTab: HomeCategoryTab;
+  setActiveCategoryTab: (tab: HomeCategoryTab) => void;
   enterSearchMode: (params: HomeSearchSubmit) => void;
   exitSearchMode: () => void;
   updateSearchLocation: (location: string) => void;
@@ -22,6 +25,7 @@ const HomeSearchContext = createContext<HomeSearchContextValue | null>(null);
 export function HomeSearchProvider({ children }: { children: React.ReactNode }) {
   const [searchMode, setSearchMode] = useState(false);
   const [searchParams, setSearchParams] = useState<HomeSearchSubmit | null>(null);
+  const [activeCategoryTab, setActiveCategoryTab] = useState<HomeCategoryTab>('hotels');
 
   const enterSearchMode = useCallback((params: HomeSearchSubmit) => {
     setSearchParams(params);
@@ -40,11 +44,13 @@ export function HomeSearchProvider({ children }: { children: React.ReactNode }) 
     () => ({
       searchMode,
       searchParams,
+      activeCategoryTab,
+      setActiveCategoryTab,
       enterSearchMode,
       exitSearchMode,
       updateSearchLocation,
     }),
-    [searchMode, searchParams, enterSearchMode, exitSearchMode, updateSearchLocation],
+    [searchMode, searchParams, activeCategoryTab, enterSearchMode, exitSearchMode, updateSearchLocation],
   );
 
   return <HomeSearchContext.Provider value={value}>{children}</HomeSearchContext.Provider>;

@@ -17,6 +17,7 @@ import { HomeHeroSection } from '@/src/components/home/HomeHeroSection';
 import { HomeSearchProvider, useHomeSearch } from '@/src/components/home/HomeSearchContext';
 import { HomeSearchResults } from '@/src/components/home/HomeSearchResults';
 import { SearchModeHeader } from '@/src/components/home/SearchModeHeader';
+import { MOCK_PACKAGE_LISTINGS } from '@/src/constants/homePackageConfig';
 
 function filterListingsByLocation(listings: Listing[], query: string) {
   const q = query.trim().toLowerCase();
@@ -31,7 +32,8 @@ function filterListingsByLocation(listings: Listing[], query: string) {
 
 function MobileHotelsHomeContent() {
   const scrollRef = useRef<ScrollView>(null);
-  const { searchMode, searchParams } = useHomeSearch();
+  const { searchMode, searchParams, activeCategoryTab } = useHomeSearch();
+  const isPackages = activeCategoryTab === 'packages';
 
   const { data: listingsRes } = useListings({ page: 1, limit: 20 });
   const { data: economicRes } = useListings({ max_price: 2499, page: 1, limit: 20 });
@@ -43,29 +45,45 @@ function MobileHotelsHomeContent() {
     searchMode && Boolean(locationQuery),
   );
 
-  const listings = (listingsRes?.data ?? []).filter(
-    (l) => (l.category?.type ?? null) !== 'package',
-  );
+  const allListings = listingsRes?.data ?? [];
+  const hotelListings = allListings.filter((l) => (l.category?.type ?? null) !== 'package');
+  const apiPackageListings = allListings.filter((l) => l.category?.type === 'package');
+  const packageListings = apiPackageListings.length ? apiPackageListings : MOCK_PACKAGE_LISTINGS;
+
   const economicListings = (economicRes?.data ?? []).filter(
     (l) => (l.category?.type ?? null) !== 'package',
   );
+  const economicPackages = (economicRes?.data ?? []).filter((l) => l.category?.type === 'package');
+  const budgetPackages = economicPackages.length
+    ? economicPackages
+    : MOCK_PACKAGE_LISTINGS.slice(0, 2);
+
   const nearYouListings = (nearYouRes?.data ?? []).filter(
     (l) => (l.category?.type ?? null) !== 'package',
   );
+  const nearYouPackages = (nearYouRes?.data ?? []).filter((l) => l.category?.type === 'package');
+  const packageDestinations = nearYouPackages.length ? nearYouPackages : packageListings;
 
   const searchListings = useMemo(() => {
     const isPackageSearch = searchParams?.tab === 'packages';
     const apiResults = searchRes?.data ?? [];
-    const pool = apiResults.length ? apiResults : listings;
+    const pool = apiResults.length ? apiResults : isPackageSearch ? packageListings : hotelListings;
     const typed = pool.filter((l) =>
       isPackageSearch ? l.category?.type === 'package' : (l.category?.type ?? null) !== 'package',
     );
     const filtered = filterListingsByLocation(typed, locationQuery);
-    return filtered.length ? filtered : filterListingsByLocation(typed, '');
-  }, [searchRes?.data, listings, locationQuery, searchParams?.tab]);
+    if (filtered.length) return filtered;
+    if (isPackageSearch) return filterListingsByLocation(packageListings, '');
+    return filterListingsByLocation(typed, '');
+  }, [searchRes?.data, hotelListings, packageListings, locationQuery, searchParams?.tab]);
 
-  const suggested = listings.slice(0, 8);
-  const destinations = nearYouListings.length ? nearYouListings : listings;
+  const suggested = isPackages ? packageListings.slice(0, 8) : hotelListings.slice(0, 8);
+  const destinations = isPackages
+    ? packageDestinations
+    : nearYouListings.length
+      ? nearYouListings
+      : hotelListings;
+  const budgetItems = isPackages ? budgetPackages : economicListings;
 
   useEffect(() => {
     if (searchMode) {
@@ -74,16 +92,19 @@ function MobileHotelsHomeContent() {
   }, [searchMode, locationQuery]);
 
   const goToListing = (listing: Listing) => {
+    const isPackageListing = listing.category?.type === 'package';
     router.push({
-      pathname: '/resort/[id]',
-      params: {
-        id: listing.id,
-        title: listing.title,
-        price: listing.price_start
-          ? `₹${Number(listing.price_start).toLocaleString('en-IN')}`
-          : '',
-        rating: '4.5',
-      },
+      pathname: isPackageListing ? '/packages' : '/resort/[id]',
+      params: isPackageListing
+        ? undefined
+        : {
+            id: listing.id,
+            title: listing.title,
+            price: listing.price_start
+              ? `₹${Number(listing.price_start).toLocaleString('en-IN')}`
+              : '',
+            rating: '4.5',
+          },
     });
   };
 
@@ -101,19 +122,35 @@ function MobileHotelsHomeContent() {
             <SearchModeHeader />
             <HomeSearchResults
               listings={searchListings}
-              locationLabel={locationQuery || 'Varkala'}
+              locationLabel={locationQuery || (isPackages ? 'Singapore' : 'Varkala')}
               loading={searchLoading}
+              variant={searchParams?.tab === 'packages' ? 'packages' : 'hotels'}
               onListingPress={goToListing}
             />
           </>
         ) : (
           <>
             <HomeHeroSection />
-            <HomePromoCarousel />
-            <HomeMoodGrid onMoodPress={() => router.push('/resorts')} />
-            <HomeSuggestedSection listings={suggested} onListingPress={goToListing} />
-            <HomeDestinationsSection listings={destinations} onListingPress={goToListing} />
-            <HomeBudgetGrid listings={economicListings} onListingPress={goToListing} />
+            <HomePromoCarousel variant={isPackages ? 'packages' : 'hotels'} />
+            <HomeMoodGrid
+              variant={isPackages ? 'packages' : 'hotels'}
+              onMoodPress={() => (isPackages ? router.push('/packages') : router.push('/resorts'))}
+            />
+            <HomeSuggestedSection
+              listings={suggested}
+              variant={isPackages ? 'packages' : 'hotels'}
+              onListingPress={goToListing}
+            />
+            <HomeDestinationsSection
+              listings={destinations}
+              variant={isPackages ? 'packages' : 'hotels'}
+              onListingPress={goToListing}
+            />
+            <HomeBudgetGrid
+              listings={budgetItems}
+              variant={isPackages ? 'packages' : 'hotels'}
+              onListingPress={goToListing}
+            />
           </>
         )}
         <View style={styles.bottomSpacer} />

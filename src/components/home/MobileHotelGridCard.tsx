@@ -11,23 +11,28 @@ import { GlassSurface } from '@/src/components/home/GlassSurface';
 import { PillButton } from '@/src/components/home/PillButton';
 import { useHomeScale } from '@/src/components/home/useHomeScale';
 
+import { PACKAGE_HERO_BACKGROUND } from '@/src/constants/placeholderImages';
+
 export function MobileHotelGridCard({
   listing,
   width,
   locationLabel = 'Varkala',
+  priceSuffix = '/night',
   onPress,
 }: {
   listing: Listing;
   width: number;
   locationLabel?: string;
+  priceSuffix?: string;
   onPress: () => void;
 }) {
   const { s } = useHomeScale();
   const img = getPrimaryImage(listing.media);
+  const isPackage = listing.category?.type === 'package';
   const price =
     listing.price_start != null
-      ? `₹ ${Number(listing.price_start).toLocaleString('en-IN')}/night`
-      : '₹ 1199/night';
+      ? `₹ ${Number(listing.price_start).toLocaleString('en-IN')}${priceSuffix}`
+      : `₹ 1199${priceSuffix}`;
 
   return (
     <Pressable
@@ -46,9 +51,7 @@ export function MobileHotelGridCard({
         {img ? (
           <Image source={{ uri: img }} style={styles.image} resizeMode="cover" />
         ) : (
-          <View style={styles.imagePlaceholder}>
-            <Ionicons name="image-outline" size={22} color={colors.text.caption} />
-          </View>
+          <Image source={PACKAGE_HERO_BACKGROUND} style={styles.image} resizeMode="cover" />
         )}
 
         <View style={[styles.heartBtn, { width: s(33), height: s(33), borderRadius: s(12) }]}>
@@ -68,8 +71,14 @@ export function MobileHotelGridCard({
             },
           ]}
         >
-          <Ionicons name="heart-outline" size={s(10)} color="#FFFFFF" />
-          <Text style={[styles.coupleBadgeText, { fontSize: s(9) }]}>COUPLE FRIENDLY</Text>
+          <Ionicons
+            name={isPackage ? 'airplane-outline' : 'heart-outline'}
+            size={s(10)}
+            color="#FFFFFF"
+          />
+          <Text style={[styles.coupleBadgeText, { fontSize: s(9) }]}>
+            {isPackage ? 'TRAVEL PACKAGE' : 'COUPLE FRIENDLY'}
+          </Text>
         </GlassSurface>
       </View>
 
@@ -89,7 +98,7 @@ export function MobileHotelGridCard({
           </View>
           <Text style={[styles.price, { fontSize: s(14), lineHeight: s(16) }]}>{price}</Text>
         </View>
-        <PillButton label="Book Now" onPress={onPress} fontSize={s(10)} height={s(34)} />
+        <PillButton label={isPackage ? 'View Package' : 'Book Now'} onPress={onPress} fontSize={s(10)} height={s(34)} />
       </View>
     </Pressable>
   );
