@@ -21,12 +21,15 @@ import HeartIcon from '@/assets/images/heart.svg';
 import HdrIcon from '@/assets/images/image-filter-hdr.svg';
 import WavesIcon from '@/assets/images/waves.svg';
 import { PACKAGE_DESTINATIONS, PACKAGE_MOODS } from '@/src/constants/homePackageConfig';
-import { PACKAGE_HERO_BACKGROUND } from '@/src/constants/placeholderImages';
+import { GLAMPING_DESTINATIONS, GLAMPING_MOODS } from '@/src/constants/homeGlampingConfig';
+import { GLAMPING_HERO_BACKGROUND, PACKAGE_HERO_BACKGROUND } from '@/src/constants/placeholderImages';
 import { GlassSurface } from '@/src/components/home/GlassSurface';
 import { PillButton } from '@/src/components/home/PillButton';
 import { useHomeScale } from '@/src/components/home/useHomeScale';
 
 const OfferBg = require('../../../assets/images/home-figma/hero-bg.png');
+
+export type HomeListingVariant = 'hotels' | 'packages' | 'glamping';
 
 const MOODS = [
   { id: 'budget', label: 'Budget', Icon: CashMultipleIcon },
@@ -55,13 +58,72 @@ export function HomeMoodGrid({
   variant = 'hotels',
 }: {
   onMoodPress?: (id: string) => void;
-  variant?: 'hotels' | 'packages';
+  variant?: HomeListingVariant;
 }) {
   const { s } = useHomeScale();
   const [selected, setSelected] = useState('budget');
   const isPackages = variant === 'packages';
+  const isGlamping = variant === 'glamping';
 
   const moodById = Object.fromEntries(MOODS.map((m) => [m.id, m]));
+
+  if (isGlamping) {
+    return (
+      <View style={[styles.section, { marginTop: s(16), gap: s(16), paddingHorizontal: s(16) }]}>
+        <View style={{ gap: s(4), alignItems: 'center' }}>
+          <Text style={[styles.sectionTitleCenter, { fontSize: s(16) }]}>
+            Explore Camps That Match Your Mood
+          </Text>
+          <Text style={[styles.sectionSubtitle, { fontSize: s(12) }]}>
+            Curated Glamping Experiences
+          </Text>
+        </View>
+
+        <View style={[styles.moodRow, { gap: s(8), justifyContent: 'center' }]}>
+          {GLAMPING_MOODS.map((mood) => {
+            const isSelected = selected === mood.id;
+            return (
+              <Pressable
+                key={mood.id}
+                style={[
+                  styles.moodPill,
+                  {
+                    paddingVertical: s(8),
+                    paddingHorizontal: s(14),
+                    gap: s(8),
+                    height: s(34),
+                    backgroundColor: isSelected ? colors.accent.main : 'transparent',
+                    borderColor: colors.accent.main,
+                  },
+                ]}
+                onPress={() => {
+                  setSelected(mood.id);
+                  onMoodPress?.(mood.id);
+                }}
+              >
+                <Ionicons
+                  name={mood.icon}
+                  size={s(20)}
+                  color={isSelected ? '#FCFCFC' : colors.accent.main}
+                />
+                <Text
+                  style={[
+                    styles.moodPillLabel,
+                    {
+                      fontSize: s(12),
+                      color: isSelected ? '#FCFCFC' : colors.accent.main,
+                    },
+                  ]}
+                >
+                  {mood.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      </View>
+    );
+  }
 
   if (isPackages) {
     return (
@@ -195,10 +257,11 @@ export function HomeMoodGrid({
   );
 }
 
-export function HomePromoCarousel({ variant = 'hotels' }: { variant?: 'hotels' | 'packages' }) {
+export function HomePromoCarousel({ variant = 'hotels' }: { variant?: HomeListingVariant }) {
   const { s } = useHomeScale();
   const cardW = s(272);
   const isPackages = variant === 'packages';
+  const isGlamping = variant === 'glamping';
 
   return (
     <View style={[styles.section, { marginTop: s(16), paddingBottom: s(12) }]}>
@@ -234,7 +297,9 @@ export function HomePromoCarousel({ variant = 'hotels' }: { variant?: 'hotels' |
               <Text style={[styles.offerEyebrow, { fontSize: s(14), lineHeight: s(19) }]}>
                 {isPackages
                   ? 'Grab upto Enjoy Up to 50% OFF*\non Package Bookings'
-                  : 'Grab upto Enjoy Up to 60% OFF*\non Hotel Bookings'}
+                  : isGlamping
+                    ? 'Grab upto Enjoy Up to 50% OFF*\non Glamping Bookings'
+                    : 'Grab upto Enjoy Up to 60% OFF*\non Hotel Bookings'}
               </Text>
               <Text style={[styles.offerAmount, { fontSize: s(24), lineHeight: s(28) }]}>
                 ₹ 1500/- off
@@ -297,18 +362,23 @@ export function HomeSuggestedSection({
 }: {
   listings: Listing[];
   onListingPress: (listing: Listing) => void;
-  variant?: 'hotels' | 'packages';
+  variant?: HomeListingVariant;
 }) {
   const { s } = useHomeScale();
   const cardW = s(271);
   const isPackages = variant === 'packages';
+  const isGlamping = variant === 'glamping';
 
   if (!listings.length) return null;
 
   return (
     <View style={[styles.section, { marginTop: s(24), paddingVertical: s(24), gap: s(36) }]}>
       <Text style={[styles.sectionTitleCenter, { fontSize: s(16), paddingHorizontal: s(16) }]}>
-        {isPackages ? 'Suggested packages for you' : 'Suggested for you'}
+        {isPackages
+          ? 'Suggested packages for you'
+          : isGlamping
+            ? 'Suggested glamping for you'
+            : 'Suggested for you'}
       </Text>
 
       <View>
@@ -367,16 +437,18 @@ function SuggestedCard({
   listing: Listing;
   width: number;
   onPress: () => void;
-  variant?: 'hotels' | 'packages';
+  variant?: HomeListingVariant;
 }) {
   const { s } = useHomeScale();
   const img = getPrimaryImage(listing.media);
   const isPackages = variant === 'packages';
+  const isGlamping = variant === 'glamping';
+  const priceSuffix = isPackages ? '/person' : isGlamping ? '/night' : '/night';
   const price =
     listing.price_start != null
-      ? `₹${Number(listing.price_start).toLocaleString('en-IN')}${isPackages ? '/person' : '/night'}`
-      : isPackages ? '₹24999/person' : '₹1199/night';
-  const location = listing.location ?? (isPackages ? 'Singapore' : 'Varkala');
+      ? `₹${Number(listing.price_start).toLocaleString('en-IN')}${priceSuffix}`
+      : isPackages ? '₹24999/person' : isGlamping ? '₹8999/night' : '₹1199/night';
+  const location = listing.location ?? (isPackages ? 'Singapore' : isGlamping ? 'Wayanad' : 'Varkala');
 
   return (
     <Pressable
@@ -395,7 +467,11 @@ function SuggestedCard({
         {img ? (
           <Image source={{ uri: img }} style={styles.suggestedImage} resizeMode="cover" />
         ) : (
-          <Image source={PACKAGE_HERO_BACKGROUND} style={styles.suggestedImage} resizeMode="cover" />
+          <Image
+            source={isGlamping ? GLAMPING_HERO_BACKGROUND : PACKAGE_HERO_BACKGROUND}
+            style={styles.suggestedImage}
+            resizeMode="cover"
+          />
         )}
 
         <View style={[styles.heartBtn, { width: s(33), height: s(33), borderRadius: s(6) }]}>
@@ -455,7 +531,7 @@ function SuggestedCard({
         <View style={styles.priceBookRow}>
           <Text style={[styles.suggestedPrice, { fontSize: s(16), lineHeight: s(16) }]}>{price}</Text>
           <PillButton
-            label={isPackages ? 'View Package' : 'Book Now'}
+            label={isPackages ? 'View Package' : isGlamping ? 'Book Camp' : 'Book Now'}
             onPress={onPress}
             fontSize={s(12)}
             height={s(34)}
@@ -473,12 +549,17 @@ export function HomeDestinationsSection({
 }: {
   listings: Listing[];
   onListingPress: (listing: Listing) => void;
-  variant?: 'hotels' | 'packages';
+  variant?: HomeListingVariant;
 }) {
   const { s } = useHomeScale();
   const cardW = s(293);
   const isPackages = variant === 'packages';
-  const destinationList = isPackages ? PACKAGE_DESTINATIONS : DESTINATIONS;
+  const isGlamping = variant === 'glamping';
+  const destinationList = isPackages
+    ? PACKAGE_DESTINATIONS
+    : isGlamping
+      ? GLAMPING_DESTINATIONS
+      : DESTINATIONS;
 
   const items = destinationList.map((dest, i) => ({
     ...dest,
@@ -498,7 +579,11 @@ export function HomeDestinationsSection({
       ]}
     >
       <Text style={[styles.sectionTitleCenter, { fontSize: s(16) }]}>
-        {isPackages ? 'Book Packages at Popular Destinations' : 'Book Hotels at Popular Destinations'}
+        {isPackages
+          ? 'Book Packages at Popular Destinations'
+          : isGlamping
+            ? 'Book Glamping at Popular Destinations'
+            : 'Book Hotels at Popular Destinations'}
       </Text>
 
       <ScrollView
@@ -526,7 +611,11 @@ export function HomeDestinationsSection({
                 {img ? (
                   <Image source={{ uri: img }} style={styles.destImage} resizeMode="cover" />
                 ) : (
-                  <Image source={PACKAGE_HERO_BACKGROUND} style={styles.destImage} resizeMode="cover" />
+                  <Image
+                    source={isGlamping ? GLAMPING_HERO_BACKGROUND : PACKAGE_HERO_BACKGROUND}
+                    style={styles.destImage}
+                    resizeMode="cover"
+                  />
                 )}
               </View>
               <View style={{ flex: 1, gap: s(12), paddingVertical: s(3) }}>
@@ -569,12 +658,13 @@ export function HomeBudgetGrid({
 }: {
   listings: Listing[];
   onListingPress: (listing: Listing) => void;
-  variant?: 'hotels' | 'packages';
+  variant?: HomeListingVariant;
 }) {
   const { s } = useHomeScale();
   const gap = s(12);
   const cardW = (s(367) - gap) / 2;
   const isPackages = variant === 'packages';
+  const isGlamping = variant === 'glamping';
 
   if (!listings.length) return null;
 
@@ -586,7 +676,7 @@ export function HomeBudgetGrid({
   return (
     <View style={[styles.section, { marginTop: s(8), paddingHorizontal: s(16), gap: s(18) }]}>
       <Text style={[styles.sectionTitleCenter, { fontSize: s(16) }]}>
-        {isPackages ? 'More budget packages' : 'More budget options'}
+        {isPackages ? 'More budget packages' : isGlamping ? 'More budget camps' : 'More budget options'}
       </Text>
       {rows.map((row) => (
         <View key={row.map((l) => l.id).join('-')} style={[styles.budgetRow, { gap }]}>
@@ -624,15 +714,16 @@ function BudgetCard({
   listing: Listing;
   width: number;
   onPress: () => void;
-  variant?: 'hotels' | 'packages';
+  variant?: HomeListingVariant;
 }) {
   const { s } = useHomeScale();
   const img = getPrimaryImage(listing.media);
   const isPackages = variant === 'packages';
+  const isGlamping = variant === 'glamping';
   const price =
     listing.price_start != null
       ? `₹ ${Number(listing.price_start).toLocaleString('en-IN')}${isPackages ? '/person' : '/night'}`
-      : isPackages ? '₹ 24999/person' : '₹ 1199/night';
+      : isPackages ? '₹ 24999/person' : isGlamping ? '₹ 8999/night' : '₹ 1199/night';
 
   return (
     <Pressable
@@ -651,7 +742,11 @@ function BudgetCard({
         {img ? (
           <Image source={{ uri: img }} style={styles.budgetImage} resizeMode="cover" />
         ) : (
-          <Image source={PACKAGE_HERO_BACKGROUND} style={styles.budgetImage} resizeMode="cover" />
+          <Image
+            source={isGlamping ? GLAMPING_HERO_BACKGROUND : PACKAGE_HERO_BACKGROUND}
+            style={styles.budgetImage}
+            resizeMode="cover"
+          />
         )}
         <View style={[styles.heartBtn, { width: s(33), height: s(33), borderRadius: s(12) }]}>
           <HeartIcon width={s(14)} height={s(14)} />
@@ -695,7 +790,7 @@ function BudgetCard({
               style={[styles.breadcrumb, { fontSize: s(9) }]}
               numberOfLines={1}
             >
-              {listing.location ? `${listing.location}` : isPackages ? 'Singapore' : 'Kerala > Varkala'}
+              {listing.location ? `${listing.location}` : isPackages ? 'Singapore' : isGlamping ? 'Wayanad' : 'Kerala > Varkala'}
             </Text>
             <View style={styles.ratingRow}>
               <Ionicons name="star" size={s(12)} color={colors.accent.main} />
@@ -705,7 +800,7 @@ function BudgetCard({
           <Text style={[styles.suggestedPrice, { fontSize: s(14) }]}>{price}</Text>
         </View>
         <PillButton
-          label={isPackages ? 'View Package' : 'Book Now'}
+          label={isPackages ? 'View Package' : isGlamping ? 'Book Camp' : 'Book Now'}
           onPress={onPress}
           fontSize={s(10)}
           height={s(34)}

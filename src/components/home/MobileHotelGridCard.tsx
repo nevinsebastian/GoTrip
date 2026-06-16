@@ -11,7 +11,11 @@ import { GlassSurface } from '@/src/components/home/GlassSurface';
 import { PillButton } from '@/src/components/home/PillButton';
 import { useHomeScale } from '@/src/components/home/useHomeScale';
 
-import { PACKAGE_HERO_BACKGROUND } from '@/src/constants/placeholderImages';
+import {
+  GLAMPING_HERO_BACKGROUND,
+  PACKAGE_HERO_BACKGROUND,
+  RESORT_PLACEHOLDER_IMAGE,
+} from '@/src/constants/placeholderImages';
 
 export function MobileHotelGridCard({
   listing,
@@ -29,6 +33,12 @@ export function MobileHotelGridCard({
   const { s } = useHomeScale();
   const img = getPrimaryImage(listing.media);
   const isPackage = listing.category?.type === 'package';
+  const isGlamping = listing.category?.type === 'camping';
+  const placeholderImage = isGlamping
+    ? GLAMPING_HERO_BACKGROUND
+    : isPackage
+      ? PACKAGE_HERO_BACKGROUND
+      : RESORT_PLACEHOLDER_IMAGE;
   const price =
     listing.price_start != null
       ? `₹ ${Number(listing.price_start).toLocaleString('en-IN')}${priceSuffix}`
@@ -51,7 +61,7 @@ export function MobileHotelGridCard({
         {img ? (
           <Image source={{ uri: img }} style={styles.image} resizeMode="cover" />
         ) : (
-          <Image source={PACKAGE_HERO_BACKGROUND} style={styles.image} resizeMode="cover" />
+          <Image source={placeholderImage} style={styles.image} resizeMode="cover" />
         )}
 
         <View style={[styles.heartBtn, { width: s(33), height: s(33), borderRadius: s(12) }]}>
@@ -74,13 +84,13 @@ export function MobileHotelGridCard({
           ]}
         >
           <Ionicons
-            name={isPackage ? 'airplane-outline' : 'heart-outline'}
+            name={isPackage ? 'airplane-outline' : isGlamping ? 'leaf-outline' : 'heart-outline'}
             size={s(10)}
             color="#FFFFFF"
             style={styles.badgeIcon}
           />
           <Text style={[styles.coupleBadgeText, { fontSize: s(9) }]} numberOfLines={1}>
-            {isPackage ? 'TRAVEL PACKAGE' : 'COUPLE FRIENDLY'}
+            {isPackage ? 'TRAVEL PACKAGE' : isGlamping ? 'GLAMPING' : 'COUPLE FRIENDLY'}
           </Text>
         </GlassSurface>
       </View>
@@ -104,7 +114,12 @@ export function MobileHotelGridCard({
           </View>
           <Text style={[styles.price, { fontSize: s(14), lineHeight: s(16) }]}>{price}</Text>
         </View>
-        <PillButton label={isPackage ? 'View Package' : 'Book Now'} onPress={onPress} fontSize={s(10)} height={s(34)} />
+        <PillButton
+          label={isPackage ? 'View Package' : isGlamping ? 'Book Camp' : 'Book Now'}
+          onPress={onPress}
+          fontSize={s(10)}
+          height={s(34)}
+        />
       </View>
     </Pressable>
   );

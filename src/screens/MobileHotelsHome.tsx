@@ -18,6 +18,7 @@ import { HomeSearchProvider, useHomeSearch } from '@/src/components/home/HomeSea
 import { HomeSearchResults } from '@/src/components/home/HomeSearchResults';
 import { SearchModeHeader } from '@/src/components/home/SearchModeHeader';
 import { MOCK_PACKAGE_LISTINGS } from '@/src/constants/homePackageConfig';
+import { MOCK_GLAMPING_LISTINGS } from '@/src/constants/homeGlampingConfig';
 
 function filterListingsByLocation(listings: Listing[], query: string) {
   const q = query.trim().toLowerCase();
@@ -34,6 +35,7 @@ function MobileHotelsHomeContent() {
   const scrollRef = useRef<ScrollView>(null);
   const { searchMode, searchParams, activeCategoryTab } = useHomeSearch();
   const isPackages = activeCategoryTab === 'packages';
+  const isGlamping = activeCategoryTab === 'glamping';
 
   const { data: listingsRes } = useListings({ page: 1, limit: 20 });
   const { data: economicRes } = useListings({ max_price: 2499, page: 1, limit: 20 });
@@ -46,9 +48,13 @@ function MobileHotelsHomeContent() {
   );
 
   const allListings = listingsRes?.data ?? [];
-  const hotelListings = allListings.filter((l) => (l.category?.type ?? null) !== 'package');
+  const hotelListings = allListings.filter(
+    (l) => (l.category?.type ?? null) !== 'package' && (l.category?.type ?? null) !== 'camping',
+  );
   const apiPackageListings = allListings.filter((l) => l.category?.type === 'package');
   const packageListings = apiPackageListings.length ? apiPackageListings : MOCK_PACKAGE_LISTINGS;
+  const apiGlampingListings = allListings.filter((l) => l.category?.type === 'camping');
+  const glampingListings = apiGlampingListings.length ? apiGlampingListings : MOCK_GLAMPING_LISTINGS;
 
   const economicListings = (economicRes?.data ?? []).filter(
     (l) => (l.category?.type ?? null) !== 'package',
@@ -66,24 +72,41 @@ function MobileHotelsHomeContent() {
 
   const searchListings = useMemo(() => {
     const isPackageSearch = searchParams?.tab === 'packages';
+    const isGlampingSearch = searchParams?.tab === 'glamping';
     const apiResults = searchRes?.data ?? [];
-    const pool = apiResults.length ? apiResults : isPackageSearch ? packageListings : hotelListings;
-    const typed = pool.filter((l) =>
-      isPackageSearch ? l.category?.type === 'package' : (l.category?.type ?? null) !== 'package',
-    );
+    const pool = apiResults.length
+      ? apiResults
+      : isPackageSearch
+        ? packageListings
+        : isGlampingSearch
+          ? glampingListings
+          : hotelListings;
+    const typed = pool.filter((l) => {
+      if (isPackageSearch) return l.category?.type === 'package';
+      if (isGlampingSearch) return l.category?.type === 'camping';
+      return (l.category?.type ?? null) !== 'package' && (l.category?.type ?? null) !== 'camping';
+    });
     const filtered = filterListingsByLocation(typed, locationQuery);
     if (filtered.length) return filtered;
     if (isPackageSearch) return filterListingsByLocation(packageListings, '');
+    if (isGlampingSearch) return filterListingsByLocation(glampingListings, '');
     return filterListingsByLocation(typed, '');
-  }, [searchRes?.data, hotelListings, packageListings, locationQuery, searchParams?.tab]);
+  }, [searchRes?.data, hotelListings, packageListings, glampingListings, locationQuery, searchParams?.tab]);
 
-  const suggested = isPackages ? packageListings.slice(0, 8) : hotelListings.slice(0, 8);
+  const listingVariant = isPackages ? 'packages' : isGlamping ? 'glamping' : 'hotels';
+  const suggested = isPackages
+    ? packageListings.slice(0, 8)
+    : isGlamping
+      ? glampingListings.slice(0, 8)
+      : hotelListings.slice(0, 8);
   const destinations = isPackages
     ? packageDestinations
-    : nearYouListings.length
-      ? nearYouListings
-      : hotelListings;
-  const budgetItems = isPackages ? budgetPackages : economicListings;
+    : isGlamping
+      ? glampingListings
+      : nearYouListings.length
+        ? nearYouListings
+        : hotelListings;
+  const budgetItems = isPackages ? budgetPackages : isGlamping ? glampingListings.slice(0, 2) : economicListings;
 
   useEffect(() => {
     if (searchMode) {
@@ -120,33 +143,40 @@ function MobileHotelsHomeContent() {
             <SearchModeHeader />
             <HomeSearchResults
               listings={searchListings}
-              locationLabel={locationQuery || (isPackages ? 'Singapore' : 'Varkala')}
+              locationLabel={
+                locationQuery ||
+                (isPackages ? 'Singapore' : isGlamping ? 'Wildlife safari camps' : 'Varkala')
+              }
               loading={searchLoading}
-              variant={searchParams?.tab === 'packages' ? 'packages' : 'hotels'}
+              variant={listingVariant}
               onListingPress={goToListing}
             />
           </>
         ) : (
           <>
             <HomeHeroSection />
-            <HomePromoCarousel variant={isPackages ? 'packages' : 'hotels'} />
+            <HomePromoCarousel variant={listingVariant} />
             <HomeMoodGrid
-              variant={isPackages ? 'packages' : 'hotels'}
-              onMoodPress={() => (isPackages ? router.push('/packages') : router.push('/resorts'))}
+              variant={listingVariant}
+              onMoodPress={() => {
+                if (isPackages) router.push('/packages');
+                else if (isGlamping) router.push('/resorts');
+                else router.push('/resorts');
+              }}
             />
             <HomeSuggestedSection
               listings={suggested}
-              variant={isPackages ? 'packages' : 'hotels'}
+              variant={listingVariant}
               onListingPress={goToListing}
             />
             <HomeDestinationsSection
               listings={destinations}
-              variant={isPackages ? 'packages' : 'hotels'}
+              variant={listingVariant}
               onListingPress={goToListing}
             />
             <HomeBudgetGrid
               listings={budgetItems}
-              variant={isPackages ? 'packages' : 'hotels'}
+              variant={listingVariant}
               onListingPress={goToListing}
             />
           </>

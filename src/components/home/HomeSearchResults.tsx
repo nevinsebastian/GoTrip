@@ -19,12 +19,13 @@ export function HomeSearchResults({
   locationLabel: string;
   loading?: boolean;
   onListingPress: (listing: Listing) => void;
-  variant?: 'hotels' | 'packages';
+  variant?: 'hotels' | 'packages' | 'glamping';
 }) {
   const { s } = useHomeScale();
   const gap = s(12);
   const cardW = (s(367) - gap) / 2;
   const isPackages = variant === 'packages';
+  const isGlamping = variant === 'glamping';
 
   const rows: Listing[][] = [];
   for (let i = 0; i < listings.length; i += 2) {
@@ -36,10 +37,18 @@ export function HomeSearchResults({
       <View style={styles.headerRow}>
         <View style={{ flex: 1, gap: s(4) }}>
           <Text style={[styles.title, { fontSize: s(16), lineHeight: s(24) }]}>
-            {isPackages ? 'Packages That Match Your Mood' : 'Stays That Match Your Mood'}
+            {isPackages
+              ? 'Packages That Match Your Mood'
+              : isGlamping
+                ? 'Camps That Match Your Mood'
+                : 'Stays That Match Your Mood'}
           </Text>
           <Text style={[styles.subtitle, { fontSize: s(12), lineHeight: s(16) }]}>
-            {isPackages ? 'Curated Travel Packages' : 'Curated Travel Experiences'}
+            {isPackages
+              ? 'Curated Travel Packages'
+              : isGlamping
+                ? 'Curated Glamping Experiences'
+                : 'Curated Travel Experiences'}
           </Text>
         </View>
         <Pressable
@@ -74,7 +83,7 @@ export function HomeSearchResults({
         </View>
       ) : (
         <Text style={[styles.emptyText, { fontSize: s(14) }]}>
-          No {isPackages ? 'packages' : 'stays'} found for &quot;{locationLabel}&quot;. Try another location.
+          No {isPackages ? 'packages' : isGlamping ? 'camps' : 'stays'} found for &quot;{locationLabel}&quot;. Try another location.
         </Text>
       )}
 

@@ -17,6 +17,7 @@ import TabGlampingIcon from '@/assets/images/home-figma/tab-glamping.svg';
 import TabHotelsIcon from '@/assets/images/home-figma/tab-hotels.svg';
 import TabPackagesIcon from '@/assets/images/home-figma/tab-packages.svg';
 import { GlassSurface } from '@/src/components/home/GlassSurface';
+import { HomeGlampingSearchCard } from '@/src/components/home/HomeGlampingSearchCard';
 import { HomePackageSearchCard } from '@/src/components/home/HomePackageSearchCard';
 import { HomeSearchCard } from '@/src/components/home/HomeSearchCard';
 import { useHomeSearch } from '@/src/components/home/HomeSearchContext';
@@ -24,7 +25,10 @@ import type { HomeCategoryTab } from '@/src/components/home/homeSearchConfig';
 import { PillButton } from '@/src/components/home/PillButton';
 import { useHomeScale } from '@/src/components/home/useHomeScale';
 import { PACKAGE_HERO } from '@/src/constants/homePackageConfig';
+import { GLAMPING_HERO } from '@/src/constants/homeGlampingConfig';
 import {
+  GLAMPING_HERO_BACKGROUND,
+  GLAMPING_OFFER_IMAGE,
   PACKAGE_HERO_BACKGROUND,
   PACKAGE_OFFER_IMAGE,
 } from '@/src/constants/placeholderImages';
@@ -60,11 +64,12 @@ const HERO_BY_TAB = {
     promoImage: PACKAGE_OFFER_IMAGE,
   },
   glamping: {
-    background: HotelsHeroBg,
-    tagline: 'Sleep Under the Stars in Style',
-    promoTitle: 'Glamping Escapes at Great Prices',
-    promoSubtitle: 'Where Nature Meets Comfort',
-    promoImage: HotelsPromoDiscount,
+    background: GLAMPING_HERO_BACKGROUND,
+    tagline: GLAMPING_HERO.tagline,
+    taglineSub: GLAMPING_HERO.taglineSub,
+    promoTitle: GLAMPING_HERO.promoTitle,
+    promoSubtitle: GLAMPING_HERO.promoSubtitle,
+    promoImage: GLAMPING_OFFER_IMAGE,
   },
   activities: {
     background: HotelsHeroBg,
@@ -132,7 +137,12 @@ export function HomeHeroSection() {
         resizeMode="cover"
       >
         <View style={[styles.heroBottom, { gap: s(16), width: '100%', paddingTop: s(layout.imageTopSpace) }]}>
-          <Text style={[styles.tagline, { fontSize: s(16), lineHeight: s(28) }]}>{hero.tagline}</Text>
+          <View style={{ gap: s(4) }}>
+            <Text style={[styles.tagline, { fontSize: s(16), lineHeight: s(28) }]}>{hero.tagline}</Text>
+            {'taglineSub' in hero && hero.taglineSub ? (
+              <Text style={[styles.tagline, { fontSize: s(16), lineHeight: s(28) }]}>{hero.taglineSub}</Text>
+            ) : null}
+          </View>
 
           <GlassSurface borderRadius={s(12)} style={{ padding: s(10) }}>
             <View style={styles.glassPromoRow}>
@@ -221,6 +231,8 @@ export function HomeHeroSection() {
 
           {activeCategoryTab === 'packages' ? (
             <HomePackageSearchCard />
+          ) : activeCategoryTab === 'glamping' ? (
+            <HomeGlampingSearchCard />
           ) : (
             <HomeSearchCard activeTab={activeCategoryTab} />
           )}

@@ -48,8 +48,8 @@ export const HOME_SEARCH_BY_TAB: Record<HomeCategoryTab, HomeSearchConfig> = {
     searchRoute: '/packages',
   },
   glamping: {
-    locationLabel: 'Glamping Location',
-    defaultLocation: 'Wayanad',
+    locationLabel: 'Find Your Dream Campfire',
+    defaultLocation: 'Wildlife safari camps',
     defaultCheckIn: '2026-04-03',
     defaultCheckOut: '2026-04-05',
     guestsLabel: 'Guests and Tents',
