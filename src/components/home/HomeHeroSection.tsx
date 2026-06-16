@@ -10,8 +10,6 @@ import {
   View,
 } from 'react-native';
 
-import BellLoginIcon from '@/assets/images/login-figma/bell-login.svg';
-import MenuLoginIcon from '@/assets/images/login-figma/menu-login.svg';
 import TabActivitiesIcon from '@/assets/images/home-figma/tab-activities.svg';
 import TabGlampingIcon from '@/assets/images/home-figma/tab-glamping.svg';
 import TabHotelsIcon from '@/assets/images/home-figma/tab-hotels.svg';
@@ -33,7 +31,6 @@ import {
   PACKAGE_OFFER_IMAGE,
 } from '@/src/constants/placeholderImages';
 
-const HeaderLogo = require('../../../assets/images/login-figma/logo-header.png');
 const HotelsHeroBg = require('../../../assets/images/backgroundimagehomehotels.jpg');
 const HotelsPromoDiscount = require('../../../assets/images/home-figma/promo-discount.png');
 
@@ -118,22 +115,6 @@ export function HomeHeroSection() {
         ]}
         resizeMode="cover"
       >
-        <View style={[styles.headerCard, { padding: s(12), borderRadius: s(10), width: '100%' }]}>
-          <Image
-            source={HeaderLogo}
-            style={{ width: s(68), height: s(32) }}
-            resizeMode="contain"
-          />
-          <View style={styles.topBarActions}>
-            <Pressable style={styles.headerIconButton} accessibilityLabel="Notifications">
-              <BellLoginIcon width={18} height={18} />
-            </Pressable>
-            <Pressable style={styles.headerIconButton} accessibilityLabel="Menu">
-              <MenuLoginIcon width={24} height={24} />
-            </Pressable>
-          </View>
-        </View>
-
         <View style={{ width: '100%', gap: s(16) }}>
           <View style={{ width: '100%' }}>
             <Text style={[styles.tagline, { fontSize: s(16), lineHeight: s(28) }]}>{hero.tagline}</Text>
@@ -251,26 +232,6 @@ const styles = StyleSheet.create({
     borderWidth: 4,
     borderColor: 'rgba(255, 255, 255, 0.2)',
     overflow: 'hidden',
-  },
-  headerCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: colors.surface.white,
-    borderWidth: 1,
-    borderColor: 'rgba(28, 32, 36, 0.1)',
-    alignSelf: 'stretch',
-  },
-  topBarActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  headerIconButton: {
-    width: 24,
-    height: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   tagline: {
     fontFamily: typography.fontFamily.text,

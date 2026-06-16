@@ -17,6 +17,7 @@ import { HomeHeroSection } from '@/src/components/home/HomeHeroSection';
 import { HomeSearchProvider, useHomeSearch } from '@/src/components/home/HomeSearchContext';
 import { HomeSearchResults } from '@/src/components/home/HomeSearchResults';
 import { SearchModeHeader } from '@/src/components/home/SearchModeHeader';
+import { AppTopHeader } from '@/src/components/navigation/AppTopHeader';
 import { MOCK_PACKAGE_LISTINGS } from '@/src/constants/homePackageConfig';
 import { MOCK_GLAMPING_LISTINGS } from '@/src/constants/homeGlampingConfig';
 
@@ -131,7 +132,7 @@ function MobileHotelsHomeContent() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={styles.container} edges={[]}>
       <ScrollView
         ref={scrollRef}
         style={styles.scroll}
@@ -155,6 +156,7 @@ function MobileHotelsHomeContent() {
           </>
         ) : (
           <>
+            <AppTopHeader />
             <HomeHeroSection />
             <HomePromoCarousel variant={listingVariant} />
             <HomeMoodGrid

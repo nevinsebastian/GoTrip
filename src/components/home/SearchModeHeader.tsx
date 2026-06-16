@@ -2,12 +2,14 @@ import { colors, typography } from '@/constants/DesignTokens';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useHomeSearch } from '@/src/components/home/HomeSearchContext';
 import { useHomeScale } from '@/src/components/home/useHomeScale';
 
 export function SearchModeHeader() {
   const { s } = useHomeScale();
+  const insets = useSafeAreaInsets();
   const { searchParams, exitSearchMode, updateSearchLocation, enterSearchMode } = useHomeSearch();
   const [query, setQuery] = useState(searchParams?.location ?? '');
 
@@ -25,7 +27,12 @@ export function SearchModeHeader() {
   };
 
   return (
-    <View style={[styles.wrap, { paddingHorizontal: s(16), paddingTop: s(10), paddingBottom: s(8) }]}>
+    <View
+      style={[
+        styles.wrap,
+        { paddingHorizontal: s(16), paddingTop: insets.top + s(10), paddingBottom: s(8) },
+      ]}
+    >
       <View style={[styles.bar, { padding: s(6), borderRadius: s(9999), gap: s(8) }]}>
         <Pressable
           style={[styles.backBtn, { width: s(40), height: s(40), borderRadius: s(20) }]}
