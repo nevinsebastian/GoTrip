@@ -139,9 +139,9 @@ export function HomePackageSearchCard() {
                 styles.moodPill,
                 {
                   paddingVertical: s(8),
-                  paddingHorizontal: s(10),
+                  paddingHorizontal: s(8),
                   borderRadius: s(100),
-                  gap: s(6),
+                  gap: s(4),
                   backgroundColor: selected ? colors.accent.main : colors.surface.white,
                   borderColor: colors.accent.main,
                 },
@@ -150,19 +150,23 @@ export function HomePackageSearchCard() {
             >
               <Ionicons
                 name={mood.icon}
-                size={s(14)}
+                size={s(12)}
                 color={selected ? colors.surface.white : colors.accent.main}
+                style={{ flexShrink: 0 }}
               />
               <Text
                 style={[
                   styles.moodLabel,
                   {
-                    fontSize: s(10),
+                    fontSize: s(9),
                     lineHeight: s(12),
                     color: selected ? colors.surface.white : colors.accent.main,
+                    flexShrink: 1,
                   },
                 ]}
                 numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.8}
               >
                 {mood.label}
               </Text>
@@ -263,6 +267,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
+    flexWrap: 'nowrap',
   },
   moodLabel: {
     fontFamily: typography.fontFamily.text,

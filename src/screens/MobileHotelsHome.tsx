@@ -94,17 +94,15 @@ function MobileHotelsHomeContent() {
   const goToListing = (listing: Listing) => {
     const isPackageListing = listing.category?.type === 'package';
     router.push({
-      pathname: isPackageListing ? '/packages' : '/resort/[id]',
-      params: isPackageListing
-        ? undefined
-        : {
-            id: listing.id,
-            title: listing.title,
-            price: listing.price_start
-              ? `₹${Number(listing.price_start).toLocaleString('en-IN')}`
-              : '',
-            rating: '4.5',
-          },
+      pathname: isPackageListing ? '/package/[id]' : '/resort/[id]',
+      params: {
+        id: listing.id,
+        title: listing.title,
+        price: listing.price_start
+          ? `₹${Number(listing.price_start).toLocaleString('en-IN')}`
+          : '',
+        rating: '4.5',
+      },
     });
   };
 

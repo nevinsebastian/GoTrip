@@ -67,7 +67,9 @@ export function MobileHotelGridCard({
               paddingVertical: s(6),
               paddingHorizontal: s(12),
               flexDirection: 'row',
-              gap: s(10),
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: s(6),
             },
           ]}
         >
@@ -75,8 +77,9 @@ export function MobileHotelGridCard({
             name={isPackage ? 'airplane-outline' : 'heart-outline'}
             size={s(10)}
             color="#FFFFFF"
+            style={styles.badgeIcon}
           />
-          <Text style={[styles.coupleBadgeText, { fontSize: s(9) }]}>
+          <Text style={[styles.coupleBadgeText, { fontSize: s(9) }]} numberOfLines={1}>
             {isPackage ? 'TRAVEL PACKAGE' : 'COUPLE FRIENDLY'}
           </Text>
         </GlassSurface>
@@ -88,7 +91,10 @@ export function MobileHotelGridCard({
             {listing.title}
           </Text>
           <View style={styles.metaRow}>
-            <Text style={[styles.breadcrumb, { fontSize: s(9), lineHeight: s(12) }]}>
+            <Text
+              style={[styles.breadcrumb, { fontSize: s(9), lineHeight: s(12) }]}
+              numberOfLines={1}
+            >
               Kerala &gt; {listing.location ?? locationLabel}
             </Text>
             <View style={styles.ratingRow}>
@@ -138,12 +144,18 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 9,
     alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  badgeIcon: {
+    flexShrink: 0,
   },
   coupleBadgeText: {
     fontFamily: typography.fontFamily.text,
     fontWeight: typography.fontWeight.medium,
     color: '#FFFFFF',
     letterSpacing: 0.04,
+    flexShrink: 1,
   },
   title: {
     fontFamily: typography.fontFamily.text,
@@ -161,11 +173,13 @@ const styles = StyleSheet.create({
     fontWeight: typography.fontWeight.medium,
     color: colors.accent.main,
     flex: 1,
+    flexShrink: 1,
   },
   ratingRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+    flexShrink: 0,
   },
   rating: {
     fontFamily: typography.fontFamily.text,

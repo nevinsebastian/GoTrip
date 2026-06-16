@@ -410,15 +410,22 @@ function SuggestedCard({
             {
               left: s(9.5),
               bottom: s(10),
-              paddingVertical: s(8),
-              paddingHorizontal: s(16),
+              paddingVertical: s(6),
+              paddingHorizontal: s(12),
               flexDirection: 'row',
-              gap: s(10),
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: s(6),
             },
           ]}
         >
-          <Ionicons name="heart-outline" size={s(12)} color="#FFFFFF" />
-          <Text style={[styles.coupleBadgeText, { fontSize: s(10) }]}>
+          <Ionicons
+            name={isPackages ? 'airplane-outline' : 'heart-outline'}
+            size={s(10)}
+            color="#FFFFFF"
+            style={{ flexShrink: 0 }}
+          />
+          <Text style={[styles.coupleBadgeText, { fontSize: s(9) }]} numberOfLines={1}>
             {isPackages ? 'TRAVEL PACKAGE' : 'COUPLE FRIENDLY'}
           </Text>
         </GlassSurface>
@@ -660,12 +667,19 @@ function BudgetCard({
               paddingVertical: s(6),
               paddingHorizontal: s(12),
               flexDirection: 'row',
-              gap: s(10),
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: s(6),
             },
           ]}
         >
-          <Ionicons name="heart-outline" size={s(10)} color="#FFFFFF" />
-          <Text style={[styles.coupleBadgeText, { fontSize: s(9) }]}>
+          <Ionicons
+            name={isPackages ? 'airplane-outline' : 'heart-outline'}
+            size={s(10)}
+            color="#FFFFFF"
+            style={{ flexShrink: 0 }}
+          />
+          <Text style={[styles.coupleBadgeText, { fontSize: s(9) }]} numberOfLines={1}>
             {isPackages ? 'TRAVEL PACKAGE' : 'COUPLE FRIENDLY'}
           </Text>
         </GlassSurface>
@@ -677,7 +691,10 @@ function BudgetCard({
             {listing.title}
           </Text>
           <View style={styles.budgetMetaRow}>
-            <Text style={[styles.breadcrumb, { fontSize: s(9) }]}>
+            <Text
+              style={[styles.breadcrumb, { fontSize: s(9) }]}
+              numberOfLines={1}
+            >
               {listing.location ? `${listing.location}` : isPackages ? 'Singapore' : 'Kerala > Varkala'}
             </Text>
             <View style={styles.ratingRow}>
@@ -850,6 +867,7 @@ const styles = StyleSheet.create({
     fontWeight: typography.fontWeight.medium,
     color: colors.surface.white,
     letterSpacing: 0.04,
+    flexShrink: 1,
   },
   titleRatingRow: {
     flexDirection: 'row',
@@ -982,5 +1000,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 8,
   },
 });

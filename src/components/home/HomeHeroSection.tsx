@@ -75,10 +75,22 @@ const HERO_BY_TAB = {
   },
 } as const;
 
+const HERO_LAYOUT: Record<
+  HomeCategoryTab,
+  { frameMinHeight: number; imageTopSpace: number; imageOffset?: number }
+> = {
+  hotels: { frameMinHeight: 762, imageTopSpace: 130, imageOffset: 24 },
+  packages: { frameMinHeight: 762, imageTopSpace: 275, imageOffset: 48 },
+  glamping: { frameMinHeight: 762, imageTopSpace: 130, imageOffset: 24 },
+  activities: { frameMinHeight: 762, imageTopSpace: 130, imageOffset: 24 },
+};
+
 export function HomeHeroSection() {
   const { s } = useHomeScale();
   const { activeCategoryTab, setActiveCategoryTab } = useHomeSearch();
   const hero = HERO_BY_TAB[activeCategoryTab];
+  const layout = HERO_LAYOUT[activeCategoryTab];
+  const imageOffset = layout.imageOffset ?? 0;
 
   return (
     <View style={[styles.wrap, { paddingHorizontal: s(16), paddingTop: s(10), gap: s(10) }]}>
@@ -105,13 +117,21 @@ export function HomeHeroSection() {
           {
             borderRadius: s(18),
             padding: s(12),
-            minHeight: activeCategoryTab === 'packages' ? s(580) : s(560),
+            minHeight: s(layout.frameMinHeight),
           },
         ]}
-        imageStyle={{ borderRadius: s(14) }}
+        imageStyle={[
+          { borderRadius: s(14) },
+          imageOffset
+            ? {
+                height: '115%',
+                transform: [{ translateY: -s(imageOffset) }],
+              }
+            : null,
+        ]}
         resizeMode="cover"
       >
-        <View style={[styles.heroBottom, { gap: s(16), paddingTop: s(180) }]}>
+        <View style={[styles.heroBottom, { gap: s(16), width: '100%', paddingTop: s(layout.imageTopSpace) }]}>
           <Text style={[styles.tagline, { fontSize: s(16), lineHeight: s(28) }]}>{hero.tagline}</Text>
 
           <GlassSurface borderRadius={s(12)} style={{ padding: s(10) }}>
@@ -123,8 +143,13 @@ export function HomeHeroSection() {
                 </Text>
               </View>
 
-              <View style={[styles.promoCopy, { gap: s(12), paddingVertical: s(3) }]}>
-                <Text style={[styles.promoTitle, { fontSize: s(11), lineHeight: s(16) }]}>
+              <View style={[styles.promoCopy, { gap: s(6), paddingVertical: s(3), flex: 1, minWidth: 0 }]}>
+                <Text
+                  style={[styles.promoTitle, { fontSize: s(11), lineHeight: s(14) }]}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.75}
+                >
                   {hero.promoTitle}
                 </Text>
                 <View style={styles.promoBottomRow}>
@@ -233,9 +258,11 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 255, 255, 0.2)',
     overflow: 'hidden',
     justifyContent: 'flex-end',
+    alignItems: 'center',
   },
   heroBottom: {
     zIndex: 2,
+    width: '100%',
   },
   tagline: {
     fontFamily: typography.fontFamily.text,

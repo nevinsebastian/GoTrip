@@ -163,7 +163,7 @@ export default function PackagesScreen() {
                 </Pressable>
                 <Pressable
                   style={styles.reserveBtn}
-                  onPress={() => router.push({ pathname: '/resort/[id]', params: { id: l.id } })}
+                  onPress={() => router.push({ pathname: '/package/[id]', params: { id: l.id } })}
                   accessibilityLabel="Reserve"
                 >
                   <Text variant="bodySemibold" style={styles.reserveText}>
