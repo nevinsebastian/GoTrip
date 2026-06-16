@@ -4,22 +4,16 @@ import React from 'react';
 import {
   Image,
   ImageBackground,
-  Platform,
-  Pressable,
   StyleSheet,
   View,
 } from 'react-native';
 
-import TabActivitiesIcon from '@/assets/images/home-figma/tab-activities.svg';
-import TabGlampingIcon from '@/assets/images/home-figma/tab-glamping.svg';
-import TabHotelsIcon from '@/assets/images/home-figma/tab-hotels.svg';
-import TabPackagesIcon from '@/assets/images/home-figma/tab-packages.svg';
 import { GlassSurface } from '@/src/components/home/GlassSurface';
+import { HomeCategoryTabs } from '@/src/components/home/HomeCategoryTabs';
 import { HomeGlampingSearchCard } from '@/src/components/home/HomeGlampingSearchCard';
 import { HomePackageSearchCard } from '@/src/components/home/HomePackageSearchCard';
 import { HomeSearchCard } from '@/src/components/home/HomeSearchCard';
 import { useHomeSearch } from '@/src/components/home/HomeSearchContext';
-import type { HomeCategoryTab } from '@/src/components/home/homeSearchConfig';
 import { PillButton } from '@/src/components/home/PillButton';
 import { useHomeScale } from '@/src/components/home/useHomeScale';
 import { GLAMPING_HERO } from '@/src/constants/homeGlampingConfig';
@@ -37,17 +31,6 @@ const HotelsPromoDiscount = require('../../../assets/images/home-figma/promo-dis
 /** Figma Frame 5189 — base frame sizing. */
 const HERO_FRAME_HEIGHT = 762;
 const HERO_FRAME_GAP = 275;
-
-const CATEGORY_TABS: Array<{
-  id: HomeCategoryTab;
-  label: string;
-  Icon: React.ComponentType<{ width?: number; height?: number }>;
-}> = [
-  { id: 'hotels', label: 'Hotels', Icon: TabHotelsIcon },
-  { id: 'packages', label: 'Packages', Icon: TabPackagesIcon },
-  { id: 'glamping', label: 'Glamping', Icon: TabGlampingIcon },
-  { id: 'activities', label: 'Activities', Icon: TabActivitiesIcon },
-];
 
 const HERO_BY_TAB = {
   hotels: {
@@ -154,59 +137,7 @@ export function HomeHeroSection() {
             </View>
           </GlassSurface>
 
-          <View style={[styles.tabsShell, { padding: s(4), borderRadius: s(12), gap: s(2), width: '100%' }]}>
-            {CATEGORY_TABS.map((tab) => {
-              const selected = tab.id === activeCategoryTab;
-              return (
-                <Pressable
-                  key={tab.id}
-                  style={[
-                    styles.tabButton,
-                    {
-                      paddingVertical: s(6),
-                      paddingHorizontal: s(4),
-                      borderRadius: s(8),
-                      gap: s(2),
-                      backgroundColor: selected ? colors.accent.main : colors.surface.white,
-                      borderWidth: selected ? 2 : 1,
-                      borderColor: selected ? colors.surface.white : 'rgba(28, 32, 36, 0.2)',
-                    },
-                  ]}
-                  onPress={() => setActiveCategoryTab(tab.id)}
-                  accessibilityState={{ selected }}
-                >
-                  <View
-                    style={[
-                      styles.tabIconBox,
-                      {
-                        width: s(18),
-                        height: s(18),
-                        borderRadius: s(2),
-                        backgroundColor: selected ? 'rgba(255, 255, 255, 0.95)' : colors.surface.white,
-                      },
-                    ]}
-                  >
-                    <tab.Icon width={s(11)} height={s(11)} />
-                  </View>
-                  <Text
-                    style={[
-                      styles.tabLabel,
-                      {
-                        fontSize: s(9),
-                        lineHeight: s(12),
-                        color: selected ? colors.surface.white : colors.text.primary,
-                      },
-                    ]}
-                    numberOfLines={1}
-                    adjustsFontSizeToFit
-                    minimumFontScale={0.75}
-                  >
-                    {tab.label}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
+          <HomeCategoryTabs activeTab={activeCategoryTab} onTabChange={setActiveCategoryTab} />
 
           {activeCategoryTab === 'packages' ? (
             <HomePackageSearchCard />
@@ -275,32 +206,5 @@ const styles = StyleSheet.create({
     fontWeight: typography.fontWeight.medium,
     color: 'rgba(255, 255, 255, 0.8)',
     letterSpacing: 0.04,
-  },
-  tabsShell: {
-    flexDirection: 'row',
-    backgroundColor: colors.surface.white,
-    ...(Platform.OS === 'web' ? ({ backdropFilter: 'blur(3px)' } as object) : null),
-  },
-  tabButton: {
-    flex: 1,
-    minWidth: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.03,
-    shadowRadius: 10,
-    elevation: 2,
-  },
-  tabIconBox: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  tabLabel: {
-    fontFamily: typography.fontFamily.text,
-    fontWeight: typography.fontWeight.medium,
-    letterSpacing: 0.01,
-    textAlign: 'center',
-    width: '100%',
   },
 });
