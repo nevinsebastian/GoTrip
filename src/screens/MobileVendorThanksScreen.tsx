@@ -44,7 +44,7 @@ export function MobileVendorThanksScreen() {
         <View style={styles.footer}>
           <Pressable
             style={({ pressed }) => [styles.ctaButton, pressed && styles.pressed]}
-            onPress={() => router.replace('/vendor/dashboard')}
+            onPress={() => router.replace('/vendor/home')}
             accessibilityRole="button"
           >
             <Text style={styles.ctaText}>{VENDOR_THANKS_COPY.cta}</Text>

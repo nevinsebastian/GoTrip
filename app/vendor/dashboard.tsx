@@ -1,5 +1,5 @@
-import { MobileVendorDashboardScreen } from '@/src/screens/MobileVendorDashboardScreen';
+import { Redirect } from 'expo-router';
 
-export default function VendorDashboardRoute() {
-  return <MobileVendorDashboardScreen />;
+export default function VendorDashboardRedirect() {
+  return <Redirect href="/vendor/home" />;
 }

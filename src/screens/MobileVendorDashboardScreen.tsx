@@ -1,6 +1,7 @@
 import { Text } from '@/components/ui';
 import { borderRadius, colors, spacing, typography } from '@/constants/DesignTokens';
 import { VendorPropertyOptionSheet } from '@/src/components/vendor/VendorPropertyOptionSheet';
+import { VendorWorkspaceHeader } from '@/src/components/vendor/workspace/VendorWorkspaceHeader';
 import {
   VENDOR_DASHBOARD_BLUE,
   VENDOR_DASHBOARD_BOOKINGS,
@@ -12,6 +13,10 @@ import {
   VENDOR_DASHBOARD_SORT_OPTIONS,
   type VendorDashboardBooking,
 } from '@/src/constants/vendorDashboardConstants';
+import {
+  VENDOR_WORKSPACE_COPY,
+  VENDOR_WORKSPACE_PINK,
+} from '@/src/constants/vendorWorkspaceConstants';
 import type { VendorListingCategoryId } from '@/src/constants/vendorOnboardingConstants';
 import { useVendorListingCategory } from '@/src/hooks/useVendorListingCategory';
 import { clearVendorSession, getStoredVendorListingCategory } from '@/src/utils/vendorSession';
@@ -33,8 +38,16 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 const DESIGN_WIDTH = 402;
 const HOST_AVATAR = require('../../loginimage.png');
 
+const CREATE_LISTING_ROUTE: Record<VendorListingCategoryId, string> = {
+  property: '/vendor/describe-property',
+  glamping: '/vendor/describe-camp',
+  packages: '/vendor/describe-package',
+  activities: '/vendor/describe-activity',
+};
+
 function BookingCard({ booking }: { booking: VendorDashboardBooking }) {
   const meta = `${booking.guests} Guest${booking.guests === 1 ? '' : 's'} | ${booking.dateRange}`;
+  const goToBooking = () => router.push(`/vendor/booking/${booking.id}` as any);
 
   if (booking.status === 'pending') {
     return (
@@ -44,7 +57,7 @@ function BookingCard({ booking }: { booking: VendorDashboardBooking }) {
           <Text style={styles.bookingMeta}>{meta}</Text>
         </View>
         <View style={styles.actionRow}>
-          <Pressable style={styles.viewBtn}>
+          <Pressable style={styles.viewBtn} onPress={goToBooking}>
             <Text style={styles.viewBtnText}>View</Text>
             <Ionicons name="open-outline" size={12} color={colors.surface.white} />
           </Pressable>
@@ -70,7 +83,7 @@ function BookingCard({ booking }: { booking: VendorDashboardBooking }) {
           <Text style={styles.bookingMeta}>{meta}</Text>
         </View>
         <View style={styles.actionRow}>
-          <Pressable style={styles.viewBtn}>
+          <Pressable style={styles.viewBtn} onPress={goToBooking}>
             <Text style={styles.viewBtnText}>View</Text>
             <Ionicons name="open-outline" size={12} color={colors.surface.white} />
           </Pressable>
@@ -94,7 +107,7 @@ function BookingCard({ booking }: { booking: VendorDashboardBooking }) {
           <Text style={styles.bookingMeta}>{meta}</Text>
         </View>
         <View style={styles.actionRow}>
-          <Pressable style={styles.viewBtn}>
+          <Pressable style={styles.viewBtn} onPress={goToBooking}>
             <Text style={styles.viewBtnText}>View</Text>
             <Ionicons name="open-outline" size={12} color={colors.surface.white} />
           </Pressable>
@@ -117,7 +130,7 @@ function BookingCard({ booking }: { booking: VendorDashboardBooking }) {
         <Text style={styles.bookingMeta}>{meta}</Text>
       </View>
       <View style={styles.simpleRow}>
-        <Pressable style={styles.viewBookingBtn}>
+        <Pressable style={styles.viewBookingBtn} onPress={goToBooking}>
           <Text style={styles.viewBookingText}>View Booking</Text>
         </Pressable>
         <Pressable style={styles.contactBtn}>
@@ -199,25 +212,15 @@ export function MobileVendorDashboardScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.page}>
+        <VendorWorkspaceHeader categoryId={categoryId} onMenuPress={() => setMenuOpen((v) => !v)} />
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          <View style={styles.header}>
-            <Text style={styles.brand}>{VENDOR_DASHBOARD_COPY.brand}</Text>
-            <View style={styles.headerActions}>
-              <Ionicons name="search-outline" size={20} color={colors.text.primary} />
-              <Ionicons name="notifications-outline" size={20} color={colors.text.primary} />
-              <Pressable onPress={() => setMenuOpen((v) => !v)} hitSlop={8}>
-                <Ionicons name="menu" size={22} color={colors.text.primary} />
-              </Pressable>
-            </View>
-          </View>
-
           {menuOpen ? (
             <View style={styles.menuCard}>
               <View style={styles.menuProfile}>
                 <Image source={HOST_AVATAR} style={styles.menuAvatar} resizeMode="cover" />
                 <Text style={styles.menuName}>{VENDOR_DASHBOARD_COPY.profileName}</Text>
               </View>
-              <Pressable style={styles.menuItem} onPress={() => setMenuOpen(false)}>
+              <Pressable style={styles.menuItem} onPress={() => router.push('/vendor/profile')}>
                 <Ionicons name="person-outline" size={16} color={colors.text.primary} />
                 <Text style={styles.menuItemText}>{VENDOR_DASHBOARD_COPY.profileLabel}</Text>
               </Pressable>
@@ -227,6 +230,14 @@ export function MobileVendorDashboardScreen() {
               </Pressable>
             </View>
           ) : null}
+
+          <Pressable
+            style={styles.createListingBtn}
+            onPress={() => router.push(CREATE_LISTING_ROUTE[categoryId] as any)}
+          >
+            <Ionicons name="add" size={16} color={colors.surface.white} />
+            <Text style={styles.createListingText}>{VENDOR_WORKSPACE_COPY.addListing}</Text>
+          </Pressable>
 
           <View style={styles.categoryRow}>
             {VENDOR_DASHBOARD_CATEGORIES.map((tab) => {
@@ -289,22 +300,6 @@ export function MobileVendorDashboardScreen() {
             ))}
           </View>
         </ScrollView>
-
-        <View style={styles.bottomNav}>
-          <View style={styles.homeTabActive}>
-            <Ionicons name="grid-outline" size={16} color={colors.surface.white} />
-            <Text style={styles.homeTabText}>{VENDOR_DASHBOARD_COPY.homeTab}</Text>
-          </View>
-          <Pressable style={styles.navIconBtn}>
-            <Ionicons name="business-outline" size={20} color="rgba(28, 32, 36, 0.45)" />
-          </Pressable>
-          <Pressable style={styles.navIconBtn}>
-            <Ionicons name="ticket-outline" size={20} color="rgba(28, 32, 36, 0.45)" />
-          </Pressable>
-          <Pressable style={styles.navIconBtn}>
-            <Ionicons name="person-circle-outline" size={22} color="rgba(28, 32, 36, 0.45)" />
-          </Pressable>
-        </View>
       </View>
 
       <VendorPropertyOptionSheet
@@ -392,25 +387,8 @@ const styles = StyleSheet.create({
   page: { flex: 1, width: '100%', maxWidth: DESIGN_WIDTH, alignSelf: 'center' },
   scrollContent: {
     paddingHorizontal: spacing['4'],
-    paddingTop: spacing['3'],
     paddingBottom: spacing['4'],
     gap: 12,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  brand: {
-    fontFamily: typography.fontFamily.text,
-    fontSize: typography.fontSize['3'],
-    fontWeight: typography.fontWeight.bold,
-    color: VENDOR_DASHBOARD_BLUE,
-  },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
   },
   menuCard: {
     alignSelf: 'flex-end',
@@ -456,6 +434,21 @@ const styles = StyleSheet.create({
     fontFamily: typography.fontFamily.text,
     fontSize: typography.fontSize['1'],
     color: colors.text.primary,
+  },
+  createListingBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: VENDOR_WORKSPACE_PINK,
+    borderRadius: borderRadius.pill,
+    paddingVertical: 12,
+  },
+  createListingText: {
+    fontFamily: typography.fontFamily.text,
+    fontSize: typography.fontSize['1'],
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.surface.white,
   },
   categoryRow: {
     flexDirection: 'row',
@@ -712,38 +705,6 @@ const styles = StyleSheet.create({
     fontSize: typography.fontSize['1'],
     fontWeight: typography.fontWeight.medium,
     color: colors.text.primary,
-  },
-  bottomNav: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-around',
-    paddingHorizontal: spacing['4'],
-    paddingTop: spacing['2'],
-    paddingBottom: spacing['4'],
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: 'rgba(28, 32, 36, 0.08)',
-    backgroundColor: colors.surface.white,
-  },
-  homeTabActive: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: VENDOR_DASHBOARD_BLUE,
-    borderRadius: borderRadius.pill,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-  },
-  homeTabText: {
-    fontFamily: typography.fontFamily.text,
-    fontSize: 11,
-    fontWeight: typography.fontWeight.semibold,
-    color: colors.surface.white,
-  },
-  navIconBtn: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   modalOverlay: {
     flex: 1,

@@ -23,6 +23,12 @@ export default function VendorLayout() {
       <Stack.Screen name="terms" options={{ headerShown: false }} />
       <Stack.Screen name="publish-listing" options={{ headerShown: false }} />
       <Stack.Screen name="thanks" options={{ headerShown: false }} />
+      <Stack.Screen name="(workspace)" options={{ headerShown: false }} />
+      <Stack.Screen name="booking/[id]" options={{ headerShown: false }} />
+      <Stack.Screen name="earnings" options={{ headerShown: false }} />
+      <Stack.Screen name="edit-listing" options={{ headerShown: false }} />
+      <Stack.Screen name="cancel-booking" options={{ headerShown: false }} />
+      <Stack.Screen name="notifications" options={{ headerShown: false }} />
       <Stack.Screen name="dashboard" options={{ headerShown: false }} />
     </Stack>
   );
