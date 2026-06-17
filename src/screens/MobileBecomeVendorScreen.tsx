@@ -345,12 +345,16 @@ function CategorySelectionContent({ categoryId, onOpenPicker }: CategorySelectio
   );
 }
 
-export function MobileBecomeVendorScreen() {
+export function MobileBecomeVendorScreen({
+  initialStep = 'landing',
+}: {
+  initialStep?: VendorStep;
+}) {
   const contentPadding = spacing['4'];
   const scrollRef = useRef<ScrollView>(null);
   const otpInputRefs = useRef<(TextInput | null)[]>([]);
 
-  const [step, setStep] = useState<VendorStep>('landing');
+  const [step, setStep] = useState<VendorStep>(initialStep);
   const [form, setForm] = useState<VendorRegistrationForm>(EMPTY_VENDOR_FORM);
   const [digits, setDigits] = useState<string[]>(Array(OTP_LENGTH).fill(''));
   const [submitError, setSubmitError] = useState<string | null>(null);
