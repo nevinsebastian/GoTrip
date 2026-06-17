@@ -130,6 +130,10 @@ export function MobileVendorSelectLocationScreen() {
       router.push('/vendor/guest-tent-details');
       return;
     }
+    if (categoryId === 'activities') {
+      router.push('/vendor/guest-activity-details');
+      return;
+    }
     router.replace('/(tabs)');
   };
 

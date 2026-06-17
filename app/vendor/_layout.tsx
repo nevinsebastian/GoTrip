@@ -7,10 +7,12 @@ export default function VendorLayout() {
       <Stack.Screen name="describe-property" options={{ headerShown: false }} />
       <Stack.Screen name="describe-camp" options={{ headerShown: false }} />
       <Stack.Screen name="describe-package" options={{ headerShown: false }} />
+      <Stack.Screen name="describe-activity" options={{ headerShown: false }} />
       <Stack.Screen name="select-location" options={{ headerShown: false }} />
       <Stack.Screen name="guest-room-details" options={{ headerShown: false }} />
       <Stack.Screen name="guest-tent-details" options={{ headerShown: false }} />
       <Stack.Screen name="guest-package-details" options={{ headerShown: false }} />
+      <Stack.Screen name="guest-activity-details" options={{ headerShown: false }} />
       <Stack.Screen name="amenities" options={{ headerShown: false }} />
       <Stack.Screen name="photos" options={{ headerShown: false }} />
       <Stack.Screen name="create-title" options={{ headerShown: false }} />

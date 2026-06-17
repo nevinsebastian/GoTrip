@@ -11,6 +11,7 @@ import {
 } from '@/src/constants/vendorListingConstants';
 import { VENDOR_GLAMPING_PRICING_COPY } from '@/src/constants/vendorGlampingConstants';
 import { VENDOR_PACKAGE_PRICING_COPY } from '@/src/constants/vendorPackageConstants';
+import { VENDOR_ACTIVITY_PRICING_COPY } from '@/src/constants/vendorActivityConstants';
 import { useVendorListingCategory } from '@/src/hooks/useVendorListingCategory';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -95,7 +96,8 @@ export function MobileVendorSetPricingScreen() {
   const categoryId = useVendorListingCategory();
   const isGlamping = categoryId === 'glamping';
   const isPackage = categoryId === 'packages';
-  const isSimplePricing = isGlamping || isPackage;
+  const isActivity = categoryId === 'activities';
+  const isSimplePricing = isGlamping || isPackage || isActivity;
 
   const [glampingPrice, setGlampingPrice] = useState(DEFAULT_VENDOR_ROOM_PRICING.basePrice);
   const [glampingDiscountEnabled, setGlampingDiscountEnabled] = useState(true);
@@ -157,13 +159,19 @@ export function MobileVendorSetPricingScreen() {
 
   const pricingSubtitle = isPackage
     ? VENDOR_PACKAGE_PRICING_COPY.subtitle
-    : VENDOR_GLAMPING_PRICING_COPY.subtitle;
+    : isActivity
+      ? VENDOR_ACTIVITY_PRICING_COPY.subtitle
+      : VENDOR_GLAMPING_PRICING_COPY.subtitle;
   const simpleBasePriceLabel = isPackage
     ? VENDOR_PACKAGE_PRICING_COPY.basePriceLabel
-    : VENDOR_GLAMPING_PRICING_COPY.basePriceLabel;
+    : isActivity
+      ? VENDOR_ACTIVITY_PRICING_COPY.basePriceLabel
+      : VENDOR_GLAMPING_PRICING_COPY.basePriceLabel;
   const simpleNextSuffix = isPackage
     ? VENDOR_PACKAGE_PRICING_COPY.nextSuffix
-    : VENDOR_GLAMPING_PRICING_COPY.nextSuffix;
+    : isActivity
+      ? VENDOR_ACTIVITY_PRICING_COPY.nextSuffix
+      : VENDOR_GLAMPING_PRICING_COPY.nextSuffix;
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>

@@ -10,6 +10,7 @@ import {
 } from '@/src/constants/vendorListingConstants';
 import { VENDOR_GLAMPING_PUBLISH_TITLE } from '@/src/constants/vendorGlampingConstants';
 import { VENDOR_PACKAGE_PUBLISH_TITLE } from '@/src/constants/vendorPackageConstants';
+import { VENDOR_ACTIVITY_PUBLISH_TITLE } from '@/src/constants/vendorActivityConstants';
 import { useVendorListingCategory } from '@/src/hooks/useVendorListingCategory';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -32,13 +33,17 @@ export function MobileVendorPublishListingScreen() {
       ? VENDOR_GLAMPING_PUBLISH_TITLE
       : categoryId === 'packages'
         ? VENDOR_PACKAGE_PUBLISH_TITLE
-        : VENDOR_PUBLISH_COPY.listingTitle;
+        : categoryId === 'activities'
+          ? VENDOR_ACTIVITY_PUBLISH_TITLE
+          : VENDOR_PUBLISH_COPY.listingTitle;
   const thumbnail =
     categoryId === 'glamping'
       ? VENDOR_MOCK_PHOTO_SOURCES[2]
       : categoryId === 'packages'
         ? VENDOR_MOCK_PHOTO_SOURCES[3]
-        : VENDOR_MOCK_PHOTO_SOURCES[0];
+        : categoryId === 'activities'
+          ? VENDOR_MOCK_PHOTO_SOURCES[4]
+          : VENDOR_MOCK_PHOTO_SOURCES[0];
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>

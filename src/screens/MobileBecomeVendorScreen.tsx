@@ -564,6 +564,10 @@ export function MobileBecomeVendorScreen() {
         router.replace('/vendor/describe-package');
         return;
       }
+      if (listingCategory === 'activities') {
+        router.replace('/vendor/describe-activity');
+        return;
+      }
       router.replace('/vendor/select-location');
     } finally {
       setIsProceedingCategory(false);
