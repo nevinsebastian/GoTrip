@@ -42,12 +42,36 @@ export const VENDOR_DASHBOARD_SORT_OPTIONS = [
 
 export type VendorBookingStatus = 'pending' | 'confirmed' | 'cancelled' | 'simple';
 
+export type VendorBookingListingTheme = 'green' | 'purple';
+
 export type VendorDashboardBooking = {
   id: string;
   guestName: string;
   guests: number;
   dateRange: string;
   status: VendorBookingStatus;
+  listingLabel: string;
+  listingTheme: VendorBookingListingTheme;
+};
+
+export const VENDOR_BOOKING_LISTING_THEME_COLORS: Record<
+  VendorBookingListingTheme,
+  { bar: string; text: string }
+> = {
+  green: { bar: '#107C10', text: '#FFFFFF' },
+  purple: { bar: '#7C3AED', text: '#FFFFFF' },
+};
+
+export const VENDOR_BOOKINGS_COPY = {
+  title: 'All Bookings',
+  allListings: 'All Listings',
+  view: 'View',
+  viewBooking: 'View Booking',
+  cancel: 'Cancel',
+  confirm: 'Confirm',
+  contact: 'Contact',
+  bookingConfirmed: 'Booking Confirmed',
+  bookingCancelled: 'Booking Cancelled',
 };
 
 export const VENDOR_DASHBOARD_BOOKINGS: VendorDashboardBooking[] = [
@@ -57,6 +81,8 @@ export const VENDOR_DASHBOARD_BOOKINGS: VendorDashboardBooking[] = [
     guests: 2,
     dateRange: 'April 3-5 2026',
     status: 'pending',
+    listingLabel: 'Property 1 - Opus Homes, Varkala',
+    listingTheme: 'green',
   },
   {
     id: 'b2',
@@ -64,6 +90,8 @@ export const VENDOR_DASHBOARD_BOOKINGS: VendorDashboardBooking[] = [
     guests: 3,
     dateRange: 'April 3-5 2026',
     status: 'confirmed',
+    listingLabel: 'Singapore package - 4N 5D',
+    listingTheme: 'purple',
   },
   {
     id: 'b3',
@@ -71,6 +99,8 @@ export const VENDOR_DASHBOARD_BOOKINGS: VendorDashboardBooking[] = [
     guests: 1,
     dateRange: 'April 3-5 2026',
     status: 'simple',
+    listingLabel: 'Property 1 - Opus Homes, Varkala',
+    listingTheme: 'green',
   },
   {
     id: 'b4',
@@ -78,6 +108,8 @@ export const VENDOR_DASHBOARD_BOOKINGS: VendorDashboardBooking[] = [
     guests: 1,
     dateRange: 'April 3-5 2026',
     status: 'cancelled',
+    listingLabel: 'Property 1 - Opus Homes, Varkala',
+    listingTheme: 'green',
   },
   {
     id: 'b5',
@@ -85,6 +117,8 @@ export const VENDOR_DASHBOARD_BOOKINGS: VendorDashboardBooking[] = [
     guests: 2,
     dateRange: 'April 3-5 2026',
     status: 'simple',
+    listingLabel: 'Property 1 - Opus Homes, Varkala',
+    listingTheme: 'green',
   },
 ];
 

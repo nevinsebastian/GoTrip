@@ -76,6 +76,7 @@ export type VendorWorkspaceBookingDetail = {
   propertyDescription: string;
   dateRangeDisplay: string;
   guestsLabel: string;
+  priceDisplay: string;
   checkIn: string;
   checkOut: string;
   guests: number;
@@ -84,6 +85,19 @@ export type VendorWorkspaceBookingDetail = {
   guestAvatar: number;
   propertyImage: number;
   defaultConfirmationNote: string;
+};
+
+export const VENDOR_VIEW_BOOKING_COPY = {
+  title: 'View Booking',
+  bookingIdLabel: 'Booking ID# :',
+  guestLabel: 'Guest',
+  datesLabel: 'Dates',
+  guestsLabel: 'Guests',
+  contact: 'Contact',
+  message: 'Message',
+  totalPrice: 'Total Price',
+  cancel: 'Cancel',
+  confirm: 'Confirm',
 };
 
 export const VENDOR_CONFIRM_BOOKING_COPY = {
@@ -117,6 +131,7 @@ export const VENDOR_WORKSPACE_BOOKING_DETAILS: Record<string, VendorWorkspaceBoo
     propertyDescription: 'Luxury stay in Kodaikanal | 2 rooms | with a valley view',
     dateRangeDisplay: '3-5 April 2026',
     guestsLabel: '2 adults',
+    priceDisplay: '₹ 10,420/night',
     checkIn: '3 Apr 2026',
     checkOut: '5 Apr 2026',
     guests: 2,
@@ -137,10 +152,74 @@ export const VENDOR_WORKSPACE_BOOKING_DETAILS: Record<string, VendorWorkspaceBoo
     propertyDescription: 'Luxury stay in Kodaikanal | 2 rooms | with a valley view',
     dateRangeDisplay: '3-5 April 2026',
     guestsLabel: '3 adults',
+    priceDisplay: '₹ 10,420/night',
     checkIn: '3 Apr 2026',
     checkOut: '5 Apr 2026',
     guests: 3,
     totalPayout: '₹9,000',
+    status: 'confirmed',
+    guestAvatar: require('../../loginimage.png'),
+    propertyImage: require('../../assets/images/glamping.jpg'),
+    defaultConfirmationNote: DEFAULT_NOTE,
+  },
+  b3: {
+    id: 'b3',
+    bookingRef: 'B27643',
+    guestName: 'Subhash',
+    guestTitle: 'Mr. Subhash',
+    guestFirstName: 'Subhash',
+    guestRating: 4.5,
+    propertyName: 'Luxury Glamping Tent',
+    propertyDescription: 'Luxury stay in Kodaikanal | 2 rooms | with a valley view',
+    dateRangeDisplay: '3-5 April 2026',
+    guestsLabel: '1 adult',
+    priceDisplay: '₹ 10,420/night',
+    checkIn: '3 Apr 2026',
+    checkOut: '5 Apr 2026',
+    guests: 1,
+    totalPayout: '₹6,400',
+    status: 'confirmed',
+    guestAvatar: require('../../loginimage.png'),
+    propertyImage: require('../../assets/images/glamping.jpg'),
+    defaultConfirmationNote: DEFAULT_NOTE,
+  },
+  b4: {
+    id: 'b4',
+    bookingRef: 'B27644',
+    guestName: 'Vignesh Raja',
+    guestTitle: 'Mr. Vignesh Raja',
+    guestFirstName: 'Vignesh',
+    guestRating: 4.2,
+    propertyName: 'Luxury Glamping Tent',
+    propertyDescription: 'Luxury stay in Kodaikanal | 2 rooms | with a valley view',
+    dateRangeDisplay: '3-5 April 2026',
+    guestsLabel: '1 adult',
+    priceDisplay: '₹ 10,420/night',
+    checkIn: '3 Apr 2026',
+    checkOut: '5 Apr 2026',
+    guests: 1,
+    totalPayout: '₹6,400',
+    status: 'cancelled',
+    guestAvatar: require('../../loginimage.png'),
+    propertyImage: require('../../assets/images/glamping.jpg'),
+    defaultConfirmationNote: DEFAULT_NOTE,
+  },
+  b5: {
+    id: 'b5',
+    bookingRef: 'B27645',
+    guestName: 'Abhinav S N',
+    guestTitle: 'Mr. Abhinav S N',
+    guestFirstName: 'Abhinav',
+    guestRating: 4.7,
+    propertyName: 'Luxury Glamping Tent',
+    propertyDescription: 'Luxury stay in Kodaikanal | 2 rooms | with a valley view',
+    dateRangeDisplay: '3-5 April 2026',
+    guestsLabel: '2 adults',
+    priceDisplay: '₹ 10,420/night',
+    checkIn: '3 Apr 2026',
+    checkOut: '5 Apr 2026',
+    guests: 2,
+    totalPayout: '₹8,200',
     status: 'confirmed',
     guestAvatar: require('../../loginimage.png'),
     propertyImage: require('../../assets/images/glamping.jpg'),
