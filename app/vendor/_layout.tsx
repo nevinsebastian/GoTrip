@@ -23,6 +23,7 @@ export default function VendorLayout() {
       <Stack.Screen name="terms" options={{ headerShown: false }} />
       <Stack.Screen name="publish-listing" options={{ headerShown: false }} />
       <Stack.Screen name="thanks" options={{ headerShown: false }} />
+      <Stack.Screen name="dashboard" options={{ headerShown: false }} />
     </Stack>
   );
 }
