@@ -3,6 +3,7 @@ import { colors, spacing, typography } from '@/constants/DesignTokens';
 import {
   VENDOR_DASHBOARD_BRAND_BLUE,
   VENDOR_DASHBOARD_COPY,
+  VENDOR_DASHBOARD_HEADER_BORDER,
   VENDOR_DASHBOARD_SEARCH_BG,
 } from '@/src/constants/vendorDashboardConstants';
 import { Ionicons } from '@expo/vector-icons';
@@ -12,12 +13,13 @@ import { Platform, Pressable, StyleSheet, View } from 'react-native';
 
 type VendorDashboardTopBarProps = {
   onMenuPress?: () => void;
+  bordered?: boolean;
 };
 
-export function VendorDashboardTopBar({ onMenuPress }: VendorDashboardTopBarProps) {
+export function VendorDashboardTopBar({ onMenuPress, bordered }: VendorDashboardTopBarProps) {
   return (
     <View style={styles.outer}>
-      <View style={styles.bar}>
+      <View style={[styles.bar, bordered ? styles.barBordered : null]}>
         <Text style={styles.brand}>{VENDOR_DASHBOARD_COPY.brand}</Text>
         <View style={styles.actions}>
           <Pressable style={styles.searchBtn} hitSlop={6} accessibilityRole="button">
@@ -62,6 +64,10 @@ const styles = StyleSheet.create({
       },
       android: { elevation: 2 },
     }),
+  },
+  barBordered: {
+    borderWidth: 2,
+    borderColor: VENDOR_DASHBOARD_HEADER_BORDER,
   },
   brand: {
     fontFamily: typography.fontFamily.text,

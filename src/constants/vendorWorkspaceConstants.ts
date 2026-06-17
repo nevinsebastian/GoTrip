@@ -241,10 +241,32 @@ export const VENDOR_WORKSPACE_EARNINGS = {
 };
 
 export const VENDOR_WORKSPACE_PROFILE = {
-  name: 'Raja',
-  email: 'raja@gotrip.com',
+  name: 'Mr. Ashish Kumar',
+  phone: '9734324310',
+  email: 'asifansad123@gmail.com',
   avatar: require('../../loginimage.png'),
 };
+
+export const VENDOR_PROFILE_COPY = {
+  title: 'Profile',
+  logout: 'Log out',
+  logoutTitle: 'Log out',
+  logoutMessage: 'Are you sure you want to logout now?',
+  logoutCancel: 'Cancel',
+  logoutConfirm: 'Logout',
+};
+
+export const VENDOR_PROFILE_MENU = [
+  { id: 'account', label: 'Account settings', icon: 'settings-outline' as const },
+  {
+    id: 'listings',
+    label: 'All Listings',
+    icon: 'business-outline' as const,
+    route: '/vendor/listings' as const,
+  },
+  { id: 'support', label: 'Support', icon: 'help-circle-outline' as const },
+  { id: 'logout', label: 'Log out', icon: 'log-out-outline' as const },
+];
 
 export const VENDOR_WORKSPACE_PROFILE_MENU = [
   { id: 'personal', label: 'Personal Information', icon: 'person-outline' as const },
