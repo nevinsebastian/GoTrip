@@ -67,9 +67,15 @@ export const VENDOR_WORKSPACE_LISTINGS: VendorWorkspaceListing[] = [
 
 export type VendorWorkspaceBookingDetail = {
   id: string;
+  bookingRef: string;
   guestName: string;
+  guestTitle: string;
+  guestFirstName: string;
   guestRating: number;
   propertyName: string;
+  propertyDescription: string;
+  dateRangeDisplay: string;
+  guestsLabel: string;
   checkIn: string;
   checkOut: string;
   guests: number;
@@ -77,34 +83,68 @@ export type VendorWorkspaceBookingDetail = {
   status: 'pending' | 'confirmed' | 'cancelled';
   guestAvatar: number;
   propertyImage: number;
+  defaultConfirmationNote: string;
 };
+
+export const VENDOR_CONFIRM_BOOKING_COPY = {
+  title: 'Confirm Booking',
+  bookingIdLabel: 'Booking ID# :',
+  guestLabel: 'Guest',
+  datesLabel: 'Dates',
+  guestsLabel: 'Guests',
+  contact: 'Contact',
+  promptTitle: 'Confirm booking?',
+  promptBody: (name: string) => `Are you sure you want to confirm ${name}'s booking?`,
+  noteLabel: 'Send a confirmation note',
+  goBack: 'Go back',
+  cancelCta: 'Cancel',
+  confirmCta: 'Confirm Booking',
+  noteMaxLength: 500,
+};
+
+const DEFAULT_NOTE =
+  "Hi Ashish, Your reservation has been successfully confirmed. We're delighted to have you with us and look forward to hosting you.";
 
 export const VENDOR_WORKSPACE_BOOKING_DETAILS: Record<string, VendorWorkspaceBookingDetail> = {
   b1: {
     id: 'b1',
+    bookingRef: 'B27641',
     guestName: 'Ashish Kumar',
+    guestTitle: 'Mr. Ashish Kumar',
+    guestFirstName: 'Ashish',
     guestRating: 4.8,
     propertyName: 'Luxury Glamping Tent',
-    checkIn: '12 May 2024',
-    checkOut: '15 May 2024',
+    propertyDescription: 'Luxury stay in Kodaikanal | 2 rooms | with a valley view',
+    dateRangeDisplay: '3-5 April 2026',
+    guestsLabel: '2 adults',
+    checkIn: '3 Apr 2026',
+    checkOut: '5 Apr 2026',
     guests: 2,
     totalPayout: '₹13,500',
     status: 'pending',
     guestAvatar: require('../../loginimage.png'),
-    propertyImage: require('../../loginimage.png'),
+    propertyImage: require('../../assets/images/glamping.jpg'),
+    defaultConfirmationNote: DEFAULT_NOTE,
   },
   b2: {
     id: 'b2',
+    bookingRef: 'B27642',
     guestName: 'Anjali Pillai',
+    guestTitle: 'Ms. Anjali Pillai',
+    guestFirstName: 'Anjali',
     guestRating: 4.9,
     propertyName: 'Luxury Glamping Tent',
+    propertyDescription: 'Luxury stay in Kodaikanal | 2 rooms | with a valley view',
+    dateRangeDisplay: '3-5 April 2026',
+    guestsLabel: '3 adults',
     checkIn: '3 Apr 2026',
     checkOut: '5 Apr 2026',
     guests: 3,
     totalPayout: '₹9,000',
     status: 'confirmed',
     guestAvatar: require('../../loginimage.png'),
-    propertyImage: require('../../loginimage.png'),
+    propertyImage: require('../../assets/images/glamping.jpg'),
+    defaultConfirmationNote: DEFAULT_NOTE,
   },
 };
 

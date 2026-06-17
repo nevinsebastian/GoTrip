@@ -7,6 +7,8 @@ import { VendorPropertyOptionSheet } from '@/src/components/vendor/VendorPropert
 import { useVendorTabBarInset } from '@/src/components/vendor/workspace/VendorWorkspaceTabBar';
 import {
   VENDOR_DASHBOARD_BLUE,
+  VENDOR_DASHBOARD_CARD_BORDER,
+  VENDOR_DASHBOARD_CARD_RADIUS,
   VENDOR_DASHBOARD_COPY,
   VENDOR_DASHBOARD_MARK_RED,
   VENDOR_DASHBOARD_PROPERTIES,
@@ -146,10 +148,10 @@ export function MobileVendorDashboardScreen() {
               <Ionicons name="chevron-down" size={14} color={colors.surface.white} />
             </Pressable>
             <Pressable style={styles.iconToolBtn} onPress={() => setFilterOpen(true)}>
-              <Ionicons name="calendar-outline" size={18} color={colors.text.primary} />
+              <Ionicons name="calendar-outline" size={16} color={colors.text.primary} />
             </Pressable>
             <Pressable style={styles.iconToolBtn} onPress={() => setSortPickerOpen(true)}>
-              <Ionicons name="funnel-outline" size={18} color={colors.text.primary} />
+              <Ionicons name="funnel-outline" size={16} color={colors.text.primary} />
             </Pressable>
           </View>
 
@@ -332,7 +334,9 @@ const styles = StyleSheet.create({
   toolbarRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    alignSelf: 'stretch',
+    gap: 16,
+    height: 34,
   },
   propertySelect: {
     flex: 1,
@@ -340,10 +344,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 8,
+    height: 34,
     backgroundColor: '#1F2937',
-    borderRadius: 0,
+    borderRadius: VENDOR_DASHBOARD_CARD_RADIUS,
     paddingHorizontal: 12,
-    paddingVertical: 12,
+    paddingVertical: 0,
   },
   propertySelectText: {
     flex: 1,
@@ -353,19 +358,19 @@ const styles = StyleSheet.create({
     color: colors.surface.white,
   },
   iconToolBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 0,
+    width: 34,
+    height: 34,
+    borderRadius: VENDOR_DASHBOARD_CARD_RADIUS,
     borderWidth: 1,
-    borderColor: 'rgba(28, 32, 36, 0.2)',
+    borderColor: VENDOR_DASHBOARD_CARD_BORDER,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.surface.white,
   },
   sortCard: {
     borderWidth: 1,
-    borderColor: 'rgba(28, 32, 36, 0.15)',
-    borderRadius: 0,
+    borderColor: VENDOR_DASHBOARD_CARD_BORDER,
+    borderRadius: VENDOR_DASHBOARD_CARD_RADIUS,
     padding: 12,
     gap: 8,
     backgroundColor: colors.surface.white,
@@ -381,8 +386,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     borderWidth: 1,
-    borderColor: 'rgba(28, 32, 36, 0.15)',
-    borderRadius: 0,
+    borderColor: VENDOR_DASHBOARD_CARD_BORDER,
+    borderRadius: VENDOR_DASHBOARD_CARD_RADIUS,
     paddingHorizontal: 12,
     paddingVertical: 10,
   },

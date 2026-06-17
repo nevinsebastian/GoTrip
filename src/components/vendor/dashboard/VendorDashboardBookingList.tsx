@@ -38,17 +38,6 @@ function BookingCard({ booking }: { booking: VendorDashboardBooking }) {
             <Text style={styles.btnTextWhite}>View</Text>
             <Ionicons name="open-outline" size={12} color={colors.surface.white} />
           </Pressable>
-          <Pressable style={styles.cancelBtn}>
-            <Text style={styles.btnTextWhite}>Cancel</Text>
-            <Ionicons name="close-circle" size={12} color={colors.surface.white} />
-          </Pressable>
-          <Pressable style={styles.confirmBtn}>
-            <Text style={styles.btnTextWhite}>Confirm</Text>
-            <Ionicons name="checkmark-circle" size={12} color={colors.surface.white} />
-          </Pressable>
-          <Pressable style={styles.phoneBtn}>
-            <Ionicons name="call-outline" size={16} color="#000000" />
-          </Pressable>
         </View>
       ) : null}
 
@@ -166,24 +155,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
     backgroundColor: VENDOR_DASHBOARD_BTN_BLUE,
-    borderRadius: VENDOR_DASHBOARD_BTN_RADIUS,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-  },
-  cancelBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: VENDOR_DASHBOARD_BTN_RED,
-    borderRadius: VENDOR_DASHBOARD_BTN_RADIUS,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-  },
-  confirmBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: VENDOR_DASHBOARD_BTN_GREEN,
     borderRadius: VENDOR_DASHBOARD_BTN_RADIUS,
     paddingHorizontal: 10,
     paddingVertical: 8,

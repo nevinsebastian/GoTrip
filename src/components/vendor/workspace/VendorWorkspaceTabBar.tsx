@@ -1,5 +1,5 @@
 import { Text } from '@/components/ui';
-import { colors, spacing, typography } from '@/constants/DesignTokens';
+import { colors, typography } from '@/constants/DesignTokens';
 import { VENDOR_DASHBOARD_NAV_BLUE } from '@/src/constants/vendorDashboardConstants';
 import {
   VENDOR_WORKSPACE_TABS,
@@ -7,6 +7,7 @@ import {
 } from '@/src/constants/vendorWorkspaceConstants';
 import { Ionicons } from '@expo/vector-icons';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
+import { router } from 'expo-router';
 import React from 'react';
 import { Platform, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -31,15 +32,17 @@ export function useVendorTabBarInset() {
   return s(64) + bottomPad + s(12);
 }
 
-export function VendorWorkspaceTabBar({ state, navigation }: BottomTabBarProps) {
+type VendorWorkspaceFloatingTabBarProps = {
+  activeTab: VendorWorkspaceTabId;
+};
+
+export function VendorWorkspaceFloatingTabBar({ activeTab }: VendorWorkspaceFloatingTabBarProps) {
   const { width } = useWindowDimensions();
   const scale = width / DESIGN_WIDTH;
   const s = (n: number) => Math.round(n * scale);
   const barWidth = Math.min(width - s(24), s(378));
   const insets = useSafeAreaInsets();
   const bottomPad = Math.max(insets.bottom, Platform.OS === 'ios' ? s(12) : s(10));
-  const activeRoute = state.routes[state.index]?.name ?? 'home';
-  const activeTab = TAB_ROUTE_MAP[activeRoute] ?? 'home';
 
   return (
     <View
@@ -63,14 +66,13 @@ export function VendorWorkspaceTabBar({ state, navigation }: BottomTabBarProps) 
       >
         {VENDOR_WORKSPACE_TABS.map((tab) => {
           const focused = tab.id === activeTab;
-          const route = state.routes.find((r) => r.name === tab.id);
           return (
             <Pressable
               key={tab.id}
               style={styles.tabButton}
               onPress={() => {
-                if (!route || focused) return;
-                navigation.navigate(route.name);
+                if (focused) return;
+                router.push(tab.route);
               }}
               accessibilityRole="button"
               accessibilityState={{ selected: focused }}
@@ -104,6 +106,13 @@ export function VendorWorkspaceTabBar({ state, navigation }: BottomTabBarProps) 
       </View>
     </View>
   );
+}
+
+export function VendorWorkspaceTabBar({ state, navigation }: BottomTabBarProps) {
+  const activeRoute = state.routes[state.index]?.name ?? 'home';
+  const activeTab = TAB_ROUTE_MAP[activeRoute] ?? 'home';
+
+  return <VendorWorkspaceFloatingTabBar activeTab={activeTab} />;
 }
 
 const styles = StyleSheet.create({
