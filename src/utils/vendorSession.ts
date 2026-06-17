@@ -75,6 +75,13 @@ export async function activateVendorSession(category: VendorListingCategoryId): 
   }
 }
 
+export async function loginExistingVendor(
+  category: VendorListingCategoryId = 'property',
+): Promise<void> {
+  const stored = await getStoredVendorListingCategory();
+  await activateVendorSession(stored ?? category);
+}
+
 export async function clearVendorSession(): Promise<void> {
   const ls = webLocalStorage();
   if (ls) {

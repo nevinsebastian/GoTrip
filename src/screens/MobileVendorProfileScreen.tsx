@@ -1,6 +1,7 @@
 import { Text } from '@/components/ui';
 import { borderRadius, colors, spacing, typography } from '@/constants/DesignTokens';
 import { VendorWorkspaceHeader } from '@/src/components/vendor/workspace/VendorWorkspaceHeader';
+import { useVendorTabBarInset } from '@/src/components/vendor/workspace/VendorWorkspaceTabBar';
 import {
   VENDOR_WORKSPACE_COPY,
   VENDOR_WORKSPACE_PROFILE,
@@ -18,6 +19,7 @@ const DESIGN_WIDTH = 402;
 
 export function MobileVendorProfileScreen() {
   const categoryId = useVendorListingCategory();
+  const tabInset = useVendorTabBarInset();
 
   const handleLogout = async () => {
     await clearVendorSession();
@@ -28,7 +30,10 @@ export function MobileVendorProfileScreen() {
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.page}>
         <VendorWorkspaceHeader categoryId={categoryId} showSearch={false} />
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: tabInset }]}
+          showsVerticalScrollIndicator={false}
+        >
           <View style={styles.profileHeader}>
             <Image source={VENDOR_WORKSPACE_PROFILE.avatar} style={styles.avatar} resizeMode="cover" />
             <View style={styles.profileInfo}>

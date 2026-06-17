@@ -41,6 +41,10 @@ export type OtpEntryModalProps = {
   email?: string;
   phone?: string;
   onAuthenticated?: () => void | Promise<void>;
+  /** Skip API verification — any 4-digit OTP succeeds. */
+  mockMode?: boolean;
+  /** Route after successful mock or API auth (default guest tabs). */
+  redirectTo?: string;
 };
 
 export function OtpEntryModal({
@@ -52,6 +56,8 @@ export function OtpEntryModal({
   email,
   phone,
   onAuthenticated,
+  mockMode = false,
+  redirectTo = '/(tabs)',
 }: OtpEntryModalProps) {
   const [digits, setDigits] = useState<string[]>(['', '', '', '']);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -110,6 +116,18 @@ export function OtpEntryModal({
     if (code.length !== OTP_LENGTH) return;
     setSubmitError(null);
 
+    if (mockMode) {
+      void (async () => {
+        try {
+          await onAuthenticated?.();
+        } finally {
+          handleClose();
+          router.replace(redirectTo as any);
+        }
+      })();
+      return;
+    }
+
     verifyOtp(
       {
         full_name: fullName || undefined,
@@ -125,7 +143,7 @@ export function OtpEntryModal({
               await onAuthenticated?.();
             } finally {
               handleClose();
-              router.replace('/(tabs)');
+              router.replace(redirectTo as any);
             }
             return;
           }

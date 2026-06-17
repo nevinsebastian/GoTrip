@@ -1,6 +1,6 @@
 import type { VendorListingCategoryId } from '@/src/constants/vendorOnboardingConstants';
 
-export const VENDOR_WORKSPACE_BLUE = '#2563EB';
+export const VENDOR_WORKSPACE_BLUE = '#2B709B';
 export const VENDOR_WORKSPACE_PINK = '#C2185B';
 export const VENDOR_WORKSPACE_GREEN = '#16A34A';
 export const VENDOR_WORKSPACE_RED = '#DC2626';
@@ -13,17 +13,17 @@ export const VENDOR_CATEGORY_PROVIDER_LABEL: Record<VendorListingCategoryId, str
   activities: 'Activity provider',
 };
 
-export type VendorWorkspaceTabId = 'home' | 'calendar' | 'listings' | 'profile';
+export type VendorWorkspaceTabId = 'home' | 'listings' | 'bookings' | 'profile';
 
 export const VENDOR_WORKSPACE_TABS: {
   id: VendorWorkspaceTabId;
   label: string;
-  icon: 'grid-outline' | 'calendar-outline' | 'business-outline' | 'person-circle-outline';
+  icon: 'grid-outline' | 'business-outline' | 'ticket-outline' | 'person-circle-outline';
   route: `/vendor/${string}`;
 }[] = [
   { id: 'home', label: 'Home', icon: 'grid-outline', route: '/vendor/home' },
-  { id: 'calendar', label: 'Calendar', icon: 'calendar-outline', route: '/vendor/calendar' },
   { id: 'listings', label: 'Listings', icon: 'business-outline', route: '/vendor/listings' },
+  { id: 'bookings', label: 'Bookings', icon: 'ticket-outline', route: '/vendor/bookings' },
   { id: 'profile', label: 'Profile', icon: 'person-circle-outline', route: '/vendor/profile' },
 ];
 

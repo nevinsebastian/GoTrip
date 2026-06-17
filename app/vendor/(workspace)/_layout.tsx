@@ -15,9 +15,10 @@ export default function VendorWorkspaceLayout() {
         }}
       >
         <Tabs.Screen name="home" options={{ title: 'Home' }} />
-        <Tabs.Screen name="calendar" options={{ title: 'Calendar' }} />
         <Tabs.Screen name="listings" options={{ title: 'Listings' }} />
+        <Tabs.Screen name="bookings" options={{ title: 'Bookings' }} />
         <Tabs.Screen name="profile" options={{ title: 'Profile' }} />
+        <Tabs.Screen name="calendar" options={{ href: null }} />
       </Tabs>
     </View>
   );

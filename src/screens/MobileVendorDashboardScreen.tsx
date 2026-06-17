@@ -1,22 +1,18 @@
 import { Text } from '@/components/ui';
 import { borderRadius, colors, spacing, typography } from '@/constants/DesignTokens';
+import { VendorDashboardBookingList } from '@/src/components/vendor/dashboard/VendorDashboardBookingList';
+import { VendorDashboardCategoryTabs } from '@/src/components/vendor/dashboard/VendorDashboardCategoryTabs';
+import { VendorDashboardTopBar } from '@/src/components/vendor/dashboard/VendorDashboardTopBar';
 import { VendorPropertyOptionSheet } from '@/src/components/vendor/VendorPropertyOptionSheet';
-import { VendorWorkspaceHeader } from '@/src/components/vendor/workspace/VendorWorkspaceHeader';
+import { useVendorTabBarInset } from '@/src/components/vendor/workspace/VendorWorkspaceTabBar';
 import {
   VENDOR_DASHBOARD_BLUE,
-  VENDOR_DASHBOARD_BOOKINGS,
-  VENDOR_DASHBOARD_CATEGORIES,
   VENDOR_DASHBOARD_COPY,
-  VENDOR_DASHBOARD_GREEN,
+  VENDOR_DASHBOARD_MARK_RED,
   VENDOR_DASHBOARD_PROPERTIES,
-  VENDOR_DASHBOARD_RED,
   VENDOR_DASHBOARD_SORT_OPTIONS,
-  type VendorDashboardBooking,
+  VENDOR_DASHBOARD_TITLE,
 } from '@/src/constants/vendorDashboardConstants';
-import {
-  VENDOR_WORKSPACE_COPY,
-  VENDOR_WORKSPACE_PINK,
-} from '@/src/constants/vendorWorkspaceConstants';
 import type { VendorListingCategoryId } from '@/src/constants/vendorOnboardingConstants';
 import { useVendorListingCategory } from '@/src/hooks/useVendorListingCategory';
 import { clearVendorSession, getStoredVendorListingCategory } from '@/src/utils/vendorSession';
@@ -38,112 +34,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 const DESIGN_WIDTH = 402;
 const HOST_AVATAR = require('../../loginimage.png');
 
-const CREATE_LISTING_ROUTE: Record<VendorListingCategoryId, string> = {
-  property: '/vendor/describe-property',
-  glamping: '/vendor/describe-camp',
-  packages: '/vendor/describe-package',
-  activities: '/vendor/describe-activity',
-};
-
-function BookingCard({ booking }: { booking: VendorDashboardBooking }) {
-  const meta = `${booking.guests} Guest${booking.guests === 1 ? '' : 's'} | ${booking.dateRange}`;
-  const goToBooking = () => router.push(`/vendor/booking/${booking.id}` as any);
-
-  if (booking.status === 'pending') {
-    return (
-      <View style={styles.bookingCard}>
-        <View style={styles.bookingTop}>
-          <Text style={styles.guestName}>{booking.guestName}</Text>
-          <Text style={styles.bookingMeta}>{meta}</Text>
-        </View>
-        <View style={styles.actionRow}>
-          <Pressable style={styles.viewBtn} onPress={goToBooking}>
-            <Text style={styles.viewBtnText}>View</Text>
-            <Ionicons name="open-outline" size={12} color={colors.surface.white} />
-          </Pressable>
-          <Pressable style={styles.cancelBtn}>
-            <Text style={styles.cancelBtnText}>Cancel</Text>
-          </Pressable>
-          <Pressable style={styles.confirmBtn}>
-            <Text style={styles.confirmBtnText}>Confirm</Text>
-          </Pressable>
-          <Pressable style={styles.phoneBtn}>
-            <Ionicons name="call-outline" size={16} color={colors.text.primary} />
-          </Pressable>
-        </View>
-      </View>
-    );
-  }
-
-  if (booking.status === 'confirmed') {
-    return (
-      <View style={styles.bookingCard}>
-        <View style={styles.bookingTop}>
-          <Text style={styles.guestName}>{booking.guestName}</Text>
-          <Text style={styles.bookingMeta}>{meta}</Text>
-        </View>
-        <View style={styles.actionRow}>
-          <Pressable style={styles.viewBtn} onPress={goToBooking}>
-            <Text style={styles.viewBtnText}>View</Text>
-            <Ionicons name="open-outline" size={12} color={colors.surface.white} />
-          </Pressable>
-          <View style={styles.statusBadgeGreen}>
-            <Ionicons name="checkmark-circle" size={14} color={VENDOR_DASHBOARD_GREEN} />
-            <Text style={styles.statusGreenText}>Booking Confirmed</Text>
-          </View>
-          <Pressable style={styles.phoneBtn}>
-            <Ionicons name="call-outline" size={16} color={colors.text.primary} />
-          </Pressable>
-        </View>
-      </View>
-    );
-  }
-
-  if (booking.status === 'cancelled') {
-    return (
-      <View style={styles.bookingCard}>
-        <View style={styles.bookingTop}>
-          <Text style={styles.guestName}>{booking.guestName}</Text>
-          <Text style={styles.bookingMeta}>{meta}</Text>
-        </View>
-        <View style={styles.actionRow}>
-          <Pressable style={styles.viewBtn} onPress={goToBooking}>
-            <Text style={styles.viewBtnText}>View</Text>
-            <Ionicons name="open-outline" size={12} color={colors.surface.white} />
-          </Pressable>
-          <View style={styles.statusBadgeRed}>
-            <Ionicons name="close-circle" size={14} color={VENDOR_DASHBOARD_RED} />
-            <Text style={styles.statusRedText}>Booking Cancelled</Text>
-          </View>
-          <Pressable style={styles.phoneBtn}>
-            <Ionicons name="call-outline" size={16} color={colors.text.primary} />
-          </Pressable>
-        </View>
-      </View>
-    );
-  }
-
-  return (
-    <View style={styles.bookingCard}>
-      <View style={styles.bookingTop}>
-        <Text style={styles.guestName}>{booking.guestName}</Text>
-        <Text style={styles.bookingMeta}>{meta}</Text>
-      </View>
-      <View style={styles.simpleRow}>
-        <Pressable style={styles.viewBookingBtn} onPress={goToBooking}>
-          <Text style={styles.viewBookingText}>View Booking</Text>
-        </Pressable>
-        <Pressable style={styles.contactBtn}>
-          <Ionicons name="call-outline" size={14} color={colors.text.primary} />
-          <Text style={styles.contactBtnText}>Contact</Text>
-        </Pressable>
-      </View>
-    </View>
-  );
-}
-
 export function MobileVendorDashboardScreen() {
   const storedCategory = useVendorListingCategory();
+  const tabInset = useVendorTabBarInset();
   const [categoryId, setCategoryId] = useState<VendorListingCategoryId>(storedCategory);
   const [propertyId, setPropertyId] = useState(VENDOR_DASHBOARD_PROPERTIES[0].id);
   const [sortId, setSortId] = useState('date');
@@ -212,8 +105,12 @@ export function MobileVendorDashboardScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.page}>
-        <VendorWorkspaceHeader categoryId={categoryId} onMenuPress={() => setMenuOpen((v) => !v)} />
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <VendorDashboardTopBar onMenuPress={() => setMenuOpen((v) => !v)} />
+
+        <ScrollView
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: tabInset }]}
+          showsVerticalScrollIndicator={false}
+        >
           {menuOpen ? (
             <View style={styles.menuCard}>
               <View style={styles.menuProfile}>
@@ -231,41 +128,13 @@ export function MobileVendorDashboardScreen() {
             </View>
           ) : null}
 
-          <Pressable
-            style={styles.createListingBtn}
-            onPress={() => router.push(CREATE_LISTING_ROUTE[categoryId] as any)}
-          >
-            <Ionicons name="add" size={16} color={colors.surface.white} />
-            <Text style={styles.createListingText}>{VENDOR_WORKSPACE_COPY.addListing}</Text>
-          </Pressable>
-
-          <View style={styles.categoryRow}>
-            {VENDOR_DASHBOARD_CATEGORIES.map((tab) => {
-              const selected = tab.id === categoryId;
-              return (
-                <Pressable
-                  key={tab.id}
-                  style={[styles.categoryTab, selected && styles.categoryTabSelected]}
-                  onPress={() => setCategoryId(tab.id)}
-                >
-                  <Ionicons
-                    name={tab.icon}
-                    size={16}
-                    color={selected ? VENDOR_DASHBOARD_BLUE : 'rgba(28, 32, 36, 0.45)'}
-                  />
-                  <Text style={[styles.categoryLabel, selected && styles.categoryLabelSelected]}>
-                    {tab.label}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
+          <VendorDashboardCategoryTabs selectedId={categoryId} onSelect={setCategoryId} />
 
           <View style={styles.dashboardHeader}>
             <Text style={styles.dashboardTitle}>{VENDOR_DASHBOARD_COPY.dashboardTitle}</Text>
             <Pressable style={styles.unavailabilityBtn}>
-              <Ionicons name="calendar-outline" size={14} color={colors.surface.white} />
               <Text style={styles.unavailabilityText}>{VENDOR_DASHBOARD_COPY.markUnavailability}</Text>
+              <Ionicons name="calendar-outline" size={14} color={colors.surface.white} />
             </Pressable>
           </View>
 
@@ -294,11 +163,7 @@ export function MobileVendorDashboardScreen() {
             </Pressable>
           </View>
 
-          <View style={styles.bookingList}>
-            {VENDOR_DASHBOARD_BOOKINGS.map((booking) => (
-              <BookingCard key={booking.id} booking={booking} />
-            ))}
-          </View>
+          <VendorDashboardBookingList />
         </ScrollView>
       </View>
 
@@ -387,8 +252,7 @@ const styles = StyleSheet.create({
   page: { flex: 1, width: '100%', maxWidth: DESIGN_WIDTH, alignSelf: 'center' },
   scrollContent: {
     paddingHorizontal: spacing['4'],
-    paddingBottom: spacing['4'],
-    gap: 12,
+    gap: 14,
   },
   menuCard: {
     alignSelf: 'flex-end',
@@ -399,6 +263,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface.white,
     padding: 12,
     gap: 8,
+    marginTop: -8,
     ...Platform.select({
       ios: {
         shadowColor: '#000',
@@ -435,76 +300,33 @@ const styles = StyleSheet.create({
     fontSize: typography.fontSize['1'],
     color: colors.text.primary,
   },
-  createListingBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: VENDOR_WORKSPACE_PINK,
-    borderRadius: borderRadius.pill,
-    paddingVertical: 12,
-  },
-  createListingText: {
-    fontFamily: typography.fontFamily.text,
-    fontSize: typography.fontSize['1'],
-    fontWeight: typography.fontWeight.semibold,
-    color: colors.surface.white,
-  },
-  categoryRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  categoryTab: {
-    flex: 1,
-    alignItems: 'center',
-    gap: 4,
-    borderWidth: 1,
-    borderColor: 'rgba(28, 32, 36, 0.12)',
-    borderRadius: borderRadius.lg,
-    paddingVertical: 8,
-    paddingHorizontal: 4,
-    backgroundColor: colors.surface.white,
-  },
-  categoryTabSelected: {
-    borderColor: VENDOR_DASHBOARD_BLUE,
-    backgroundColor: 'rgba(37, 99, 235, 0.08)',
-  },
-  categoryLabel: {
-    fontFamily: typography.fontFamily.text,
-    fontSize: 9,
-    color: 'rgba(28, 32, 36, 0.55)',
-    textAlign: 'center',
-  },
-  categoryLabelSelected: {
-    color: VENDOR_DASHBOARD_BLUE,
-    fontWeight: typography.fontWeight.semibold,
-  },
   dashboardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 8,
+    gap: 10,
+    marginTop: 2,
   },
   dashboardTitle: {
     fontFamily: typography.fontFamily.text,
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: typography.fontWeight.bold,
-    color: colors.text.primary,
+    color: VENDOR_DASHBOARD_TITLE,
     flex: 1,
   },
   unavailabilityBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    backgroundColor: VENDOR_DASHBOARD_RED,
-    borderRadius: borderRadius.pill,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
+    gap: 8,
+    backgroundColor: VENDOR_DASHBOARD_MARK_RED,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
   },
   unavailabilityText: {
     fontFamily: typography.fontFamily.text,
-    fontSize: 10,
-    fontWeight: typography.fontWeight.semibold,
+    fontSize: 11,
+    fontWeight: typography.fontWeight.bold,
     color: colors.surface.white,
   },
   toolbarRow: {
@@ -519,7 +341,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 8,
     backgroundColor: '#1F2937',
-    borderRadius: borderRadius.lg,
+    borderRadius: 0,
     paddingHorizontal: 12,
     paddingVertical: 12,
   },
@@ -533,17 +355,17 @@ const styles = StyleSheet.create({
   iconToolBtn: {
     width: 40,
     height: 40,
-    borderRadius: borderRadius.lg,
+    borderRadius: 0,
     borderWidth: 1,
-    borderColor: 'rgba(28, 32, 36, 0.12)',
+    borderColor: 'rgba(28, 32, 36, 0.2)',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.surface.white,
   },
   sortCard: {
     borderWidth: 1,
-    borderColor: 'rgba(28, 32, 36, 0.12)',
-    borderRadius: borderRadius.lg,
+    borderColor: 'rgba(28, 32, 36, 0.15)',
+    borderRadius: 0,
     padding: 12,
     gap: 8,
     backgroundColor: colors.surface.white,
@@ -559,151 +381,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     borderWidth: 1,
-    borderColor: 'rgba(28, 32, 36, 0.12)',
-    borderRadius: borderRadius.lg,
+    borderColor: 'rgba(28, 32, 36, 0.15)',
+    borderRadius: 0,
     paddingHorizontal: 12,
     paddingVertical: 10,
   },
   sortValue: {
     fontFamily: typography.fontFamily.text,
     fontSize: typography.fontSize['1'],
-    color: colors.text.primary,
-  },
-  bookingList: { gap: 10 },
-  bookingCard: {
-    borderWidth: 1,
-    borderColor: 'rgba(28, 32, 36, 0.1)',
-    borderRadius: borderRadius.xl,
-    padding: 12,
-    gap: 10,
-    backgroundColor: colors.surface.white,
-  },
-  bookingTop: { gap: 4 },
-  guestName: {
-    fontFamily: typography.fontFamily.text,
-    fontSize: typography.fontSize['2'],
-    fontWeight: typography.fontWeight.semibold,
-    color: colors.text.primary,
-  },
-  bookingMeta: {
-    fontFamily: typography.fontFamily.text,
-    fontSize: 11,
-    color: 'rgba(28, 32, 36, 0.55)',
-  },
-  actionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    flexWrap: 'wrap',
-  },
-  viewBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: VENDOR_DASHBOARD_BLUE,
-    borderRadius: borderRadius.pill,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  viewBtnText: {
-    fontFamily: typography.fontFamily.text,
-    fontSize: 11,
-    fontWeight: typography.fontWeight.semibold,
-    color: colors.surface.white,
-  },
-  cancelBtn: {
-    borderWidth: 1,
-    borderColor: VENDOR_DASHBOARD_RED,
-    borderRadius: borderRadius.pill,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  cancelBtnText: {
-    fontFamily: typography.fontFamily.text,
-    fontSize: 11,
-    fontWeight: typography.fontWeight.semibold,
-    color: VENDOR_DASHBOARD_RED,
-  },
-  confirmBtn: {
-    backgroundColor: VENDOR_DASHBOARD_GREEN,
-    borderRadius: borderRadius.pill,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  confirmBtnText: {
-    fontFamily: typography.fontFamily.text,
-    fontSize: 11,
-    fontWeight: typography.fontWeight.semibold,
-    color: colors.surface.white,
-  },
-  phoneBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: borderRadius.lg,
-    borderWidth: 1,
-    borderColor: 'rgba(28, 32, 36, 0.12)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.surface.white,
-  },
-  statusBadgeGreen: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    justifyContent: 'center',
-  },
-  statusGreenText: {
-    fontFamily: typography.fontFamily.text,
-    fontSize: 10,
-    fontWeight: typography.fontWeight.medium,
-    color: VENDOR_DASHBOARD_GREEN,
-  },
-  statusBadgeRed: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    justifyContent: 'center',
-  },
-  statusRedText: {
-    fontFamily: typography.fontFamily.text,
-    fontSize: 10,
-    fontWeight: typography.fontWeight.medium,
-    color: VENDOR_DASHBOARD_RED,
-  },
-  simpleRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  viewBookingBtn: {
-    flex: 1,
-    backgroundColor: VENDOR_DASHBOARD_BLUE,
-    borderRadius: borderRadius.pill,
-    paddingVertical: 10,
-    alignItems: 'center',
-  },
-  viewBookingText: {
-    fontFamily: typography.fontFamily.text,
-    fontSize: typography.fontSize['1'],
-    fontWeight: typography.fontWeight.semibold,
-    color: colors.surface.white,
-  },
-  contactBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    borderWidth: 1,
-    borderColor: 'rgba(28, 32, 36, 0.12)',
-    borderRadius: borderRadius.pill,
-    paddingVertical: 10,
-  },
-  contactBtnText: {
-    fontFamily: typography.fontFamily.text,
-    fontSize: typography.fontSize['1'],
-    fontWeight: typography.fontWeight.medium,
     color: colors.text.primary,
   },
   modalOverlay: {

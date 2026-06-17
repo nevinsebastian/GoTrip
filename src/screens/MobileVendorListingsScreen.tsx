@@ -1,6 +1,7 @@
 import { Text } from '@/components/ui';
 import { borderRadius, colors, spacing, typography } from '@/constants/DesignTokens';
 import { VendorWorkspaceHeader } from '@/src/components/vendor/workspace/VendorWorkspaceHeader';
+import { useVendorTabBarInset } from '@/src/components/vendor/workspace/VendorWorkspaceTabBar';
 import {
   VENDOR_WORKSPACE_COPY,
   VENDOR_WORKSPACE_GREEN,
@@ -26,12 +27,16 @@ const CREATE_LISTING_ROUTE: Record<VendorListingCategoryId, string> = {
 
 export function MobileVendorListingsScreen() {
   const categoryId = useVendorListingCategory();
+  const tabInset = useVendorTabBarInset();
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.page}>
         <VendorWorkspaceHeader categoryId={categoryId} />
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: tabInset }]}
+          showsVerticalScrollIndicator={false}
+        >
           <Pressable
             style={styles.createBtn}
             onPress={() => router.push(CREATE_LISTING_ROUTE[categoryId] as any)}

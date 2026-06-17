@@ -1,14 +1,15 @@
 import { Input, Text } from '@/components/ui';
-import { borderRadius, colors, spacing, typography } from '@/constants/DesignTokens';
+import { colors, spacing, typography } from '@/constants/DesignTokens';
 import { AuthMobileHero } from '@/src/components/AuthMobileHero';
 import { OtpEntryModal } from '@/src/components/OtpEntryModal';
 import type { OtpChannel } from '@/src/api/types';
 import { authFieldInputStyle } from '@/src/constants/authInputStyles';
+import { VENDOR_WORKSPACE_BLUE } from '@/src/constants/vendorWorkspaceConstants';
+import { loginExistingVendor } from '@/src/utils/vendorSession';
+import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
-  Image,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
@@ -20,15 +21,9 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import MailIcon from '@/assets/images/mail.svg';
-import { useSendOtp } from '@/src/hooks/useSendOtp';
-import { getErrorMessage } from '@/src/utils/errorHandler';
-
-const GoogleIcon = require('../../assets/images/google.png');
-
 const isWeb = Platform.OS === 'web';
 const isIOS = Platform.OS === 'ios';
-const ACCENT = colors.accent.main;
+const VENDOR_ACCENT = VENDOR_WORKSPACE_BLUE;
 const DESIGN_WIDTH = 402;
 
 type LoginMode = 'phone' | 'email';
@@ -48,9 +43,8 @@ function OrDivider() {
   );
 }
 
-export function MobileLoginScreen() {
+export function MobileVendorLoginScreen() {
   const contentPadding = spacing['4'];
-  const socialIconSize = 16;
   const scrollRef = useRef<ScrollView>(null);
   const [keyboardPadding, setKeyboardPadding] = useState(0);
 
@@ -60,7 +54,6 @@ export function MobileLoginScreen() {
   const [otpSession, setOtpSession] = useState<OtpSession | null>(null);
 
   const isEmailMode = loginMode === 'email';
-  const { mutate: sendOtp, isPending: isSendingOtp } = useSendOtp();
 
   useEffect(() => {
     if (isWeb) return;
@@ -90,7 +83,6 @@ export function MobileLoginScreen() {
 
   const handleGetOtp = () => {
     setSubmitError(null);
-
     const trimmed = inputValue.trim();
     if (!trimmed) {
       setSubmitError(
@@ -98,25 +90,9 @@ export function MobileLoginScreen() {
       );
       return;
     }
-
+    Keyboard.dismiss();
     const channel: OtpChannel = isEmailMode ? 'email' : 'phone';
-    const payload = isEmailMode
-      ? { channel, email: trimmed }
-      : { channel, phone: trimmed };
-
-    sendOtp(payload, {
-      onSuccess: (res) => {
-        if (res?.success) {
-          Keyboard.dismiss();
-          setOtpSession({ contact: trimmed, channel });
-          return;
-        }
-        setSubmitError(res?.message ?? 'Failed to send OTP. Please try again.');
-      },
-      onError: (err) => {
-        setSubmitError(getErrorMessage(err));
-      },
-    });
+    setOtpSession({ contact: trimmed, channel });
   };
 
   const dismissKeyboard = () => {
@@ -145,20 +121,26 @@ export function MobileLoginScreen() {
           automaticallyAdjustKeyboardInsets={isIOS}
           showsVerticalScrollIndicator={false}
         >
+          <Pressable onPress={() => router.back()} style={styles.backRow} hitSlop={8}>
+            <Ionicons name="arrow-back" size={20} color={colors.text.primary} />
+            <Text style={styles.backText}>Guest login</Text>
+          </Pressable>
+
           <AuthMobileHero />
 
           <View style={styles.formSection}>
-            <Text style={styles.welcomeTitle}>Welcome Back!</Text>
+            <Text style={styles.welcomeTitle}>Vendor Login</Text>
+            <Text style={styles.subtitle}>Sign in to manage your listings and bookings.</Text>
 
             <View style={styles.formBody}>
               <View style={styles.formTop}>
                 <View style={styles.inputGroup}>
                   <Text style={styles.fieldLabel}>
-                    {isEmailMode ? 'Enter your Email to continue.' : 'Enter your Phone to continue.'}
+                    {isEmailMode ? 'Enter your vendor email.' : 'Enter your vendor phone.'}
                   </Text>
 
                   <Input
-                    placeholder={isEmailMode ? 'Email' : '+91 9744893210'}
+                    placeholder={isEmailMode ? 'vendor@email.com' : '+91 9744893210'}
                     keyboardType={isEmailMode ? 'email-address' : 'phone-pad'}
                     autoCapitalize="none"
                     autoCorrect={false}
@@ -170,9 +152,7 @@ export function MobileLoginScreen() {
                   />
 
                   <Text style={styles.helper}>
-                    {isEmailMode
-                      ? "You'll get OTP to this email."
-                      : "You'll get OTP to this number."}
+                    Demo mode — enter any contact, then use any 4-digit OTP.
                   </Text>
                 </View>
 
@@ -183,20 +163,11 @@ export function MobileLoginScreen() {
                 ) : null}
 
                 <Pressable
-                  style={({ pressed }) => [
-                    styles.getOtpButton,
-                    pressed && styles.buttonPressed,
-                    isSendingOtp && styles.buttonDisabled,
-                  ]}
+                  style={({ pressed }) => [styles.getOtpButton, pressed && styles.buttonPressed]}
                   onPress={handleGetOtp}
-                  disabled={isSendingOtp}
                   accessibilityRole="button"
                 >
-                  {isSendingOtp ? (
-                    <ActivityIndicator color={colors.surface.white} size="small" />
-                  ) : (
-                    <Text style={styles.getOtpText}>Get OTP</Text>
-                  )}
+                  <Text style={styles.getOtpText}>Get OTP</Text>
                 </Pressable>
               </View>
 
@@ -204,55 +175,20 @@ export function MobileLoginScreen() {
 
               <View style={styles.socialStack}>
                 <Pressable
-                  style={({ pressed }) => [
-                    styles.socialButton,
-                    pressed && styles.buttonPressed,
-                  ]}
+                  style={({ pressed }) => [styles.socialButton, pressed && styles.buttonPressed]}
                   onPress={switchMode}
                   accessibilityRole="button"
                 >
-                  <MailIcon width={socialIconSize} height={socialIconSize} />
                   <Text style={styles.socialButtonText}>
                     {isEmailMode ? 'Login with phone' : 'Log in with mail'}
                   </Text>
                 </Pressable>
 
                 <Pressable
-                  style={({ pressed }) => [
-                    styles.socialButton,
-                    pressed && styles.buttonPressed,
-                  ]}
-                  onPress={() => {}}
+                  style={({ pressed }) => [styles.joinTribeButton, pressed && styles.buttonPressed]}
+                  onPress={() => router.push('/become-vendor')}
                   accessibilityRole="button"
-                >
-                  <Image
-                    source={GoogleIcon}
-                    style={{ width: socialIconSize, height: socialIconSize }}
-                    resizeMode="contain"
-                  />
-                  <Text style={styles.socialButtonText}>Continue with Google</Text>
-                </Pressable>
-
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.vendorLoginButton,
-                    pressed && styles.buttonPressed,
-                  ]}
-                  onPress={() => router.push('/vendor-login')}
-                  accessibilityRole="button"
-                  accessibilityLabel="Login as a vendor"
-                >
-                  <Text style={styles.vendorLoginText}>Login as a vendor</Text>
-                </Pressable>
-
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.joinTribeButton,
-                    pressed && styles.buttonPressed,
-                  ]}
-                  onPress={() => router.push('/signup')}
-                  accessibilityRole="button"
-                  accessibilityLabel="Join the Tribe signup"
+                  accessibilityLabel="Join the Tribe vendor signup"
                 >
                   <Text style={styles.joinTribeText}>Join the Tribe!</Text>
                 </Pressable>
@@ -267,13 +203,14 @@ export function MobileLoginScreen() {
         onClose={() => setOtpSession(null)}
         contact={otpSession?.contact ?? ''}
         channel={otpSession?.channel ?? 'phone'}
+        mockMode
+        redirectTo="/vendor/home"
+        onAuthenticated={loginExistingVendor}
       />
     </SafeAreaView>
   );
 
-  if (isWeb) {
-    return shell;
-  }
+  if (isWeb) return shell;
 
   return (
     <TouchableWithoutFeedback onPress={dismissKeyboard} accessible={false}>
@@ -296,9 +233,19 @@ const styles = StyleSheet.create({
     maxWidth: DESIGN_WIDTH,
     alignSelf: 'center',
   },
+  backRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  backText: {
+    fontFamily: typography.fontFamily.text,
+    fontSize: typography.fontSize['1'],
+    color: colors.text.primary,
+  },
   formSection: {
     width: '100%',
-    gap: 12,
+    gap: 8,
   },
   welcomeTitle: {
     fontFamily: typography.fontFamily.text,
@@ -306,7 +253,13 @@ const styles = StyleSheet.create({
     fontWeight: typography.fontWeight.medium,
     lineHeight: 42,
     letterSpacing: typography.letterSpacing['3'],
-    color: ACCENT,
+    color: VENDOR_ACCENT,
+  },
+  subtitle: {
+    fontFamily: typography.fontFamily.text,
+    fontSize: typography.fontSize['1'],
+    color: 'rgba(28, 32, 36, 0.55)',
+    marginBottom: 4,
   },
   formBody: { gap: 12 },
   formTop: { gap: 24 },
@@ -333,7 +286,7 @@ const styles = StyleSheet.create({
   getOtpButton: {
     height: 36,
     borderRadius: 24,
-    backgroundColor: ACCENT,
+    backgroundColor: VENDOR_ACCENT,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: spacing['3'],
@@ -348,7 +301,6 @@ const styles = StyleSheet.create({
     color: colors.surface.white,
   },
   buttonPressed: { opacity: 0.85 },
-  buttonDisabled: { opacity: 0.7 },
   orDivider: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -359,7 +311,7 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 1,
     borderRadius: 2,
-    backgroundColor: ACCENT,
+    backgroundColor: VENDOR_ACCENT,
   },
   orLineMuted: {
     flex: 1,
@@ -404,37 +356,16 @@ const styles = StyleSheet.create({
     height: 36,
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: ACCENT,
+    borderColor: VENDOR_ACCENT,
     backgroundColor: colors.surface.white,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: spacing['3'],
     width: '100%',
+    marginTop: spacing['1'],
     ...Platform.select({
       web: { cursor: 'pointer' as const },
     }),
-  },
-  vendorLoginButton: {
-    height: 36,
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: '#2563EB',
-    backgroundColor: 'rgba(37, 99, 235, 0.06)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: spacing['3'],
-    width: '100%',
-    ...Platform.select({
-      web: { cursor: 'pointer' as const },
-    }),
-  },
-  vendorLoginText: {
-    fontFamily: typography.fontFamily.text,
-    fontSize: typography.fontSize['2'],
-    fontWeight: typography.fontWeight.medium,
-    lineHeight: typography.lineHeight['2'],
-    letterSpacing: typography.letterSpacing['2'],
-    color: '#2563EB',
   },
   joinTribeText: {
     fontFamily: typography.fontFamily.text,
@@ -442,6 +373,6 @@ const styles = StyleSheet.create({
     fontWeight: typography.fontWeight.medium,
     lineHeight: typography.lineHeight['2'],
     letterSpacing: typography.letterSpacing['2'],
-    color: ACCENT,
+    color: VENDOR_ACCENT,
   },
 });
