@@ -3,6 +3,7 @@ import { borderRadius, colors, spacing, typography } from '@/constants/DesignTok
 import { VendorOnboardingFooter } from '@/src/components/vendor/VendorOnboardingFooter';
 import { VendorOnboardingHero } from '@/src/components/vendor/VendorOnboardingHero';
 import { DEFAULT_VENDOR_HOST_TERMS, VENDOR_TERMS_COPY } from '@/src/constants/vendorListingConstants';
+import { useVendorListingCategory } from '@/src/hooks/useVendorListingCategory';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
@@ -14,6 +15,7 @@ const FIELD_BORDER = 'rgba(28, 32, 36, 0.1)';
 const TERMS_SCROLL_HEIGHT = 220;
 
 export function MobileVendorTermsScreen() {
+  const categoryId = useVendorListingCategory();
   const [terms, setTerms] = useState(DEFAULT_VENDOR_HOST_TERMS);
   const [agreed, setAgreed] = useState(false);
 
@@ -21,7 +23,7 @@ export function MobileVendorTermsScreen() {
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.page}>
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          <VendorOnboardingHero categoryId="property" />
+          <VendorOnboardingHero categoryId={categoryId} />
           <Text style={styles.title}>{VENDOR_TERMS_COPY.title}</Text>
           <Text style={styles.subtitle}>{VENDOR_TERMS_COPY.subtitle}</Text>
 

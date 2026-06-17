@@ -6,6 +6,7 @@ import {
   VENDOR_AMENITIES,
   VENDOR_AMENITIES_COPY,
 } from '@/src/constants/vendorListingConstants';
+import { useVendorListingCategory } from '@/src/hooks/useVendorListingCategory';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useMemo, useState } from 'react';
@@ -16,6 +17,7 @@ const DESIGN_WIDTH = 402;
 const DEFAULT_SELECTED = ['kitchen', 'parking', 'breakfast', 'ac', 'bathroom'];
 
 export function MobileVendorAmenitiesScreen() {
+  const categoryId = useVendorListingCategory();
   const [selectedIds, setSelectedIds] = useState<string[]>(DEFAULT_SELECTED);
   const [searchQuery, setSearchQuery] = useState('');
   const [applyToAllRooms, setApplyToAllRooms] = useState(true);
@@ -36,7 +38,7 @@ export function MobileVendorAmenitiesScreen() {
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.page}>
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          <VendorOnboardingHero categoryId="property" />
+          <VendorOnboardingHero categoryId={categoryId} />
           <Text style={styles.title}>{VENDOR_AMENITIES_COPY.title}</Text>
 
           <View style={styles.toolbar}>

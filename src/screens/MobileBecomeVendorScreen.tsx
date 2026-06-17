@@ -556,6 +556,10 @@ export function MobileBecomeVendorScreen() {
         router.replace('/vendor/describe-property');
         return;
       }
+      if (listingCategory === 'glamping') {
+        router.replace('/vendor/describe-camp');
+        return;
+      }
       router.replace('/vendor/select-location');
     } finally {
       setIsProceedingCategory(false);

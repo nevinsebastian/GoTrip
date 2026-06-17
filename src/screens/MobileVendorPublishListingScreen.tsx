@@ -8,6 +8,8 @@ import {
   VENDOR_PREVIEW_TAGS,
   VENDOR_PUBLISH_COPY,
 } from '@/src/constants/vendorListingConstants';
+import { VENDOR_GLAMPING_PUBLISH_TITLE } from '@/src/constants/vendorGlampingConstants';
+import { useVendorListingCategory } from '@/src/hooks/useVendorListingCategory';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React from 'react';
@@ -22,25 +24,30 @@ function formatRupee(value: number) {
 }
 
 export function MobileVendorPublishListingScreen() {
+  const categoryId = useVendorListingCategory();
   const price = DEFAULT_VENDOR_ROOM_PRICING.basePrice;
+  const listingTitle =
+    categoryId === 'glamping' ? VENDOR_GLAMPING_PUBLISH_TITLE : VENDOR_PUBLISH_COPY.listingTitle;
+  const thumbnail =
+    categoryId === 'glamping' ? VENDOR_MOCK_PHOTO_SOURCES[2] : VENDOR_MOCK_PHOTO_SOURCES[0];
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.page}>
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          <VendorOnboardingHero categoryId="property" />
+          <VendorOnboardingHero categoryId={categoryId} />
           <Text style={styles.title}>{VENDOR_PUBLISH_COPY.title}</Text>
           <Text style={styles.description}>{VENDOR_PUBLISH_COPY.description}</Text>
 
           <View style={styles.previewCard}>
             <View style={styles.previewTop}>
               <Image
-                source={VENDOR_MOCK_PHOTO_SOURCES[0]}
+                source={thumbnail}
                 style={styles.thumbnail}
                 resizeMode="cover"
               />
               <View style={styles.previewInfo}>
-                <Text style={styles.listingTitle}>{VENDOR_PUBLISH_COPY.listingTitle}</Text>
+                <Text style={styles.listingTitle}>{listingTitle}</Text>
                 <View style={styles.hostRow}>
                   <Image source={VENDOR_MOCK_HOST.avatar} style={styles.hostAvatar} resizeMode="cover" />
                   <Text style={styles.hostText}>

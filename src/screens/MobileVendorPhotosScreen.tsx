@@ -8,6 +8,7 @@ import {
   VENDOR_PHOTOS_COPY,
   type VendorListingPhoto,
 } from '@/src/constants/vendorListingConstants';
+import { useVendorListingCategory } from '@/src/hooks/useVendorListingCategory';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
@@ -33,6 +34,7 @@ function createPhotoFromSource(source: (typeof VENDOR_MOCK_PHOTO_SOURCES)[number
 }
 
 export function MobileVendorPhotosScreen() {
+  const categoryId = useVendorListingCategory();
   const [photos, setPhotos] = useState<VendorListingPhoto[]>([]);
   const [coverPhotoId, setCoverPhotoId] = useState<string | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -71,7 +73,7 @@ export function MobileVendorPhotosScreen() {
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.page}>
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          <VendorOnboardingHero categoryId="property" />
+          <VendorOnboardingHero categoryId={categoryId} />
           <Text style={styles.title}>{VENDOR_PHOTOS_COPY.title}</Text>
           <Text style={styles.subtitle}>
             {hasPhotos ? VENDOR_PHOTOS_COPY.subtitleFilled : VENDOR_PHOTOS_COPY.subtitleEmpty}

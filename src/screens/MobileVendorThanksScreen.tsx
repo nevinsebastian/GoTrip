@@ -2,6 +2,7 @@ import { Text } from '@/components/ui';
 import { borderRadius, colors, spacing, typography } from '@/constants/DesignTokens';
 import { VendorOnboardingHero } from '@/src/components/vendor/VendorOnboardingHero';
 import { VENDOR_MOCK_HOST, VENDOR_THANKS_COPY } from '@/src/constants/vendorListingConstants';
+import { useVendorListingCategory } from '@/src/hooks/useVendorListingCategory';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React from 'react';
@@ -12,6 +13,7 @@ const DESIGN_WIDTH = 402;
 const FIELD_BORDER = 'rgba(28, 32, 36, 0.1)';
 
 export function MobileVendorThanksScreen() {
+  const categoryId = useVendorListingCategory();
   const hostName = VENDOR_MOCK_HOST.firstName;
 
   return (
@@ -19,7 +21,7 @@ export function MobileVendorThanksScreen() {
       <View style={styles.page}>
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           <VendorOnboardingHero
-            categoryId="property"
+            categoryId={categoryId}
             hostOverlay={{
               label: 'Your host',
               name: VENDOR_MOCK_HOST.fullName,

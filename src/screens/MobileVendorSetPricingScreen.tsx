@@ -9,6 +9,8 @@ import {
   VENDOR_PRICING_ROOMS,
   type VendorRoomPricing,
 } from '@/src/constants/vendorListingConstants';
+import { VENDOR_GLAMPING_PRICING_COPY } from '@/src/constants/vendorGlampingConstants';
+import { useVendorListingCategory } from '@/src/hooks/useVendorListingCategory';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useRef, useState } from 'react';
@@ -89,6 +91,13 @@ function EditableRupeeField({
 }
 
 export function MobileVendorSetPricingScreen() {
+  const categoryId = useVendorListingCategory();
+  const isGlamping = categoryId === 'glamping';
+
+  const [glampingPrice, setGlampingPrice] = useState(DEFAULT_VENDOR_ROOM_PRICING.basePrice);
+  const [glampingDiscountEnabled, setGlampingDiscountEnabled] = useState(true);
+  const [editingGlampingPrice, setEditingGlampingPrice] = useState(false);
+
   const [activeRoomId, setActiveRoomId] = useState<string>(VENDOR_PRICING_ROOMS[0].id);
   const [roomPickerOpen, setRoomPickerOpen] = useState(false);
   const [applyToAllRooms, setApplyToAllRooms] = useState(true);
@@ -126,40 +135,118 @@ export function MobileVendorSetPricingScreen() {
     label: `${room.roomIndex}/${room.roomTotal} ${room.label}`,
   }));
 
+  const adjustGlampingPrice = (delta: number) => {
+    setEditingGlampingPrice(false);
+    setGlampingPrice((prev) => Math.max(0, prev + delta));
+  };
+
+  const handleNext = () => {
+    if (isGlamping) {
+      router.push('/vendor/camping-insights');
+      return;
+    }
+    router.push('/vendor/terms');
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.page}>
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          <VendorOnboardingHero categoryId="property" />
+          <VendorOnboardingHero categoryId={categoryId} />
           <Text style={styles.title}>{VENDOR_PRICING_COPY.title}</Text>
+          {isGlamping ? (
+            <Text style={styles.subtitle}>{VENDOR_GLAMPING_PRICING_COPY.subtitle}</Text>
+          ) : null}
 
-          <View style={styles.toolbar}>
-            <Pressable
-              style={({ pressed }) => [styles.roomPill, pressed && styles.pressed]}
-              onPress={() => setRoomPickerOpen(true)}
-              accessibilityRole="button"
-            >
-              <View style={styles.roomBadge}>
-                <Text style={styles.roomBadgeText}>
-                  {activeRoom.roomIndex}/{activeRoom.roomTotal}
-                </Text>
+          {isGlamping ? (
+            <View style={styles.pricingCard}>
+              <Text style={styles.basePriceLabel}>{VENDOR_GLAMPING_PRICING_COPY.basePriceLabel}</Text>
+
+              <View style={styles.basePriceRow}>
+                <Pressable
+                  style={({ pressed }) => [styles.stepButton, pressed && styles.pressed]}
+                  onPress={() => adjustGlampingPrice(-VENDOR_PRICING_COPY.priceStep)}
+                  accessibilityRole="button"
+                >
+                  <Ionicons name="remove" size={18} color={colors.text.primary} />
+                </Pressable>
+
+                <EditableRupeeField
+                  value={glampingPrice}
+                  editing={editingGlampingPrice}
+                  onStartEdit={() => setEditingGlampingPrice(true)}
+                  onEndEdit={() => setEditingGlampingPrice(false)}
+                  onChange={setGlampingPrice}
+                  containerStyle={styles.basePriceValue}
+                  textStyle={styles.basePriceText}
+                  inputStyle={styles.basePriceInput}
+                />
+
+                <Pressable
+                  style={({ pressed }) => [styles.stepButton, pressed && styles.pressed]}
+                  onPress={() => adjustGlampingPrice(VENDOR_PRICING_COPY.priceStep)}
+                  accessibilityRole="button"
+                >
+                  <Ionicons name="add" size={18} color={colors.text.primary} />
+                </Pressable>
               </View>
-              <Text style={styles.roomPillText}>{activeRoom.label}</Text>
-              <Ionicons name="chevron-down" size={14} color={colors.surface.white} />
-            </Pressable>
 
-            <View style={styles.applyRow}>
-              <Text style={styles.applyLabel}>{VENDOR_PRICING_COPY.applyAll}</Text>
-              <Switch
-                value={applyToAllRooms}
-                onValueChange={setApplyToAllRooms}
-                trackColor={{ false: 'rgba(28,32,36,0.15)', true: 'rgba(232,84,51,0.35)' }}
-                thumbColor={applyToAllRooms ? colors.accent.main : colors.surface.white}
-              />
+              <View style={styles.orDividerRow}>
+                <View style={styles.orLineAccent} />
+                <View style={styles.orLineMuted} />
+              </View>
+
+              <Text style={styles.rangeHint}>
+                {VENDOR_PRICING_COPY.rangeHintPrefix}{' '}
+                <Text style={styles.rangeHintBold}>
+                  ₹{VENDOR_PRICING_COPY.rangeMin.toLocaleString('en-IN')} - ₹
+                  {VENDOR_PRICING_COPY.rangeMax.toLocaleString('en-IN')}
+                </Text>
+              </Text>
+
+              <Pressable
+                style={({ pressed }) => [styles.discountRow, pressed && styles.pressed]}
+                onPress={() => setGlampingDiscountEnabled((v) => !v)}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: glampingDiscountEnabled }}
+              >
+                <Text style={styles.discountText}>{VENDOR_PRICING_COPY.discountLabel}</Text>
+                <View style={[styles.checkbox, glampingDiscountEnabled && styles.checkboxChecked]}>
+                  {glampingDiscountEnabled ? (
+                    <Ionicons name="checkmark" size={14} color={colors.surface.white} />
+                  ) : null}
+                </View>
+              </Pressable>
             </View>
-          </View>
+          ) : (
+            <>
+              <View style={styles.toolbar}>
+                <Pressable
+                  style={({ pressed }) => [styles.roomPill, pressed && styles.pressed]}
+                  onPress={() => setRoomPickerOpen(true)}
+                  accessibilityRole="button"
+                >
+                  <View style={styles.roomBadge}>
+                    <Text style={styles.roomBadgeText}>
+                      {activeRoom.roomIndex}/{activeRoom.roomTotal}
+                    </Text>
+                  </View>
+                  <Text style={styles.roomPillText}>{activeRoom.label}</Text>
+                  <Ionicons name="chevron-down" size={14} color={colors.surface.white} />
+                </Pressable>
 
-          <View style={styles.pricingCard}>
+                <View style={styles.applyRow}>
+                  <Text style={styles.applyLabel}>{VENDOR_PRICING_COPY.applyAll}</Text>
+                  <Switch
+                    value={applyToAllRooms}
+                    onValueChange={setApplyToAllRooms}
+                    trackColor={{ false: 'rgba(28,32,36,0.15)', true: 'rgba(232,84,51,0.35)' }}
+                    thumbColor={applyToAllRooms ? colors.accent.main : colors.surface.white}
+                  />
+                </View>
+              </View>
+
+              <View style={styles.pricingCard}>
             <Text style={styles.basePriceLabel}>{VENDOR_PRICING_COPY.basePriceLabel}</Text>
 
             <View style={styles.basePriceRow}>
@@ -241,16 +328,19 @@ export function MobileVendorSetPricingScreen() {
               </View>
             </Pressable>
           </View>
+            </>
+          )}
         </ScrollView>
 
         <VendorOnboardingFooter
           onBack={() => router.back()}
-          onNext={() => router.push('/vendor/terms')}
+          onNext={handleNext}
           nextLabel="Next"
-          nextSuffix={VENDOR_PRICING_COPY.nextSuffix}
+          nextSuffix={isGlamping ? VENDOR_GLAMPING_PRICING_COPY.nextSuffix : VENDOR_PRICING_COPY.nextSuffix}
         />
       </View>
 
+      {!isGlamping ? (
       <VendorPropertyOptionSheet
         visible={roomPickerOpen}
         title="Select room"
@@ -263,6 +353,7 @@ export function MobileVendorSetPricingScreen() {
           setEditingField(null);
         }}
       />
+      ) : null}
     </SafeAreaView>
   );
 }
@@ -281,6 +372,11 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: typography.fontWeight.semibold,
     color: colors.accent.main,
+  },
+  subtitle: {
+    fontFamily: typography.fontFamily.text,
+    fontSize: typography.fontSize['1'],
+    color: 'rgba(28, 32, 36, 0.55)',
   },
   toolbar: { gap: 10 },
   roomPill: {
@@ -489,6 +585,13 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: 'rgba(28, 32, 36, 0.08)',
   },
+  orDividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '100%',
+  },
+  orLineAccent: { flex: 1, height: 1, backgroundColor: colors.accent.main },
+  orLineMuted: { flex: 1, height: 1, backgroundColor: 'rgba(28, 32, 36, 0.12)' },
   rangeHint: {
     fontFamily: typography.fontFamily.text,
     fontSize: 11,

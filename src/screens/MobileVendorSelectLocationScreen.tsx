@@ -126,6 +126,10 @@ export function MobileVendorSelectLocationScreen() {
       router.push('/vendor/guest-room-details');
       return;
     }
+    if (categoryId === 'glamping') {
+      router.push('/vendor/guest-tent-details');
+      return;
+    }
     router.replace('/(tabs)');
   };
 
