@@ -560,6 +560,10 @@ export function MobileBecomeVendorScreen() {
         router.replace('/vendor/describe-camp');
         return;
       }
+      if (listingCategory === 'packages') {
+        router.replace('/vendor/describe-package');
+        return;
+      }
       router.replace('/vendor/select-location');
     } finally {
       setIsProceedingCategory(false);

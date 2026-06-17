@@ -7,8 +7,14 @@ import {
   DEFAULT_CAMPING_INCLUSIONS,
   VENDOR_INCLUSIONS_EXCLUSIONS_COPY,
 } from '@/src/constants/vendorGlampingConstants';
+import {
+  DEFAULT_PACKAGE_EXCLUSIONS,
+  DEFAULT_PACKAGE_INCLUSIONS,
+  VENDOR_PACKAGE_INCLUSIONS_COPY,
+} from '@/src/constants/vendorPackageConstants';
+import { useVendorListingCategory } from '@/src/hooks/useVendorListingCategory';
 import { router } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Platform, ScrollView, StyleSheet, TextInput, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -51,6 +57,10 @@ function ListSection({
 }
 
 export function MobileVendorInclusionsExclusionsScreen() {
+  const categoryId = useVendorListingCategory();
+  const isPackage = categoryId === 'packages';
+  const copy = isPackage ? VENDOR_PACKAGE_INCLUSIONS_COPY : VENDOR_INCLUSIONS_EXCLUSIONS_COPY;
+
   const { width } = useWindowDimensions();
   const scale = width / DESIGN_WIDTH;
   const contentWidth = Math.round(CONTENT_WIDTH * scale);
@@ -58,6 +68,18 @@ export function MobileVendorInclusionsExclusionsScreen() {
 
   const [inclusions, setInclusions] = useState(DEFAULT_CAMPING_INCLUSIONS);
   const [exclusions, setExclusions] = useState(DEFAULT_CAMPING_EXCLUSIONS);
+
+  useEffect(() => {
+    if (categoryId === 'packages') {
+      setInclusions(DEFAULT_PACKAGE_INCLUSIONS);
+      setExclusions(DEFAULT_PACKAGE_EXCLUSIONS);
+      return;
+    }
+    if (categoryId === 'glamping') {
+      setInclusions(DEFAULT_CAMPING_INCLUSIONS);
+      setExclusions(DEFAULT_CAMPING_EXCLUSIONS);
+    }
+  }, [categoryId]);
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
@@ -71,23 +93,23 @@ export function MobileVendorInclusionsExclusionsScreen() {
             <VendorListingHeader />
 
             <View style={styles.intro}>
-              <Text style={styles.title}>{VENDOR_INCLUSIONS_EXCLUSIONS_COPY.title}</Text>
-              <Text style={styles.subtitle}>{VENDOR_INCLUSIONS_EXCLUSIONS_COPY.subtitle}</Text>
+              <Text style={styles.title}>{copy.title}</Text>
+              <Text style={styles.subtitle}>{copy.subtitle}</Text>
             </View>
 
             <ListSection
-              title={VENDOR_INCLUSIONS_EXCLUSIONS_COPY.inclusionsTitle}
+              title={copy.inclusionsTitle}
               value={inclusions}
               onChange={setInclusions}
-              maxLength={VENDOR_INCLUSIONS_EXCLUSIONS_COPY.maxLength}
+              maxLength={copy.maxLength}
               headerStyle={styles.inclusionsHeader}
               headerTextStyle={styles.inclusionsHeaderText}
             />
             <ListSection
-              title={VENDOR_INCLUSIONS_EXCLUSIONS_COPY.exclusionsTitle}
+              title={copy.exclusionsTitle}
               value={exclusions}
               onChange={setExclusions}
-              maxLength={VENDOR_INCLUSIONS_EXCLUSIONS_COPY.maxLength}
+              maxLength={copy.maxLength}
               headerStyle={styles.exclusionsHeader}
               headerTextStyle={styles.exclusionsHeaderText}
             />
@@ -98,7 +120,7 @@ export function MobileVendorInclusionsExclusionsScreen() {
           onBack={() => router.back()}
           onNext={() => router.push('/vendor/terms')}
           nextLabel="Next"
-          nextSuffix={VENDOR_INCLUSIONS_EXCLUSIONS_COPY.nextSuffix}
+          nextSuffix={copy.nextSuffix}
         />
       </View>
     </SafeAreaView>

@@ -10,6 +10,7 @@ import {
   type VendorRoomPricing,
 } from '@/src/constants/vendorListingConstants';
 import { VENDOR_GLAMPING_PRICING_COPY } from '@/src/constants/vendorGlampingConstants';
+import { VENDOR_PACKAGE_PRICING_COPY } from '@/src/constants/vendorPackageConstants';
 import { useVendorListingCategory } from '@/src/hooks/useVendorListingCategory';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -93,6 +94,8 @@ function EditableRupeeField({
 export function MobileVendorSetPricingScreen() {
   const categoryId = useVendorListingCategory();
   const isGlamping = categoryId === 'glamping';
+  const isPackage = categoryId === 'packages';
+  const isSimplePricing = isGlamping || isPackage;
 
   const [glampingPrice, setGlampingPrice] = useState(DEFAULT_VENDOR_ROOM_PRICING.basePrice);
   const [glampingDiscountEnabled, setGlampingDiscountEnabled] = useState(true);
@@ -145,8 +148,22 @@ export function MobileVendorSetPricingScreen() {
       router.push('/vendor/camping-insights');
       return;
     }
+    if (isPackage) {
+      router.push('/vendor/package-itinerary');
+      return;
+    }
     router.push('/vendor/terms');
   };
+
+  const pricingSubtitle = isPackage
+    ? VENDOR_PACKAGE_PRICING_COPY.subtitle
+    : VENDOR_GLAMPING_PRICING_COPY.subtitle;
+  const simpleBasePriceLabel = isPackage
+    ? VENDOR_PACKAGE_PRICING_COPY.basePriceLabel
+    : VENDOR_GLAMPING_PRICING_COPY.basePriceLabel;
+  const simpleNextSuffix = isPackage
+    ? VENDOR_PACKAGE_PRICING_COPY.nextSuffix
+    : VENDOR_GLAMPING_PRICING_COPY.nextSuffix;
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
@@ -154,13 +171,13 @@ export function MobileVendorSetPricingScreen() {
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           <VendorOnboardingHero categoryId={categoryId} />
           <Text style={styles.title}>{VENDOR_PRICING_COPY.title}</Text>
-          {isGlamping ? (
-            <Text style={styles.subtitle}>{VENDOR_GLAMPING_PRICING_COPY.subtitle}</Text>
+          {isSimplePricing ? (
+            <Text style={styles.subtitle}>{pricingSubtitle}</Text>
           ) : null}
 
-          {isGlamping ? (
+          {isSimplePricing ? (
             <View style={styles.pricingCard}>
-              <Text style={styles.basePriceLabel}>{VENDOR_GLAMPING_PRICING_COPY.basePriceLabel}</Text>
+              <Text style={styles.basePriceLabel}>{simpleBasePriceLabel}</Text>
 
               <View style={styles.basePriceRow}>
                 <Pressable
@@ -336,11 +353,11 @@ export function MobileVendorSetPricingScreen() {
           onBack={() => router.back()}
           onNext={handleNext}
           nextLabel="Next"
-          nextSuffix={isGlamping ? VENDOR_GLAMPING_PRICING_COPY.nextSuffix : VENDOR_PRICING_COPY.nextSuffix}
+          nextSuffix={isSimplePricing ? simpleNextSuffix : VENDOR_PRICING_COPY.nextSuffix}
         />
       </View>
 
-      {!isGlamping ? (
+      {!isSimplePricing ? (
       <VendorPropertyOptionSheet
         visible={roomPickerOpen}
         title="Select room"

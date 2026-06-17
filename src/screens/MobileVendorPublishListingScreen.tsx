@@ -9,6 +9,7 @@ import {
   VENDOR_PUBLISH_COPY,
 } from '@/src/constants/vendorListingConstants';
 import { VENDOR_GLAMPING_PUBLISH_TITLE } from '@/src/constants/vendorGlampingConstants';
+import { VENDOR_PACKAGE_PUBLISH_TITLE } from '@/src/constants/vendorPackageConstants';
 import { useVendorListingCategory } from '@/src/hooks/useVendorListingCategory';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -27,9 +28,17 @@ export function MobileVendorPublishListingScreen() {
   const categoryId = useVendorListingCategory();
   const price = DEFAULT_VENDOR_ROOM_PRICING.basePrice;
   const listingTitle =
-    categoryId === 'glamping' ? VENDOR_GLAMPING_PUBLISH_TITLE : VENDOR_PUBLISH_COPY.listingTitle;
+    categoryId === 'glamping'
+      ? VENDOR_GLAMPING_PUBLISH_TITLE
+      : categoryId === 'packages'
+        ? VENDOR_PACKAGE_PUBLISH_TITLE
+        : VENDOR_PUBLISH_COPY.listingTitle;
   const thumbnail =
-    categoryId === 'glamping' ? VENDOR_MOCK_PHOTO_SOURCES[2] : VENDOR_MOCK_PHOTO_SOURCES[0];
+    categoryId === 'glamping'
+      ? VENDOR_MOCK_PHOTO_SOURCES[2]
+      : categoryId === 'packages'
+        ? VENDOR_MOCK_PHOTO_SOURCES[3]
+        : VENDOR_MOCK_PHOTO_SOURCES[0];
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
