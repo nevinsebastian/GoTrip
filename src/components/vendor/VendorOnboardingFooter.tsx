@@ -12,6 +12,7 @@ type VendorOnboardingFooterProps = {
   nextSuffix?: string;
   isNextLoading?: boolean;
   nextFlex?: number;
+  nextDisabled?: boolean;
 };
 
 export function VendorOnboardingFooter({
@@ -21,6 +22,7 @@ export function VendorOnboardingFooter({
   nextSuffix,
   isNextLoading,
   nextFlex = 1.6,
+  nextDisabled = false,
 }: VendorOnboardingFooterProps) {
   return (
     <View style={styles.footer}>
@@ -38,11 +40,11 @@ export function VendorOnboardingFooter({
         style={({ pressed }) => [
           styles.nextButton,
           { flex: nextFlex },
-          pressed && styles.pressed,
-          isNextLoading && styles.disabled,
+          pressed && !nextDisabled && styles.pressed,
+          (isNextLoading || nextDisabled) && styles.disabled,
         ]}
         onPress={onNext}
-        disabled={isNextLoading}
+        disabled={isNextLoading || nextDisabled}
         accessibilityRole="button"
       >
         {isNextLoading ? (

@@ -1,5 +1,6 @@
-import { MobileVendorHomeScreen } from '@/src/screens/MobileVendorHomeScreen';
+import { Redirect } from 'expo-router';
 
-export default function VendorHomeRoute() {
-  return <MobileVendorHomeScreen />;
+/** Vendor onboarding routes live under /vendor/* — the index is not the app entry. */
+export default function VendorIndexRoute() {
+  return <Redirect href="/" />;
 }

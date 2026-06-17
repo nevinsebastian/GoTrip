@@ -1,8 +1,9 @@
-import { colors, spacing, typography } from '@/constants/DesignTokens';
+import { borderRadius, colors, spacing, typography } from '@/constants/DesignTokens';
 import React from 'react';
 import {
   Image,
   ImageBackground,
+  ImageSourcePropType,
   Platform,
   StyleSheet,
   View,
@@ -29,11 +30,18 @@ const DESIGN_WIDTH = 402;
 const HERO_HEIGHT = 327;
 const isWeb = Platform.OS === 'web';
 
-type VendorOnboardingHeroProps = {
-  categoryId?: VendorListingCategoryId;
+type VendorHeroHostOverlay = {
+  label: string;
+  name: string;
+  avatar: ImageSourcePropType;
 };
 
-export function VendorOnboardingHero({ categoryId }: VendorOnboardingHeroProps) {
+type VendorOnboardingHeroProps = {
+  categoryId?: VendorListingCategoryId;
+  hostOverlay?: VendorHeroHostOverlay;
+};
+
+export function VendorOnboardingHero({ categoryId, hostOverlay }: VendorOnboardingHeroProps) {
   const category = categoryId ? getVendorListingCategory(categoryId) : null;
   const heroImage = category?.heroImage ?? DefaultHeroImage;
   const pillLabel = category?.pillLabel ?? 'Hotels';
@@ -111,12 +119,24 @@ export function VendorOnboardingHero({ categoryId }: VendorOnboardingHeroProps) 
           </View>
         </View>
 
-        <View style={[styles.hotelsPill, { bottom: Math.round(14 * scale) }]}>
-          <View style={styles.hotelsDividerWrap}>
-            <HotelsDividerIcon width={21} height={6} />
-          </View>
-          <HotelIcon width={18} height={18} />
-          <Text style={styles.hotelsPillText}>{pillLabel}</Text>
+        <View style={[hostOverlay ? styles.hostCard : styles.hotelsPill, { bottom: Math.round(14 * scale) }]}>
+          {hostOverlay ? (
+            <>
+              <Image source={hostOverlay.avatar} style={styles.hostAvatar} resizeMode="cover" />
+              <Text style={styles.hostText}>
+                <Text style={styles.hostLabel}>{hostOverlay.label} </Text>
+                {hostOverlay.name}
+              </Text>
+            </>
+          ) : (
+            <>
+              <View style={styles.hotelsDividerWrap}>
+                <HotelsDividerIcon width={21} height={6} />
+              </View>
+              <HotelIcon width={18} height={18} />
+              <Text style={styles.hotelsPillText}>{pillLabel}</Text>
+            </>
+          )}
         </View>
       </View>
     </>
@@ -230,5 +250,42 @@ const styles = StyleSheet.create({
     lineHeight: typography.lineHeight['1'],
     letterSpacing: typography.letterSpacing['1'],
     color: colors.surface.white,
+  },
+  hostCard: {
+    position: 'absolute',
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: 'rgba(28, 32, 36, 0.45)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.25)',
+    borderRadius: borderRadius.lg,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    zIndex: 1,
+    maxWidth: '90%',
+    ...Platform.select({
+      web: { backdropFilter: 'blur(6px)' as unknown as undefined },
+    }),
+  },
+  hostAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.4)',
+  },
+  hostText: {
+    flexShrink: 1,
+    fontFamily: typography.fontFamily.text,
+    fontSize: 11,
+    fontWeight: typography.fontWeight.medium,
+    lineHeight: 16,
+    color: colors.surface.white,
+  },
+  hostLabel: {
+    fontWeight: typography.fontWeight.regular,
+    color: 'rgba(255, 255, 255, 0.85)',
   },
 });

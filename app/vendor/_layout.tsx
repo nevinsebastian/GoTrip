@@ -9,6 +9,11 @@ export default function VendorLayout() {
       <Stack.Screen name="guest-room-details" options={{ headerShown: false }} />
       <Stack.Screen name="amenities" options={{ headerShown: false }} />
       <Stack.Screen name="photos" options={{ headerShown: false }} />
+      <Stack.Screen name="create-title" options={{ headerShown: false }} />
+      <Stack.Screen name="set-pricing" options={{ headerShown: false }} />
+      <Stack.Screen name="terms" options={{ headerShown: false }} />
+      <Stack.Screen name="publish-listing" options={{ headerShown: false }} />
+      <Stack.Screen name="thanks" options={{ headerShown: false }} />
     </Stack>
   );
 }

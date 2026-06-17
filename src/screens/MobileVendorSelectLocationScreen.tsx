@@ -126,7 +126,7 @@ export function MobileVendorSelectLocationScreen() {
       router.push('/vendor/guest-room-details');
       return;
     }
-    router.replace('/vendor');
+    router.replace('/(tabs)');
   };
 
   return (

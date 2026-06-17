@@ -162,8 +162,9 @@ export function MobileVendorPhotosScreen() {
 
         <VendorOnboardingFooter
           onBack={() => router.back()}
-          onNext={() => router.replace('/vendor')}
+          onNext={() => router.push('/vendor/create-title')}
           nextLabel="Next"
+          nextSuffix={VENDOR_PHOTOS_COPY.nextSuffix}
         />
       </View>
 

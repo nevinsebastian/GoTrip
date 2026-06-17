@@ -10,16 +10,28 @@ type VendorStepperProps = {
   min?: number;
   max?: number;
   onChange: (value: number) => void;
+  variant?: 'default' | 'pill';
 };
 
-export function VendorStepper({ value, min = 0, max = 99, onChange }: VendorStepperProps) {
+export function VendorStepper({
+  value,
+  min = 0,
+  max = 99,
+  onChange,
+  variant = 'default',
+}: VendorStepperProps) {
   const decrement = () => onChange(Math.max(min, value - 1));
   const increment = () => onChange(Math.min(max, value + 1));
+  const isPill = variant === 'pill';
 
   return (
-    <View style={styles.wrap}>
+    <View style={[styles.wrap, isPill && styles.wrapPill]}>
       <Pressable
-        style={({ pressed }) => [styles.button, pressed && styles.pressed]}
+        style={({ pressed }) => [
+          styles.button,
+          isPill && styles.buttonPill,
+          pressed && styles.pressed,
+        ]}
         onPress={decrement}
         disabled={value <= min}
         accessibilityRole="button"
@@ -32,7 +44,11 @@ export function VendorStepper({ value, min = 0, max = 99, onChange }: VendorStep
       </Pressable>
       <Text style={styles.value}>{value}</Text>
       <Pressable
-        style={({ pressed }) => [styles.button, pressed && styles.pressed]}
+        style={({ pressed }) => [
+          styles.button,
+          isPill && styles.buttonPill,
+          pressed && styles.pressed,
+        ]}
         onPress={increment}
         disabled={value >= max}
         accessibilityRole="button"
@@ -53,6 +69,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
+  wrapPill: {
+    borderWidth: 1,
+    borderColor: colors.accent.main,
+    borderRadius: 20,
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+    gap: 4,
+  },
   button: {
     width: 28,
     height: 28,
@@ -65,6 +89,12 @@ const styles = StyleSheet.create({
     ...Platform.select({
       web: { cursor: 'pointer' as const },
     }),
+  },
+  buttonPill: {
+    width: 24,
+    height: 24,
+    borderWidth: 0,
+    backgroundColor: 'transparent',
   },
   value: {
     minWidth: 18,

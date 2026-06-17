@@ -102,6 +102,135 @@ export const VENDOR_PHOTOS_COPY = {
   coverBadge: 'Cover Photo',
   makeCover: 'Make cover photo',
   minPhotos: 5,
+  nextSuffix: 'Create Title',
+};
+
+export const VENDOR_TITLE_COPY = {
+  title: 'Create your Title',
+  subtitle: 'Provide a good title for your space.',
+  titleLabel: 'Title',
+  titlePrimaryDefault: 'Opus Homes, Varkala',
+  titleSecondaryDefault: 'Place to stay in Varkala, with beach view.',
+  titleSecondaryMax: 50,
+  highlightsLabel: 'Choose upto 2 highlights',
+  highlightsMax: 2,
+  descriptionLabel: 'Description',
+  descriptionDefault: 'Enjoy a stylish experience at this centrally located place',
+  descriptionMax: 500,
+  nextSuffix: 'Set Pricing',
+};
+
+export const VENDOR_HIGHLIGHTS = [
+  { id: 'peaceful', label: 'Peaceful', icon: 'leaf-outline' as const },
+  { id: 'unique', label: 'Unique', icon: 'bulb-outline' as const },
+  { id: 'central', label: 'Central', icon: 'location-outline' as const },
+  { id: 'family', label: 'Family-friendly', icon: 'people-outline' as const },
+] as const;
+
+export type VendorHighlightId = (typeof VENDOR_HIGHLIGHTS)[number]['id'];
+
+export type VendorRoomPricing = {
+  basePrice: number;
+  adultExtra: number;
+  childExtra: number;
+  discountEnabled: boolean;
+};
+
+export const DEFAULT_VENDOR_ROOM_PRICING: VendorRoomPricing = {
+  basePrice: 2420,
+  adultExtra: 520,
+  childExtra: 520,
+  discountEnabled: true,
+};
+
+export const VENDOR_PRICING_COPY = {
+  title: 'Set your pricing',
+  applyAll: 'Apply to all rooms',
+  basePriceLabel: 'Enter the Base price details',
+  extraChargeLabel: 'Extra Charge',
+  adultLabel: 'Adult',
+  childLabel: 'Child',
+  rangeHintPrefix: 'Places like your usually range from',
+  rangeMin: 1000,
+  rangeMax: 3000,
+  discountLabel: 'Offer a 20% discount for your first 2 guests to help you get booked faster',
+  nextSuffix: 'Terms & Conditions',
+  priceStep: 10,
+};
+
+export const VENDOR_PRICING_ROOMS = [
+  { id: 'room-0', label: 'Room 1 - Deluxe AC', roomIndex: 1, roomTotal: 2 },
+  { id: 'room-1', label: 'Room 2 - Deluxe AC', roomIndex: 2, roomTotal: 2 },
+] as const;
+
+export const VENDOR_MOCK_HOST = {
+  firstName: 'Ashish',
+  fullName: 'Mr. Ashish Kumar',
+  avatar: require('../../loginimage.png'),
+};
+
+export const DEFAULT_VENDOR_HOST_TERMS = `Host Terms and Conditions
+Last Updated: May 2026
+
+1. Eligibility and Account Registration
+You must be at least 18 years of age and have the legal authority to list your property on GoTrip holiday.
+
+2. Verification
+GoTrip may verify your identity, property ownership, and listing details before your property goes live.
+
+3. Legal Authority
+By listing on GoTrip, you confirm that you have the legal right to rent or offer the property described in your listing.
+
+4. Compliance with Local Laws
+You agree to comply with all applicable local laws, regulations, and tax requirements related to short-term rentals and hospitality services.
+
+5. Accuracy of Information
+You are responsible for ensuring all listing information, including photos, pricing, and amenities, is accurate and up to date.
+
+6. Guest Safety and Conduct
+You agree to maintain a safe environment for guests and respond promptly to guest inquiries and issues.
+
+7. Cancellations and Refunds
+You agree to honor GoTrip's cancellation and refund policies as communicated to guests at the time of booking.`;
+
+export const VENDOR_TERMS_COPY = {
+  title: 'Terms and Conditions',
+  subtitle: 'Review and update your host terms below.',
+  cardTitle: 'Host Terms and Conditions',
+  lastUpdated: 'Last Updated: May 2026',
+  agreeLabel: 'I agree with the privacy policy and the terms & conditions',
+  nextSuffix: 'Publish your Listing',
+};
+
+export const VENDOR_PUBLISH_COPY = {
+  title: 'Publish your listing',
+  description:
+    'This listing will be visible to your guests 24 hours after you publish. You can add more info or make changes anytime.',
+  listingTitle: 'Place to stay in Varkala with beach view',
+  rating: '4.5',
+  customersLabel: '500+ customers',
+  priceLabel: 'Total price for one night',
+  taxLabel: 'including tax',
+  cta: 'Publish Your Listing',
+};
+
+export const VENDOR_PREVIEW_TAGS = [
+  { id: 'hotel', label: 'Hotel', icon: 'business-outline' as const },
+  { id: 'transfer', label: 'Transfer', icon: 'car-outline' as const },
+  { id: 'sightseeing', label: 'Sightseeing', icon: 'binoculars-outline' as const },
+  { id: 'breakfast', label: 'Breakfast', icon: 'cafe-outline' as const },
+];
+
+export const VENDOR_THANKS_COPY = {
+  subtitle: 'A small welcome note from team GoTrip.',
+  welcomeBody: `We're thrilled to have you join our community of hosts. Your listing is an important step toward welcoming travelers from around the world.
+
+Our team is now reviewing your listing to ensure everything looks great. Once approved, your property will be live on GoTrip and ready for guests to book.
+
+Thank you for choosing GoTrip holiday. We can't wait to see the experiences you'll create for your guests.`,
+  signature: '— The GoTrip Team',
+  verificationNote: 'Hang tight while our team checks and verifies your listing!',
+  cta: 'Start your journey',
 };
 
 export type VendorListingPhoto = {
