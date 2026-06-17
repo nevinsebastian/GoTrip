@@ -1,95 +1,101 @@
 import { Text } from '@/components/ui';
-import { borderRadius, colors, spacing, typography } from '@/constants/DesignTokens';
-import { VendorWorkspaceHeader } from '@/src/components/vendor/workspace/VendorWorkspaceHeader';
-import { useVendorTabBarInset } from '@/src/components/vendor/workspace/VendorWorkspaceTabBar';
+import { colors, spacing, typography } from '@/constants/DesignTokens';
+import { VendorDashboardCategoryTabs } from '@/src/components/vendor/dashboard/VendorDashboardCategoryTabs';
+import { VendorDashboardTopBar } from '@/src/components/vendor/dashboard/VendorDashboardTopBar';
+import { VendorDeleteListingModal } from '@/src/components/vendor/listings/VendorDeleteListingModal';
+import { VendorListingCard } from '@/src/components/vendor/listings/VendorListingCard';
 import {
-  VENDOR_WORKSPACE_COPY,
-  VENDOR_WORKSPACE_GREEN,
-  VENDOR_WORKSPACE_LISTINGS,
-  VENDOR_WORKSPACE_PINK,
-} from '@/src/constants/vendorWorkspaceConstants';
+  useVendorTabBarInset,
+  VendorWorkspaceFloatingTabBar,
+} from '@/src/components/vendor/workspace/VendorWorkspaceTabBar';
+import {
+  VENDOR_LISTING_CARDS,
+  VENDOR_LISTINGS_COPY,
+  type VendorListingCardData,
+} from '@/src/constants/vendorListingsConstants';
 import type { VendorListingCategoryId } from '@/src/constants/vendorOnboardingConstants';
 import { useVendorListingCategory } from '@/src/hooks/useVendorListingCategory';
+import { getStoredVendorListingCategory } from '@/src/utils/vendorSession';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import React from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const DESIGN_WIDTH = 402;
 
-const CREATE_LISTING_ROUTE: Record<VendorListingCategoryId, string> = {
-  property: '/vendor/describe-property',
-  glamping: '/vendor/describe-camp',
-  packages: '/vendor/describe-package',
-  activities: '/vendor/describe-activity',
-};
-
 export function MobileVendorListingsScreen() {
-  const categoryId = useVendorListingCategory();
+  const storedCategory = useVendorListingCategory();
+  const [categoryId, setCategoryId] = useState<VendorListingCategoryId>(storedCategory);
+  const [listingItems, setListingItems] = useState(VENDOR_LISTING_CARDS);
+  const [deleteTarget, setDeleteTarget] = useState<VendorListingCardData | null>(null);
   const tabInset = useVendorTabBarInset();
+
+  useEffect(() => {
+    getStoredVendorListingCategory().then((stored) => {
+      if (stored) setCategoryId(stored);
+    });
+  }, []);
+
+  const filteredListings = useMemo(
+    () => listingItems.filter((listing) => listing.categoryId === categoryId),
+    [categoryId, listingItems],
+  );
+
+  const listings = filteredListings.length > 0 ? filteredListings : listingItems;
+
+  const handleConfirmDelete = () => {
+    if (!deleteTarget) return;
+    setListingItems((prev) => prev.filter((item) => item.id !== deleteTarget.id));
+    setDeleteTarget(null);
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.page}>
-        <VendorWorkspaceHeader categoryId={categoryId} />
+        <VendorDashboardTopBar />
+
         <ScrollView
           contentContainerStyle={[styles.scrollContent, { paddingBottom: tabInset }]}
           showsVerticalScrollIndicator={false}
         >
-          <Pressable
-            style={styles.createBtn}
-            onPress={() => router.push(CREATE_LISTING_ROUTE[categoryId] as any)}
-          >
-            <Ionicons name="add" size={18} color={colors.surface.white} />
-            <Text style={styles.createBtnText}>{VENDOR_WORKSPACE_COPY.createListing}</Text>
-          </Pressable>
+          <VendorDashboardCategoryTabs selectedId={categoryId} onSelect={setCategoryId} />
 
-          <Text style={styles.title}>{VENDOR_WORKSPACE_COPY.allListings}</Text>
+          <View style={styles.screenHeader}>
+            <Pressable style={styles.backCircle} onPress={() => router.back()} hitSlop={8}>
+              <Ionicons name="chevron-back" size={18} color={colors.surface.white} />
+            </Pressable>
+            <Text style={styles.screenTitle}>{VENDOR_LISTINGS_COPY.title}</Text>
+            <Pressable style={styles.locationFilter}>
+              <Ionicons name="location-outline" size={14} color={colors.surface.white} />
+              <Text style={styles.locationFilterText} numberOfLines={1}>
+                {VENDOR_LISTINGS_COPY.locationFilter}
+              </Text>
+              <Ionicons name="chevron-down" size={14} color={colors.surface.white} />
+            </Pressable>
+          </View>
 
           <View style={styles.list}>
-            {VENDOR_WORKSPACE_LISTINGS.map((listing) => (
-              <View key={listing.id} style={styles.card}>
-                <Image source={listing.image} style={styles.thumb} resizeMode="cover" />
-                <View style={styles.cardBody}>
-                  <Text style={styles.cardTitle} numberOfLines={1}>
-                    {listing.title}
-                  </Text>
-                  <Text style={styles.cardMeta}>{listing.location}</Text>
-                  <Text style={styles.cardPrice}>{listing.pricePerNight}/night</Text>
-                  <View style={styles.cardFooter}>
-                    <View
-                      style={[
-                        styles.statusBadge,
-                        listing.status === 'live' ? styles.statusLive : styles.statusDraft,
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.statusText,
-                          listing.status === 'live' ? styles.statusLiveText : styles.statusDraftText,
-                        ]}
-                      >
-                        {listing.status === 'live' ? 'Live' : 'Draft'}
-                      </Text>
-                    </View>
-                    <View style={styles.cardActions}>
-                      <Pressable
-                        style={styles.editBtn}
-                        onPress={() => router.push('/vendor/edit-listing')}
-                      >
-                        <Text style={styles.editBtnText}>Edit</Text>
-                      </Pressable>
-                      <Pressable style={styles.deleteBtn}>
-                        <Text style={styles.deleteBtnText}>Delete</Text>
-                      </Pressable>
-                    </View>
-                  </View>
-                </View>
-              </View>
+            {listings.map((listing) => (
+              <VendorListingCard
+                key={listing.id}
+                listing={listing}
+                onDelete={() => setDeleteTarget(listing)}
+              />
             ))}
           </View>
         </ScrollView>
+
+        {deleteTarget ? (
+          <VendorDeleteListingModal
+            listing={deleteTarget}
+            bottomInset={tabInset}
+            onClose={() => setDeleteTarget(null)}
+            onConfirm={handleConfirmDelete}
+          />
+        ) : null}
+
+        <VendorWorkspaceFloatingTabBar activeTab="listings" />
       </View>
     </SafeAreaView>
   );
@@ -100,107 +106,45 @@ const styles = StyleSheet.create({
   page: { flex: 1, width: '100%', maxWidth: DESIGN_WIDTH, alignSelf: 'center' },
   scrollContent: {
     paddingHorizontal: spacing['4'],
-    paddingBottom: spacing['4'],
-    gap: 16,
+    gap: 14,
   },
-  createBtn: {
+  screenHeader: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 10,
+    marginTop: 2,
+  },
+  backCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.text.primary,
+    alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    backgroundColor: VENDOR_WORKSPACE_PINK,
-    borderRadius: borderRadius.pill,
-    paddingVertical: 14,
   },
-  createBtnText: {
+  screenTitle: {
+    flex: 1,
     fontFamily: typography.fontFamily.text,
-    fontSize: typography.fontSize['2'],
-    fontWeight: typography.fontWeight.semibold,
-    color: colors.surface.white,
-  },
-  title: {
-    fontFamily: typography.fontFamily.text,
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: typography.fontWeight.bold,
     color: colors.text.primary,
   },
-  list: { gap: 12 },
-  card: {
-    flexDirection: 'row',
-    gap: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(28, 32, 36, 0.1)',
-    borderRadius: borderRadius.xl,
-    padding: 12,
-    backgroundColor: colors.surface.white,
-  },
-  thumb: {
-    width: 80,
-    height: 80,
-    borderRadius: borderRadius.lg,
-  },
-  cardBody: { flex: 1, gap: 4 },
-  cardTitle: {
-    fontFamily: typography.fontFamily.text,
-    fontSize: typography.fontSize['2'],
-    fontWeight: typography.fontWeight.semibold,
-    color: colors.text.primary,
-  },
-  cardMeta: {
-    fontFamily: typography.fontFamily.text,
-    fontSize: 11,
-    color: 'rgba(28, 32, 36, 0.55)',
-  },
-  cardPrice: {
-    fontFamily: typography.fontFamily.text,
-    fontSize: typography.fontSize['1'],
-    fontWeight: typography.fontWeight.semibold,
-    color: colors.text.primary,
-  },
-  cardFooter: {
+  locationFilter: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 4,
-  },
-  statusBadge: {
-    borderRadius: borderRadius.pill,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  statusLive: { backgroundColor: 'rgba(22, 163, 74, 0.12)' },
-  statusDraft: { backgroundColor: 'rgba(28, 32, 36, 0.08)' },
-  statusText: {
-    fontFamily: typography.fontFamily.text,
-    fontSize: 10,
-    fontWeight: typography.fontWeight.semibold,
-  },
-  statusLiveText: { color: VENDOR_WORKSPACE_GREEN },
-  statusDraftText: { color: 'rgba(28, 32, 36, 0.55)' },
-  cardActions: { flexDirection: 'row', gap: 6 },
-  editBtn: {
-    backgroundColor: '#2563EB',
-    borderRadius: borderRadius.pill,
+    gap: 4,
+    maxWidth: 148,
+    backgroundColor: colors.text.primary,
+    borderRadius: 20,
     paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingVertical: 8,
   },
-  editBtnText: {
+  locationFilterText: {
+    flex: 1,
     fontFamily: typography.fontFamily.text,
     fontSize: 10,
-    fontWeight: typography.fontWeight.semibold,
+    fontWeight: typography.fontWeight.medium,
     color: colors.surface.white,
   },
-  deleteBtn: {
-    borderWidth: 1,
-    borderColor: '#DC2626',
-    borderRadius: borderRadius.pill,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  deleteBtnText: {
-    fontFamily: typography.fontFamily.text,
-    fontSize: 10,
-    fontWeight: typography.fontWeight.semibold,
-    color: '#DC2626',
-  },
+  list: { gap: 14 },
 });
