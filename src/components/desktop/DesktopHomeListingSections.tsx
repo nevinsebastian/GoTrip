@@ -9,12 +9,15 @@ import { getPrimaryImage } from '@/src/utils/getPrimaryImage';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
-import { Image, Pressable, StyleSheet, View } from 'react-native';
+import { Image, Platform, Pressable, StyleSheet, View } from 'react-native';
 
 import HeartIcon from '@/assets/images/heart.svg';
 
 const CARD_W = 386;
 const CARD_H = 428;
+const BUDGET_CARD_W = 280;
+const BUDGET_CARD_H = 252;
+const BUDGET_GAP = 36;
 
 export function DesktopAccentDivider() {
   return (
@@ -53,23 +56,27 @@ export function DesktopMoodSection({ activeTab }: { activeTab: HomeCategoryTab }
         <Text style={styles.moodSubtitle}>{subtitle}</Text>
       </View>
 
-      <View style={styles.moodPillRow}>
-        {DESKTOP_MOODS.map((mood) => {
-          const isSelected = selected === mood.id;
-          const Icon = mood.Icon;
-          return (
-            <Pressable
-              key={mood.id}
-              style={[styles.moodPill, isSelected && styles.moodPillActive]}
-              onPress={() => setSelected(mood.id)}
-            >
-              <Icon width={20} height={20} />
-              <Text style={[styles.moodPillLabel, isSelected && styles.moodPillLabelActive]}>
-                {mood.label}
-              </Text>
-            </Pressable>
-          );
-        })}
+      <View style={styles.moodPillShell}>
+        <View style={styles.moodPillRow}>
+          {DESKTOP_MOODS.map((mood) => {
+            const isSelected = selected === mood.id;
+            const Icon = mood.Icon;
+            return (
+              <Pressable
+                key={mood.id}
+                style={[styles.moodPill, isSelected && styles.moodPillActive]}
+                onPress={() => setSelected(mood.id)}
+              >
+                <View style={[styles.moodIconWrap, isSelected && styles.moodIconWrapActive]}>
+                  <Icon width={20} height={20} />
+                </View>
+                <Text style={[styles.moodPillLabel, isSelected && styles.moodPillLabelActive]}>
+                  {mood.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
       </View>
     </View>
   );
@@ -116,7 +123,7 @@ export function DesktopSuggestedSection({
 export function DesktopDestinationsSection() {
   return (
     <View style={styles.destinationsSection}>
-      <Text style={styles.sectionTitle}>Book Hotels at Popular Destinations</Text>
+      <Text style={styles.destSectionTitle}>Book Hotels at Popular Destinations</Text>
 
       <View style={styles.destGrid}>
         {DESKTOP_DESTINATIONS.map((dest) => (
@@ -136,24 +143,112 @@ export function DesktopDestinationsSection() {
           </View>
         ))}
       </View>
+
+      <View style={styles.viewAllWrap}>
+        <Pressable style={styles.viewAllPill}>
+          <Text style={styles.viewAllText}>View all →</Text>
+        </Pressable>
+      </View>
     </View>
+  );
+}
+
+export function DesktopBudgetOptionsSection({ listings }: { listings: Listing[] }) {
+  const items = listings.slice(0, 8);
+  if (!items.length) return null;
+
+  const rows: Listing[][] = [];
+  for (let i = 0; i < items.length; i += 4) {
+    rows.push(items.slice(i, i + 4));
+  }
+
+  return (
+    <View style={styles.budgetSection}>
+      <Text style={styles.sectionTitle}>More budget options</Text>
+
+      <View style={styles.budgetGrid}>
+        {rows.map((row) => (
+          <View key={row.map((l) => l.id).join('-')} style={styles.budgetRow}>
+            {row.map((listing) => (
+              <DesktopBudgetCard key={listing.id} listing={listing} />
+            ))}
+          </View>
+        ))}
+      </View>
+
+      <View style={styles.viewAllWrap}>
+        <Pressable style={styles.viewAllPill}>
+          <Text style={styles.viewAllText}>View all →</Text>
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
+function DesktopBudgetCard({ listing }: { listing: Listing }) {
+  const img = getPrimaryImage(listing.media);
+  const priceValue =
+    listing.price_start != null
+      ? Number(listing.price_start).toLocaleString('en-IN')
+      : '1199';
+
+  const handlePress = () => {
+    router.push({ pathname: '/resort/[id]', params: { id: listing.id } });
+  };
+
+  return (
+    <Pressable style={styles.budgetCard} onPress={handlePress} accessibilityLabel={listing.title}>
+      <View style={styles.budgetImageWrap}>
+        {img ? (
+          <Image source={{ uri: img }} style={styles.budgetImage} resizeMode="cover" />
+        ) : (
+          <View style={styles.listingImagePlaceholder}>
+            <Ionicons name="image-outline" size={20} color={colors.text.caption} />
+          </View>
+        )}
+        <View style={styles.budgetHeartBtn}>
+          <HeartIcon width={14} height={14} />
+        </View>
+        <GlassSurface borderRadius={24} intensity="light" style={styles.budgetCoupleBadge}>
+          <Ionicons name="heart-outline" size={12} color={colors.surface.white} />
+          <Text style={styles.coupleBadgeText}>COUPLE FRIENDLY</Text>
+        </GlassSurface>
+      </View>
+
+      <View style={styles.budgetBody}>
+        <View style={styles.budgetTitleRow}>
+          <Text style={styles.budgetTitle} numberOfLines={1}>
+            {listing.title}
+          </Text>
+          <View style={styles.ratingRow}>
+            <Ionicons name="star" size={16} color={colors.accent.main} />
+            <Text style={styles.budgetRatingText}>4.5</Text>
+          </View>
+        </View>
+
+        <View style={styles.budgetPriceRow}>
+          <Text style={styles.budgetPrice}>₹ {priceValue}/night</Text>
+          <PillButton label="Book Now" onPress={handlePress} fontSize={12} height={34} />
+        </View>
+      </View>
+    </Pressable>
   );
 }
 
 function DesktopListingCard({ listing }: { listing: Listing }) {
   const img = getPrimaryImage(listing.media);
-  const price =
+  const priceValue =
     listing.price_start != null
-      ? `₹ ${Number(listing.price_start).toLocaleString('en-IN')} / night`
-      : '₹ 1199 / night';
+      ? Number(listing.price_start).toLocaleString('en-IN')
+      : '1199';
   const location = listing.location ?? 'Varkala';
 
+  const handlePress = () => {
+    router.push({ pathname: '/resort/[id]', params: { id: listing.id } });
+  };
+
   return (
-    <Pressable
-      style={styles.listingCard}
-      onPress={() => router.push({ pathname: '/resort/[id]', params: { id: listing.id } })}
-      accessibilityLabel={listing.title}
-    >
+    <Pressable style={styles.listingCard} onPress={handlePress} accessibilityLabel={listing.title}>
       <View style={styles.listingImageWrap}>
         {img ? (
           <Image source={{ uri: img }} style={styles.listingImage} resizeMode="cover" />
@@ -191,13 +286,8 @@ function DesktopListingCard({ listing }: { listing: Listing }) {
         <Text style={styles.breadcrumb}>Thiruvananthapuram &gt; {location}</Text>
 
         <View style={styles.priceBookRow}>
-          <Text style={styles.listingPrice}>{price}</Text>
-          <PillButton
-            label="Book Now"
-            onPress={() => router.push({ pathname: '/resort/[id]', params: { id: listing.id } })}
-            fontSize={12}
-            height={42}
-          />
+          <Text style={styles.listingPrice}>₹ {priceValue} / night</Text>
+          <PillButton label="Book Now" onPress={handlePress} fontSize={14} height={42} />
         </View>
       </View>
     </Pressable>
@@ -226,7 +316,7 @@ const styles = StyleSheet.create({
   },
   moodSection: {
     marginTop: 72,
-    gap: 72,
+    gap: 36,
     alignItems: 'center',
   },
   moodHeader: {
@@ -249,36 +339,54 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 11,
   },
+  moodPillShell: {
+    width: '100%',
+    maxWidth: 945,
+    backgroundColor: 'rgba(223, 38, 0, 0.05)',
+    borderRadius: 100,
+    padding: 10,
+    alignSelf: 'center',
+  },
   moodPillRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    gap: 46,
-    maxWidth: 945,
-    padding: 10,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+    minHeight: 34,
   },
   moodPill: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 8,
     paddingHorizontal: 14,
-    paddingVertical: 7,
+    paddingVertical: 8,
     height: 34,
+    width: 116,
     borderRadius: 100,
     borderWidth: 1,
     borderColor: colors.accent.main,
     backgroundColor: 'transparent',
-    minWidth: 116,
-    justifyContent: 'center',
   },
   moodPillActive: {
     backgroundColor: colors.accent.main,
+    borderColor: colors.accent.main,
+  },
+  moodIconWrap: {
+    width: 20,
+    height: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  moodIconWrapActive: {
+    opacity: 1,
   },
   moodPillLabel: {
     fontFamily: typography.fontFamily.text,
     fontSize: 12,
     fontWeight: typography.fontWeight.medium,
     color: colors.accent.main,
+    letterSpacing: 0.04,
   },
   moodPillLabelActive: {
     color: colors.surface.white,
@@ -300,19 +408,31 @@ const styles = StyleSheet.create({
   },
   cardRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexWrap: 'nowrap',
     justifyContent: 'center',
     gap: 36,
     width: '100%',
+    maxWidth: 1230,
+    alignSelf: 'center',
   },
   listingCard: {
     width: CARD_W,
-    height: CARD_H,
+    minHeight: CARD_H,
     borderRadius: 12,
     backgroundColor: colors.surface.white,
     padding: 6,
+    gap: 16,
     borderWidth: 1,
-    borderColor: 'rgba(28, 32, 36, 0.08)',
+    borderColor: 'rgba(28, 32, 36, 0.1)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 4,
+    ...Platform.select({
+      web: { boxShadow: '0 4px 12.5px rgba(0, 0, 0, 0.1)' },
+      default: {},
+    }),
   },
   listingImageWrap: {
     width: '100%',
@@ -402,9 +522,11 @@ const styles = StyleSheet.create({
   },
   breadcrumb: {
     fontFamily: typography.fontFamily.text,
-    fontSize: 12,
-    color: colors.text.secondary,
+    fontSize: 14,
+    fontWeight: typography.fontWeight.regular,
+    color: colors.accent.main,
     lineHeight: 16,
+    letterSpacing: 0.04,
   },
   priceBookRow: {
     flexDirection: 'row',
@@ -414,10 +536,12 @@ const styles = StyleSheet.create({
   },
   listingPrice: {
     fontFamily: typography.fontFamily.text,
-    fontSize: 16,
-    fontWeight: typography.fontWeight.semibold,
+    fontSize: 20,
+    fontWeight: typography.fontWeight.bold,
     color: colors.text.primary,
     lineHeight: 16,
+    letterSpacing: 0.04,
+    flexShrink: 1,
   },
   viewAllWrap: {
     alignItems: 'center',
@@ -428,19 +552,36 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 100,
     borderWidth: 1,
-    borderColor: 'rgba(28, 32, 36, 0.15)',
+    borderColor: colors.accent.main,
   },
   viewAllText: {
     fontFamily: typography.fontFamily.text,
     fontSize: 14,
-    color: colors.text.primary,
+    fontWeight: typography.fontWeight.regular,
+    color: colors.accent.main,
     lineHeight: 16,
+    letterSpacing: 0.04,
   },
   destinationsSection: {
     marginTop: 72,
     gap: 36,
     paddingVertical: 42,
+    paddingHorizontal: 24,
     alignItems: 'center',
+    width: '100%',
+    backgroundColor: 'rgba(229, 77, 46, 0.05)',
+    borderRadius: 0,
+    alignSelf: 'stretch',
+  },
+  destSectionTitle: {
+    fontFamily: typography.fontFamily.text,
+    fontSize: 16,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.text.primary,
+    textAlign: 'center',
+    width: '100%',
+    maxWidth: 1280,
+    lineHeight: 17,
   },
   destGrid: {
     flexDirection: 'row',
@@ -493,5 +634,124 @@ const styles = StyleSheet.create({
     fontWeight: typography.fontWeight.medium,
     color: 'rgba(28, 32, 36, 0.7)',
     lineHeight: 12,
+  },
+  budgetSection: {
+    marginTop: 72,
+    gap: 36,
+    alignItems: 'center',
+    paddingVertical: 24,
+    width: '100%',
+  },
+  budgetGrid: {
+    width: '100%',
+    maxWidth: 1230,
+    gap: BUDGET_GAP,
+    alignSelf: 'center',
+  },
+  budgetRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: BUDGET_GAP,
+    width: '100%',
+  },
+  budgetCard: {
+    width: BUDGET_CARD_W,
+    minHeight: BUDGET_CARD_H,
+    borderRadius: 12,
+    backgroundColor: colors.surface.white,
+    padding: 12,
+    gap: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(28, 32, 36, 0.1)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 4,
+    ...Platform.select({
+      web: { boxShadow: '0 4px 12.5px rgba(0, 0, 0, 0.1)' },
+      default: {},
+    }),
+  },
+  budgetImageWrap: {
+    width: '100%',
+    height: 132,
+    borderRadius: 8,
+    overflow: 'hidden',
+    backgroundColor: colors.gray['2'],
+    position: 'relative',
+    borderWidth: 1,
+    borderColor: colors.surface.white,
+  },
+  budgetImage: {
+    width: '100%',
+    height: '100%',
+  },
+  budgetHeartBtn: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    width: 33,
+    height: 33,
+    borderRadius: 6,
+    backgroundColor: colors.surface.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  budgetCoupleBadge: {
+    position: 'absolute',
+    left: 9,
+    bottom: 9,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  budgetBody: {
+    gap: 18,
+    paddingHorizontal: 4,
+  },
+  budgetTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  budgetTitle: {
+    flex: 1,
+    fontFamily: typography.fontFamily.text,
+    fontSize: 16,
+    fontWeight: typography.fontWeight.medium,
+    color: colors.text.primary,
+    lineHeight: 16,
+    letterSpacing: 0.04,
+  },
+  budgetRatingText: {
+    fontFamily: typography.fontFamily.text,
+    fontSize: 15,
+    fontWeight: typography.fontWeight.regular,
+    color: colors.accent.main,
+    lineHeight: 16,
+  },
+  budgetPriceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  budgetPrice: {
+    fontFamily: typography.fontFamily.text,
+    fontSize: 16,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.text.primary,
+    lineHeight: 16,
+    flexShrink: 1,
   },
 });

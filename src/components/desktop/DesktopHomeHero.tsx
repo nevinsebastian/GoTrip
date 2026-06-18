@@ -3,9 +3,9 @@ import { colors, typography } from '@/constants/DesignTokens';
 import { DesktopHomeSearchBar } from '@/src/components/desktop/DesktopHomeSearchBar';
 import { DesktopWebNav } from '@/src/components/desktop/DesktopWebNav';
 import { GlassSurface } from '@/src/components/home/GlassSurface';
-import { PillButton } from '@/src/components/home/PillButton';
 import type { HomeCategoryTab } from '@/src/components/home/homeSearchConfig';
 import { useHomeSearch } from '@/src/components/home/HomeSearchContext';
+import { PillButton } from '@/src/components/home/PillButton';
 import {
   DESKTOP_HERO_BY_TAB,
   DESKTOP_HERO_SPECS,
@@ -122,6 +122,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     gap: 24,
     flexWrap: 'wrap',
+    marginTop: 90,
   },
   promoCard: {
     width: 386,

@@ -1,25 +1,27 @@
-import { spacing, colors, borderRadius } from '@/constants/DesignTokens';
+import { Text } from '@/components/ui';
+import { borderRadius, colors, spacing } from '@/constants/DesignTokens';
+import { logout } from '@/src/api/auth.service';
+import { AuthWebModal } from '@/src/components/AuthWebModal';
 import { DesktopHomeHero } from '@/src/components/desktop/DesktopHomeHero';
 import {
-  DesktopAccentDivider,
-  DesktopDestinationsSection,
-  DesktopMoodSection,
-  DesktopSuggestedSection,
+    DesktopAccentDivider,
+    DesktopBudgetOptionsSection,
+    DesktopDestinationsSection,
+    DesktopMoodSection,
+    DesktopSuggestedSection,
 } from '@/src/components/desktop/DesktopHomeListingSections';
+import { DesktopHomeVendorSection } from '@/src/components/desktop/DesktopHomeVendorSection';
 import { DesktopPromoBanner } from '@/src/components/desktop/DesktopPromoBanner';
 import { DesktopSiteFooter } from '@/src/components/desktop/DesktopSiteFooter';
 import { HomeSearchProvider, useHomeSearch } from '@/src/components/home/HomeSearchContext';
-import { logout } from '@/src/api/auth.service';
-import { AuthWebModal } from '@/src/components/AuthWebModal';
 import { useListings } from '@/src/hooks/useListings';
 import { USER_PROFILE_QUERY_KEY, useUserProfile } from '@/src/hooks/useUserProfile';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
+import { router } from 'expo-router';
 import React, { useState } from 'react';
 import { Modal, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Text } from '@/components/ui';
 
 import BellBadgeIcon from '@/assets/images/bell-badge.svg';
 import HeartFilledIcon from '@/assets/images/heart-filled.svg';
@@ -40,8 +42,10 @@ function DesktopHomeContent() {
   }>({ visible: false, mode: 'login' });
 
   const { data: listingsRes } = useListings({ page: 1, limit: 20 });
+  const { data: economicRes } = useListings({ max_price: 2499, page: 1, limit: 20 });
   const listings = listingsRes?.data ?? [];
   const suggested = listings.slice(0, 6);
+  const budget = (economicRes?.data ?? listings).slice(0, 8);
 
   const handleWebMenuLogout = async () => {
     setWebMenuOpen(false);
@@ -150,8 +154,14 @@ function DesktopHomeContent() {
           <DesktopAccentDivider />
           <DesktopMoodSection activeTab={activeCategoryTab} />
           <DesktopSuggestedSection listings={suggested} activeTab={activeCategoryTab} />
-          <DesktopDestinationsSection />
         </View>
+
+        <DesktopDestinationsSection />
+        <View style={styles.main}>
+          <DesktopBudgetOptionsSection listings={budget} />
+        </View>
+
+        <DesktopHomeVendorSection />
 
         <DesktopSiteFooter />
       </ScrollView>
