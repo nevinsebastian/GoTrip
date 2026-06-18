@@ -1,170 +1,197 @@
 import { Text } from '@/components/ui';
 import { colors, typography } from '@/constants/DesignTokens';
 import { DesktopHomeSearchBar } from '@/src/components/desktop/DesktopHomeSearchBar';
+import { DesktopWebNav } from '@/src/components/desktop/DesktopWebNav';
 import { GlassSurface } from '@/src/components/home/GlassSurface';
 import { PillButton } from '@/src/components/home/PillButton';
 import type { HomeCategoryTab } from '@/src/components/home/homeSearchConfig';
 import { useHomeSearch } from '@/src/components/home/HomeSearchContext';
+import {
+  DESKTOP_HERO_BY_TAB,
+  DESKTOP_HERO_SPECS,
+} from '@/src/constants/desktopHomeConstants';
 import React from 'react';
-import { Image, ImageBackground, StyleSheet, View } from 'react-native';
+import { Image, ImageBackground, Platform, StyleSheet, View } from 'react-native';
 
-const HERO_BY_TAB: Record<
-  HomeCategoryTab,
-  {
-    background: number;
-    tagline: string;
-    promoTitle: string;
-    promoSubtitle: string;
-    promoImage: number;
-  }
-> = {
-  hotels: {
-    background: require('../../../assets/images/backgroundimagehomehotels.jpg'),
-    tagline: 'Stay Anywhere, Feel at Home',
-    promoTitle: 'Luxury Hotels at Stunning Discounts',
-    promoSubtitle: 'Where Every Mood Meets Its Perfect Stay',
-    promoImage: require('../../../assets/images/home-figma/promo-discount.png'),
-  },
-  packages: {
-    background: require('../../../assets/images/packagebackground.jpg'),
-    tagline: 'Travel Beyond Borders',
-    promoTitle: 'Curated Packages for Every Journey',
-    promoSubtitle: 'Handpicked destinations, seamless planning',
-    promoImage: require('../../../assets/images/offerpackage.jpg'),
-  },
-  glamping: {
-    background: require('../../../assets/images/glampingbg.jpg'),
-    tagline: 'Sleep Under the Stars',
-    promoTitle: 'Glamping Escapes Await',
-    promoSubtitle: 'Nature meets comfort in scenic retreats',
-    promoImage: require('../../../assets/images/glampingoffer.jpg'),
-  },
-  activities: {
-    background: require('../../../assets/images/activitybg.jpg'),
-    tagline: 'Adventure Starts Here',
-    promoTitle: 'Unforgettable Local Experiences',
-    promoSubtitle: 'Trekking, sightseeing, and more',
-    promoImage: require('../../../assets/images/activityoffer.jpg'),
-  },
+type DesktopHomeHeroProps = {
+  activeTab: HomeCategoryTab;
+  onTabChange: (tab: HomeCategoryTab) => void;
+  isLoggedIn?: boolean;
+  onMenuPress?: () => void;
+  onProfilePress?: () => void;
+  onLoginPress?: () => void;
 };
 
-export function DesktopHomeHero() {
+export function DesktopHomeHero({
+  activeTab,
+  onTabChange,
+  isLoggedIn,
+  onMenuPress,
+  onProfilePress,
+  onLoginPress,
+}: DesktopHomeHeroProps) {
   const { activeCategoryTab } = useHomeSearch();
-  const hero = HERO_BY_TAB[activeCategoryTab];
+  const hero = DESKTOP_HERO_BY_TAB[activeCategoryTab];
 
   return (
-    <ImageBackground
-      source={hero.background}
-      style={styles.hero}
-      imageStyle={styles.heroImage}
-      resizeMode="cover"
-    >
-      <View style={styles.overlay} />
+    <View style={styles.outer}>
+      <View style={styles.frame}>
+        <ImageBackground
+          source={hero.background}
+          style={styles.hero}
+          imageStyle={styles.heroImage}
+          resizeMode="cover"
+        >
+          <View style={styles.content}>
+            <DesktopWebNav
+              embedded
+              activeTab={activeTab}
+              onTabChange={onTabChange}
+              isLoggedIn={isLoggedIn}
+              onMenuPress={onMenuPress}
+              onProfilePress={onProfilePress}
+              onLoginPress={onLoginPress}
+            />
 
-      <Text style={styles.tagline}>{hero.tagline}</Text>
+            <View style={styles.middle}>
+              <GlassSurface borderRadius={12} intensity="medium" style={styles.promoCard}>
+                <View style={styles.promoRow}>
+                  <View style={styles.promoThumb}>
+                    <Image
+                      source={hero.promoImage}
+                      style={StyleSheet.absoluteFillObject}
+                      resizeMode="cover"
+                    />
+                    <Text style={styles.promoThumbUpto}>upto </Text>
+                    <Text style={styles.promoThumbOff}>50% off</Text>
+                  </View>
+                  <View style={styles.promoCopy}>
+                    <Text style={styles.promoTitle}>{hero.promoTitle}</Text>
+                    <View style={styles.promoBottomRow}>
+                      <Text style={styles.promoSubtitle}>{hero.promoSubtitle}</Text>
+                      <PillButton label="Explore" variant="white" fontSize={12} height={24} />
+                    </View>
+                  </View>
+                </View>
+              </GlassSurface>
 
-      <View style={styles.body}>
-        <GlassSurface borderRadius={16} intensity="light" style={styles.promoCard}>
-          <View style={styles.promoRow}>
-            <View style={styles.promoThumb}>
-              <Image source={hero.promoImage} style={StyleSheet.absoluteFillObject} resizeMode="cover" />
-              <Text style={styles.promoThumbText}>{'upto\n50% off'}</Text>
+              <Text style={styles.tagline}>{hero.tagline}</Text>
             </View>
-            <View style={styles.promoCopy}>
-              <Text style={styles.promoTitle}>{hero.promoTitle}</Text>
-              <Text style={styles.promoSubtitle}>{hero.promoSubtitle}</Text>
-              <PillButton label="Explore" variant="white" fontSize={12} height={28} />
-            </View>
+
+            <DesktopHomeSearchBar />
           </View>
-        </GlassSurface>
+        </ImageBackground>
       </View>
-
-      <View style={styles.searchWrap}>
-        <DesktopHomeSearchBar />
-      </View>
-    </ImageBackground>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  outer: {
+    width: '100%',
+    maxWidth: 1280,
+    alignSelf: 'center',
+    paddingHorizontal: 24,
+    paddingTop: 24,
+  },
+  frame: {
+    borderWidth: DESKTOP_HERO_SPECS.frameBorderWidth,
+    borderColor: DESKTOP_HERO_SPECS.frameBorderColor,
+    borderRadius: DESKTOP_HERO_SPECS.frameBorderRadius,
+    overflow: 'hidden',
+    backgroundColor: DESKTOP_HERO_SPECS.accent,
+    ...Platform.select({
+      web: { boxShadow: '0 4px 24px rgba(0, 0, 0, 0.08)' },
+      default: {},
+    }),
+  },
   hero: {
     width: '100%',
-    minHeight: 520,
-    justifyContent: 'space-between',
-    paddingTop: 48,
-    paddingBottom: 32,
-    paddingHorizontal: 24,
+    minHeight: DESKTOP_HERO_SPECS.frameMinHeight,
   },
-  heroImage: {
-    transform: [{ scale: 1.05 }],
-  },
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.18)',
-  },
-  tagline: {
-    alignSelf: 'center',
-    fontFamily: typography.fontFamily.text,
-    fontSize: 28,
-    fontWeight: typography.fontWeight.semibold,
-    color: colors.surface.white,
-    textAlign: 'center',
-    zIndex: 1,
-    marginTop: 24,
-  },
-  body: {
+  heroImage: {},
+  content: {
     flex: 1,
-    justifyContent: 'center',
-    paddingVertical: 24,
-    zIndex: 1,
+    minHeight: DESKTOP_HERO_SPECS.frameMinHeight,
+    padding: DESKTOP_HERO_SPECS.framePadding,
+    gap: 24,
+    justifyContent: 'space-between',
+  },
+  middle: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 24,
+    flexWrap: 'wrap',
   },
   promoCard: {
-    maxWidth: 380,
-    padding: 14,
+    width: 386,
+    padding: 10,
+    flexShrink: 0,
   },
   promoRow: {
     flexDirection: 'row',
-    gap: 14,
+    gap: 16,
     alignItems: 'flex-start',
   },
   promoThumb: {
-    width: 96,
-    height: 72,
-    borderRadius: 10,
+    width: 113,
+    height: 74,
+    borderRadius: 8,
     overflow: 'hidden',
-    borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.35)',
+    borderWidth: 1,
+    borderColor: colors.surface.white,
     justifyContent: 'center',
-    padding: 8,
+    paddingHorizontal: 11,
+    paddingVertical: 8,
   },
-  promoThumbText: {
+  promoThumbUpto: {
     fontFamily: typography.fontFamily.text,
-    fontSize: 13,
-    fontWeight: typography.fontWeight.bold,
+    fontSize: 12,
+    fontWeight: typography.fontWeight.medium,
     color: colors.surface.white,
-    lineHeight: 16,
+    lineHeight: 12,
+  },
+  promoThumbOff: {
+    fontFamily: typography.fontFamily.text,
+    fontSize: 16,
+    fontWeight: typography.fontWeight.regular,
+    color: colors.surface.white,
+    lineHeight: 12,
+    marginTop: 2,
   },
   promoCopy: {
     flex: 1,
-    gap: 8,
+    gap: 12,
+    paddingVertical: 3,
+    minWidth: 0,
   },
   promoTitle: {
     fontFamily: typography.fontFamily.text,
     fontSize: 14,
-    fontWeight: typography.fontWeight.bold,
+    fontWeight: typography.fontWeight.regular,
     color: colors.surface.white,
-    lineHeight: 20,
+    lineHeight: 16,
+  },
+  promoBottomRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 18,
+    minHeight: 24,
   },
   promoSubtitle: {
+    flex: 1,
     fontFamily: typography.fontFamily.text,
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.9)',
-    lineHeight: 18,
+    fontSize: 10,
+    fontWeight: typography.fontWeight.medium,
+    color: 'rgba(255, 255, 255, 0.8)',
+    lineHeight: 12,
   },
-  searchWrap: {
-    maxWidth: 1100,
-    width: '100%',
-    alignSelf: 'center',
-    zIndex: 1,
+  tagline: {
+    fontFamily: typography.fontFamily.text,
+    fontSize: 24,
+    fontWeight: typography.fontWeight.medium,
+    color: colors.surface.white,
+    lineHeight: 28,
+    flexShrink: 1,
   },
 });
