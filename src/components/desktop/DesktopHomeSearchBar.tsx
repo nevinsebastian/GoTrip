@@ -20,6 +20,8 @@ import { router } from 'expo-router';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Modal, Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
 
+const SEARCH_ROOT_ID = 'desktop-home-search-bar';
+const LOCATION_PANEL_ID = 'desktop-location-panel';
 const SPECS = DESKTOP_HERO_SPECS;
 const BuildingIcon = DESKTOP_WEB_ICONS.building;
 const CalendarIcon = DESKTOP_WEB_ICONS.calendar;
@@ -118,28 +120,28 @@ export function DesktopHomeSearchBar() {
     router.push(config.searchRoute);
   };
 
-  const stackRef = useRef<View>(null);
-  const [panelAnchor, setPanelAnchor] = useState({ top: 0, left: 0, width: 350 });
+  const closeLocationSection = () => {
+    closeSection();
+    locationInputRef.current?.blur();
+  };
 
   useEffect(() => {
-    if (!expanded || Platform.OS !== 'web') return;
+    if (Platform.OS !== 'web' || expanded !== 'location') return;
 
-    const measure = () => {
-      stackRef.current?.measureInWindow((x, y, _width, height) => {
-        const top = y + height + 8;
-        if (expanded === 'location') {
-          setPanelAnchor({ top, left: x, width: 350 });
-        } else if (expanded === 'dates') {
-          setPanelAnchor({ top, left: x + 282, width: 720 });
-        } else if (expanded === 'guests') {
-          setPanelAnchor({ top, left: x + _width - 320, width: 320 });
-        }
-      });
+    const onPointerDown = (event: PointerEvent) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      if (
+        target.closest(`#${SEARCH_ROOT_ID}`) ||
+        target.closest(`#${LOCATION_PANEL_ID}`)
+      ) {
+        return;
+      }
+      closeLocationSection();
     };
 
-    measure();
-    const timer = setTimeout(measure, 0);
-    return () => clearTimeout(timer);
+    document.addEventListener('pointerdown', onPointerDown, true);
+    return () => document.removeEventListener('pointerdown', onPointerDown, true);
   }, [expanded]);
 
   const locationPanelContent = (
@@ -150,8 +152,7 @@ export function DesktopHomeSearchBar() {
           style={styles.suggestionRow}
           onPress={() => {
             setLocation(item.short);
-            closeSection();
-            locationInputRef.current?.blur();
+            closeLocationSection();
           }}
         >
           <Text style={styles.suggestionTitle}>{item.title}</Text>
@@ -167,8 +168,7 @@ export function DesktopHomeSearchBar() {
             style={styles.destChip}
             onPress={() => {
               setLocation(city);
-              closeSection();
-              locationInputRef.current?.blur();
+              closeLocationSection();
             }}
           >
             <Text style={styles.destChipText}>{city}</Text>
@@ -254,12 +254,18 @@ export function DesktopHomeSearchBar() {
   const useFloatingPanels = Platform.OS === 'web';
 
   return (
-    <View style={styles.wrap}>
+    <View
+      nativeID={SEARCH_ROOT_ID}
+      style={[
+        styles.wrap,
+        useFloatingPanels && expanded && expanded !== 'location' ? styles.wrapAboveModal : null,
+      ]}
+    >
       {!useFloatingPanels && expanded ? (
         <Pressable style={styles.backdrop} onPress={closeSection} accessibilityLabel="Close search panel" />
       ) : null}
 
-      <View ref={stackRef} style={styles.stack} collapsable={false}>
+      <View style={styles.stack} collapsable={false}>
         <View style={styles.bar}>
           <View
             style={[
@@ -353,8 +359,19 @@ export function DesktopHomeSearchBar() {
           </Pressable>
         </View>
 
-        {!useFloatingPanels && expanded === 'location' ? (
-          <View style={styles.locationPanelWrap}>{locationPanelContent}</View>
+        {expanded === 'location' ? (
+          <View
+            nativeID={LOCATION_PANEL_ID}
+            style={styles.locationPanelWrap}
+            {...Platform.select({
+              web: {
+                onMouseDown: (event: { preventDefault: () => void }) => event.preventDefault(),
+              },
+              default: {},
+            })}
+          >
+            {locationPanelContent}
+          </View>
         ) : null}
 
         {!useFloatingPanels && expanded === 'dates' ? (
@@ -364,36 +381,23 @@ export function DesktopHomeSearchBar() {
         {!useFloatingPanels && expanded === 'guests' ? (
           <View style={styles.guestsPanelWrap}>{guestsPanelContent}</View>
         ) : null}
+
+        {useFloatingPanels && expanded === 'dates' ? (
+          <View style={styles.datePanelWrap}>{datePanelContent}</View>
+        ) : null}
+
+        {useFloatingPanels && expanded === 'guests' ? (
+          <View style={styles.guestsPanelWrap}>{guestsPanelContent}</View>
+        ) : null}
       </View>
 
-      {useFloatingPanels ? (
-        <Modal visible={expanded !== null} transparent animationType="none" onRequestClose={closeSection}>
-          <View style={styles.modalRoot} pointerEvents="box-none">
-            {expanded !== 'location' ? (
-              <Pressable
-                style={styles.modalBackdrop}
-                onPress={closeSection}
-                accessibilityLabel="Close search panel"
-              />
-            ) : null}
-            {expanded ? (
-              <View
-                pointerEvents="auto"
-                style={[
-                  styles.floatingPanel,
-                  {
-                    top: panelAnchor.top,
-                    left: panelAnchor.left,
-                    width: panelAnchor.width,
-                  },
-                ]}
-              >
-                {expanded === 'location' ? locationPanelContent : null}
-                {expanded === 'dates' ? datePanelContent : null}
-                {expanded === 'guests' ? guestsPanelContent : null}
-              </View>
-            ) : null}
-          </View>
+      {useFloatingPanels && expanded !== null && expanded !== 'location' ? (
+        <Modal visible transparent animationType="none" onRequestClose={closeSection}>
+          <Pressable
+            style={styles.modalBackdrop}
+            onPress={closeSection}
+            accessibilityLabel="Close search panel"
+          />
         </Modal>
       ) : null}
 
@@ -457,6 +461,10 @@ const styles = StyleSheet.create({
     zIndex: 50,
     overflow: 'visible',
   },
+  wrapAboveModal: {
+    position: 'relative',
+    zIndex: 100000,
+  },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
     top: -2000,
@@ -466,15 +474,8 @@ const styles = StyleSheet.create({
     zIndex: 0,
   },
   modalBackdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'transparent',
-  },
-  modalRoot: {
     flex: 1,
-  },
-  floatingPanel: {
-    position: 'absolute',
-    zIndex: 2,
+    backgroundColor: 'transparent',
   },
   stack: {
     flex: 1,
@@ -605,7 +606,7 @@ const styles = StyleSheet.create({
     left: 0,
     marginTop: 8,
     width: 350,
-    zIndex: 40,
+    zIndex: 100001,
   },
   locationPanel: {
     backgroundColor: colors.surface.white,
@@ -748,7 +749,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
     width: 720,
     maxWidth: '100%',
-    zIndex: 40,
+    zIndex: 100001,
   },
   guestsPanelWrap: {
     position: 'absolute',
@@ -756,7 +757,7 @@ const styles = StyleSheet.create({
     right: 0,
     marginTop: 8,
     width: 320,
-    zIndex: 40,
+    zIndex: 100001,
   },
   guestsPanel: {
     backgroundColor: colors.surface.white,
