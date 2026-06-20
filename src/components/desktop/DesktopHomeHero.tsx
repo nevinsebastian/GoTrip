@@ -11,7 +11,7 @@ import {
   DESKTOP_HERO_SPECS,
 } from '@/src/constants/desktopHomeConstants';
 import React from 'react';
-import { Image, ImageBackground, Platform, StyleSheet, View } from 'react-native';
+import { Image, Platform, StyleSheet, View } from 'react-native';
 
 type DesktopHomeHeroProps = {
   activeTab: HomeCategoryTab;
@@ -36,12 +36,11 @@ export function DesktopHomeHero({
   return (
     <View style={styles.outer}>
       <View style={styles.frame}>
-        <ImageBackground
-          source={hero.background}
-          style={styles.hero}
-          imageStyle={styles.heroImage}
-          resizeMode="cover"
-        >
+        <View style={styles.heroShell}>
+          <View style={styles.heroBgClip} pointerEvents="none">
+            <Image source={hero.background} style={styles.heroBgImage} resizeMode="cover" />
+          </View>
+
           <View style={styles.content}>
             <DesktopWebNav
               embedded
@@ -77,10 +76,12 @@ export function DesktopHomeHero({
 
               <Text style={styles.tagline}>{hero.tagline}</Text>
             </View>
+          </View>
 
+          <View style={styles.searchSlot}>
             <DesktopHomeSearchBar />
           </View>
-        </ImageBackground>
+        </View>
       </View>
     </View>
   );
@@ -93,29 +94,46 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     paddingHorizontal: 24,
     paddingTop: 24,
+    position: 'relative',
+    zIndex: 100,
   },
   frame: {
     borderWidth: DESKTOP_HERO_SPECS.frameBorderWidth,
     borderColor: DESKTOP_HERO_SPECS.frameBorderColor,
     borderRadius: DESKTOP_HERO_SPECS.frameBorderRadius,
-    overflow: 'hidden',
+    overflow: 'visible',
     backgroundColor: DESKTOP_HERO_SPECS.accent,
     ...Platform.select({
       web: { boxShadow: '0 4px 24px rgba(0, 0, 0, 0.08)' },
       default: {},
     }),
   },
-  hero: {
-    width: '100%',
+  heroShell: {
+    position: 'relative',
     minHeight: DESKTOP_HERO_SPECS.frameMinHeight,
+    borderRadius: DESKTOP_HERO_SPECS.frameBorderRadius,
+    overflow: 'visible',
   },
-  heroImage: {},
+  heroBgClip: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: DESKTOP_HERO_SPECS.frameBorderRadius,
+    overflow: 'hidden',
+  },
+  heroBgImage: {
+    width: '100%',
+    height: '100%',
+  },
   content: {
-    flex: 1,
-    minHeight: DESKTOP_HERO_SPECS.frameMinHeight,
+    minHeight: DESKTOP_HERO_SPECS.frameMinHeight - DESKTOP_HERO_SPECS.searchHeight - 36,
     padding: DESKTOP_HERO_SPECS.framePadding,
+    paddingBottom: 0,
     gap: 24,
-    justifyContent: 'space-between',
+  },
+  searchSlot: {
+    paddingHorizontal: DESKTOP_HERO_SPECS.framePadding,
+    paddingBottom: DESKTOP_HERO_SPECS.framePadding,
+    zIndex: 50,
+    overflow: 'visible',
   },
   middle: {
     flexDirection: 'row',
