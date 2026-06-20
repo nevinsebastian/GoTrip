@@ -35,7 +35,7 @@ export const DESKTOP_FOOTER_DESCRIPTION =
 export const DESKTOP_VENDOR_LANDING = {
   discoverTitle: 'Discover more about us!',
   discoverBody:
-    'GoTrip offers handpicked hotels, travel packages, camping experiences, and activities—bringing everything together in one platform for hassle-free planning and booking.',
+    'We bring together handpicked hotels, exciting travel packages, immersive camping spots, and a wide range of activities—all in one place. Whether you\'re planning a relaxing getaway, an adventurous escape, or a unique outdoor experience, GoTrip makes it simple, personalized, and hassle-free. Explore destinations, discover new experiences, and create unforgettable memories with ease.',
   exploreMore: 'Explore more',
   help: 'Help',
 };
