@@ -1,4 +1,5 @@
 import type { HomeCategoryTab } from '@/src/components/home/homeSearchConfig';
+import type { Listing } from '@/src/api/types';
 import AccountMultipleIcon from '@/assets/images/account-multiple.svg';
 import CashMultipleIcon from '@/assets/images/cash-multiple.svg';
 import DiamondIcon from '@/assets/images/diamond.svg';
@@ -131,3 +132,33 @@ export const DESKTOP_DESTINATIONS = [
     image: require('../../assets/images/packagebackground.jpg'),
   },
 ] as const;
+
+export const DESKTOP_LISTING_FALLBACK_IMAGE = require('../../assets/webassets/hotelsbg.jpg');
+
+const DESKTOP_MOCK_LISTING_COPY = {
+  title: 'Luxury stay in Varkala',
+  description:
+    'Experience refined comfort in this elegant two-floor villa featuring four spacious bedrooms and a private pool.',
+  location: 'Varkala',
+  price_start: '1199',
+} as const;
+
+export function createDesktopMockListings(count: number): Listing[] {
+  return Array.from({ length: count }, (_, index) => ({
+    id: `desktop-mock-${index + 1}`,
+    vendor_id: 'mock',
+    category_id: 'mock',
+    title: DESKTOP_MOCK_LISTING_COPY.title,
+    description: DESKTOP_MOCK_LISTING_COPY.description,
+    location: DESKTOP_MOCK_LISTING_COPY.location,
+    price_start: DESKTOP_MOCK_LISTING_COPY.price_start,
+  }));
+}
+
+export function resolveDesktopListings(listings: Listing[], count: number): Listing[] {
+  if (listings.length >= count) {
+    return listings.slice(0, count);
+  }
+  const mocks = createDesktopMockListings(count - listings.length);
+  return [...listings, ...mocks].slice(0, count);
+}

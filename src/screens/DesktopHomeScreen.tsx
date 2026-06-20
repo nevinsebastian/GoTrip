@@ -10,6 +10,7 @@ import {
     DesktopMoodSection,
     DesktopSuggestedSection,
 } from '@/src/components/desktop/DesktopHomeListingSections';
+import { resolveDesktopListings } from '@/src/constants/desktopHomeConstants';
 import { DesktopHomeVendorSection } from '@/src/components/desktop/DesktopHomeVendorSection';
 import { DesktopPromoBanner } from '@/src/components/desktop/DesktopPromoBanner';
 import { DesktopSiteFooter } from '@/src/components/desktop/DesktopSiteFooter';
@@ -44,8 +45,8 @@ function DesktopHomeContent() {
   const { data: listingsRes } = useListings({ page: 1, limit: 20 });
   const { data: economicRes } = useListings({ max_price: 2499, page: 1, limit: 20 });
   const listings = listingsRes?.data ?? [];
-  const suggested = listings.slice(0, 6);
-  const budget = (economicRes?.data ?? listings).slice(0, 8);
+  const suggested = resolveDesktopListings(listings.slice(0, 6), 3);
+  const budget = resolveDesktopListings((economicRes?.data ?? listings).slice(0, 8), 8);
 
   const handleWebMenuLogout = async () => {
     setWebMenuOpen(false);
@@ -153,10 +154,14 @@ function DesktopHomeContent() {
           <DesktopPromoBanner />
           <DesktopAccentDivider />
           <DesktopMoodSection activeTab={activeCategoryTab} />
+        </View>
+
+        <View style={styles.main}>
           <DesktopSuggestedSection listings={suggested} activeTab={activeCategoryTab} />
         </View>
 
         <DesktopDestinationsSection />
+
         <View style={styles.main}>
           <DesktopBudgetOptionsSection listings={budget} />
         </View>

@@ -92,10 +92,7 @@ export function DesktopHomeSearchBar() {
             <View style={styles.guestValueRow}>
               <View style={styles.guestPart}>
                 <Text style={styles.guestNum}>{guests}</Text>
-                <Text style={styles.guestUnit}>
-                  {config.guestUnit}
-                  {guests === 1 ? '' : 's'}
-                </Text>
+                <Text style={styles.guestUnit}>{config.guestUnit}</Text>
               </View>
               <View style={styles.guestDivider} />
               <View style={styles.guestPart}>

@@ -4,7 +4,7 @@ import { GlassSurface } from '@/src/components/home/GlassSurface';
 import { PillButton } from '@/src/components/home/PillButton';
 import type { HomeCategoryTab } from '@/src/components/home/homeSearchConfig';
 import type { Listing } from '@/src/api/types';
-import { DESKTOP_DESTINATIONS, DESKTOP_MOODS } from '@/src/constants/desktopHomeConstants';
+import { DESKTOP_DESTINATIONS, DESKTOP_LISTING_FALLBACK_IMAGE, DESKTOP_MOODS } from '@/src/constants/desktopHomeConstants';
 import { getPrimaryImage } from '@/src/utils/getPrimaryImage';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -90,7 +90,6 @@ export function DesktopSuggestedSection({
   activeTab?: HomeCategoryTab;
 }) {
   const items = listings.slice(0, 3);
-  if (!items.length) return null;
 
   const title =
     activeTab === 'packages'
@@ -155,7 +154,6 @@ export function DesktopDestinationsSection() {
 
 export function DesktopBudgetOptionsSection({ listings }: { listings: Listing[] }) {
   const items = listings.slice(0, 8);
-  if (!items.length) return null;
 
   const rows: Listing[][] = [];
   for (let i = 0; i < items.length; i += 4) {
@@ -193,6 +191,7 @@ function DesktopBudgetCard({ listing }: { listing: Listing }) {
       : '1199';
 
   const handlePress = () => {
+    if (listing.id.startsWith('desktop-mock-')) return;
     router.push({ pathname: '/resort/[id]', params: { id: listing.id } });
   };
 
@@ -202,9 +201,7 @@ function DesktopBudgetCard({ listing }: { listing: Listing }) {
         {img ? (
           <Image source={{ uri: img }} style={styles.budgetImage} resizeMode="cover" />
         ) : (
-          <View style={styles.listingImagePlaceholder}>
-            <Ionicons name="image-outline" size={20} color={colors.text.caption} />
-          </View>
+          <Image source={DESKTOP_LISTING_FALLBACK_IMAGE} style={styles.budgetImage} resizeMode="cover" />
         )}
         <View style={styles.budgetHeartBtn}>
           <HeartIcon width={14} height={14} />
@@ -244,6 +241,7 @@ function DesktopListingCard({ listing }: { listing: Listing }) {
   const location = listing.location ?? 'Varkala';
 
   const handlePress = () => {
+    if (listing.id.startsWith('desktop-mock-')) return;
     router.push({ pathname: '/resort/[id]', params: { id: listing.id } });
   };
 
@@ -253,9 +251,7 @@ function DesktopListingCard({ listing }: { listing: Listing }) {
         {img ? (
           <Image source={{ uri: img }} style={styles.listingImage} resizeMode="cover" />
         ) : (
-          <View style={styles.listingImagePlaceholder}>
-            <Ionicons name="image-outline" size={24} color={colors.text.caption} />
-          </View>
+          <Image source={DESKTOP_LISTING_FALLBACK_IMAGE} style={styles.listingImage} resizeMode="cover" />
         )}
         <View style={styles.heartBtn}>
           <HeartIcon width={14} height={14} />
@@ -267,21 +263,20 @@ function DesktopListingCard({ listing }: { listing: Listing }) {
       </View>
 
       <View style={styles.listingBody}>
-        <View style={styles.titleRatingRow}>
-          <View style={styles.titleBlock}>
-            <Text style={styles.listingTitle} numberOfLines={1}>
-              {listing.title}
-            </Text>
-            <Text style={styles.listingDesc} numberOfLines={3}>
-              {listing.description ??
-                'Experience refined comfort in this elegant two-floor villa featuring four spacious bedrooms and a private pool.'}
-            </Text>
-          </View>
+        <View style={styles.suggestedTitleRow}>
+          <Text style={styles.listingTitle} numberOfLines={1}>
+            {listing.title}
+          </Text>
           <View style={styles.ratingRow}>
             <Ionicons name="star" size={16} color={colors.accent.main} />
             <Text style={styles.ratingText}>4.5</Text>
           </View>
         </View>
+
+        <Text style={styles.listingDesc} numberOfLines={3}>
+          {listing.description ??
+            'Experience refined comfort in this elegant two-floor villa featuring four spacious bedrooms and a private pool.'}
+        </Text>
 
         <Text style={styles.breadcrumb}>Thiruvananthapuram &gt; {location}</Text>
 
@@ -441,6 +436,8 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     backgroundColor: colors.gray['2'],
     position: 'relative',
+    borderWidth: 1,
+    borderColor: colors.surface.white,
   },
   listingImage: {
     width: '100%',
@@ -453,59 +450,66 @@ const styles = StyleSheet.create({
   },
   heartBtn: {
     position: 'absolute',
-    top: 10,
-    right: 10,
+    top: 9,
+    right: 7,
     width: 33,
     height: 33,
     borderRadius: 6,
     backgroundColor: colors.surface.white,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 4,
   },
   coupleBadge: {
     position: 'absolute',
-    left: 9,
-    bottom: 10,
+    left: 8,
+    bottom: 9,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    gap: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   coupleBadgeText: {
     fontFamily: typography.fontFamily.text,
-    fontSize: 9,
-    fontWeight: typography.fontWeight.semibold,
+    fontSize: 10,
+    fontWeight: typography.fontWeight.medium,
     color: colors.surface.white,
-    letterSpacing: 0.5,
+    letterSpacing: 0,
   },
   listingBody: {
-    padding: 12,
+    paddingHorizontal: 12,
+    paddingBottom: 12,
     gap: 18,
     flex: 1,
   },
-  titleRatingRow: {
+  suggestedTitleRow: {
     flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     gap: 12,
-    alignItems: 'flex-start',
-  },
-  titleBlock: {
-    flex: 1,
-    gap: 8,
-    minWidth: 0,
   },
   listingTitle: {
+    flex: 1,
     fontFamily: typography.fontFamily.text,
     fontSize: 16,
-    fontWeight: typography.fontWeight.semibold,
+    fontWeight: typography.fontWeight.medium,
     color: colors.text.primary,
     lineHeight: 16,
+    letterSpacing: 0.04,
   },
   listingDesc: {
     fontFamily: typography.fontFamily.text,
     fontSize: 12,
-    color: colors.text.secondary,
+    fontWeight: typography.fontWeight.regular,
+    color: 'rgba(28, 32, 36, 0.8)',
     lineHeight: 16,
+    letterSpacing: 0.04,
   },
   ratingRow: {
     flexDirection: 'row',
@@ -515,10 +519,11 @@ const styles = StyleSheet.create({
   },
   ratingText: {
     fontFamily: typography.fontFamily.text,
-    fontSize: 16,
-    fontWeight: typography.fontWeight.medium,
+    fontSize: 15,
+    fontWeight: typography.fontWeight.regular,
     color: colors.accent.main,
     lineHeight: 16,
+    letterSpacing: 0.04,
   },
   breadcrumb: {
     fontFamily: typography.fontFamily.text,
