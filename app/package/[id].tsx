@@ -1,5 +1,6 @@
 import { useResponsive } from '@/components/ui/useResponsive';
 import { FIGMA_PACKAGE_DETAIL } from '@/src/constants/packageDetailConstants';
+import { DesktopCategoryListingDetailScreen } from '@/src/screens/DesktopCategoryListingDetailScreen';
 import { MobilePackageDetailsScreen } from '@/src/screens/MobilePackageDetails';
 import { getPackageFixedDates } from '@/src/utils/packageDates';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -29,7 +30,12 @@ export default function PackageDetailsScreen() {
   if (isDesktopWeb) {
     return (
       <View style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
-        <MobilePackageDetailsScreen listingId={listingId} onBookNow={onBookNow} />
+        <DesktopCategoryListingDetailScreen
+          tab="packages"
+          title={params.title}
+          priceLabel={params.price}
+          onBookNow={onBookNow}
+        />
       </View>
     );
   }

@@ -63,7 +63,7 @@ export const HOME_SEARCH_BY_TAB: Record<HomeCategoryTab, HomeSearchConfig> = {
     searchRoute: '/resorts',
   },
   activities: {
-    locationLabel: 'Enter your dream destination',
+    locationLabel: 'Enter Your Dream Adventure',
     defaultLocation: 'Scuba Diving',
     defaultCheckIn: '2026-04-03',
     defaultCheckOut: '2026-04-03',

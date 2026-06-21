@@ -1,5 +1,6 @@
 import { useResponsive } from '@/components/ui/useResponsive';
 import { FIGMA_ACTIVITY_DETAIL } from '@/src/constants/activityDetailConstants';
+import { DesktopCategoryListingDetailScreen } from '@/src/screens/DesktopCategoryListingDetailScreen';
 import { MobileActivityDetailsScreen } from '@/src/screens/MobileActivityDetails';
 import { router, useLocalSearchParams } from 'expo-router';
 import React from 'react';
@@ -25,7 +26,12 @@ export default function ActivityDetailsRoute() {
   if (isDesktopWeb) {
     return (
       <View style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
-        <MobileActivityDetailsScreen onBookNow={onBookNow} />
+        <DesktopCategoryListingDetailScreen
+          tab="activities"
+          title={params.title}
+          priceLabel={params.price}
+          onBookNow={onBookNow}
+        />
       </View>
     );
   }

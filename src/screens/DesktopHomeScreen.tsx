@@ -15,6 +15,7 @@ import { DesktopHomeVendorSection } from '@/src/components/desktop/DesktopHomeVe
 import { DesktopPromoBanner } from '@/src/components/desktop/DesktopPromoBanner';
 import { DesktopSiteFooter } from '@/src/components/desktop/DesktopSiteFooter';
 import { HomeSearchProvider, useHomeSearch } from '@/src/components/home/HomeSearchContext';
+import { DesktopSearchResultsScreen } from '@/src/screens/DesktopSearchResultsScreen';
 import { useListings } from '@/src/hooks/useListings';
 import { USER_PROFILE_QUERY_KEY, useUserProfile } from '@/src/hooks/useUserProfile';
 import { Ionicons } from '@expo/vector-icons';
@@ -34,7 +35,7 @@ function DesktopHomeContent() {
   const { data: user, error: profileError } = useUserProfile();
   const isUnauthorized = Boolean(profileError?.isUnauthorized);
   const isLoggedIn = Boolean(user) && !isUnauthorized;
-  const { activeCategoryTab, setActiveCategoryTab } = useHomeSearch();
+  const { activeCategoryTab, setActiveCategoryTab, searchMode } = useHomeSearch();
 
   const [webMenuOpen, setWebMenuOpen] = useState(false);
   const [webAuthModal, setWebAuthModal] = useState<{
@@ -140,36 +141,45 @@ function DesktopHomeContent() {
         onAuthenticated={() => queryClient.invalidateQueries({ queryKey: USER_PROFILE_QUERY_KEY })}
       />
 
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator>
-        <DesktopHomeHero
-          activeTab={activeCategoryTab}
-          onTabChange={setActiveCategoryTab}
+      {searchMode ? (
+        <DesktopSearchResultsScreen
           isLoggedIn={isLoggedIn}
           onMenuPress={() => setWebMenuOpen(true)}
           onProfilePress={() => router.push('/(tabs)/four')}
           onLoginPress={() => setWebAuthModal({ visible: true, mode: 'login' })}
         />
+      ) : (
+        <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator>
+          <DesktopHomeHero
+            activeTab={activeCategoryTab}
+            onTabChange={setActiveCategoryTab}
+            isLoggedIn={isLoggedIn}
+            onMenuPress={() => setWebMenuOpen(true)}
+            onProfilePress={() => router.push('/(tabs)/four')}
+            onLoginPress={() => setWebAuthModal({ visible: true, mode: 'login' })}
+          />
 
-        <View style={styles.main}>
-          <DesktopPromoBanner />
-          <DesktopAccentDivider />
-          <DesktopMoodSection activeTab={activeCategoryTab} />
-        </View>
+          <View style={styles.main}>
+            <DesktopPromoBanner />
+            <DesktopAccentDivider />
+            <DesktopMoodSection activeTab={activeCategoryTab} />
+          </View>
 
-        <View style={styles.main}>
-          <DesktopSuggestedSection listings={suggested} activeTab={activeCategoryTab} />
-        </View>
+          <View style={styles.main}>
+            <DesktopSuggestedSection listings={suggested} activeTab={activeCategoryTab} />
+          </View>
 
-        <DesktopDestinationsSection />
+          <DesktopDestinationsSection />
 
-        <View style={styles.main}>
-          <DesktopBudgetOptionsSection listings={budget} />
-        </View>
+          <View style={styles.main}>
+            <DesktopBudgetOptionsSection listings={budget} />
+          </View>
 
-        <DesktopHomeVendorSection />
+          <DesktopHomeVendorSection />
 
-        <DesktopSiteFooter />
-      </ScrollView>
+          <DesktopSiteFooter />
+        </ScrollView>
+      )}
     </SafeAreaView>
   );
 }

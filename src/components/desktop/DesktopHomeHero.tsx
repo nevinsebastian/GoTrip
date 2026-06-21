@@ -1,9 +1,10 @@
 import { Text } from '@/components/ui';
 import { colors, typography } from '@/constants/DesignTokens';
+import { DesktopCategorySearchBar } from '@/src/components/desktop/DesktopCategorySearchBar';
 import { DesktopHomeSearchBar } from '@/src/components/desktop/DesktopHomeSearchBar';
 import { DesktopWebNav } from '@/src/components/desktop/DesktopWebNav';
 import { GlassSurface } from '@/src/components/home/GlassSurface';
-import type { HomeCategoryTab } from '@/src/components/home/homeSearchConfig';
+import { HOME_SEARCH_BY_TAB, type HomeCategoryTab } from '@/src/components/home/homeSearchConfig';
 import { useHomeSearch } from '@/src/components/home/HomeSearchContext';
 import { PillButton } from '@/src/components/home/PillButton';
 import {
@@ -30,8 +31,26 @@ export function DesktopHomeHero({
   onProfilePress,
   onLoginPress,
 }: DesktopHomeHeroProps) {
-  const { activeCategoryTab } = useHomeSearch();
+  const { activeCategoryTab, enterSearchMode } = useHomeSearch();
   const hero = DESKTOP_HERO_BY_TAB[activeCategoryTab];
+  const searchConfig = HOME_SEARCH_BY_TAB[activeCategoryTab];
+
+  const handleCategorySearch = ({ location, mood }: { location: string; mood: string }) => {
+    enterSearchMode({
+      location,
+      checkIn: searchConfig.defaultCheckIn,
+      checkOut: searchConfig.defaultCheckOut,
+      guests: {
+        adults: searchConfig.defaultAdults,
+        children: searchConfig.defaultChildren,
+        infants: searchConfig.defaultInfants,
+        rooms: searchConfig.defaultRooms,
+      },
+      tab: activeCategoryTab,
+      ...(activeCategoryTab === 'packages' ? { packageMood: mood } : {}),
+      ...(activeCategoryTab === 'activities' ? { activityMood: mood } : {}),
+    });
+  };
 
   return (
     <View style={styles.outer}>
@@ -79,7 +98,11 @@ export function DesktopHomeHero({
           </View>
 
           <View style={styles.searchSlot}>
-            <DesktopHomeSearchBar />
+            {activeCategoryTab === 'hotels' ? (
+              <DesktopHomeSearchBar />
+            ) : (
+              <DesktopCategorySearchBar activeTab={activeCategoryTab} onSearch={handleCategorySearch} />
+            )}
           </View>
         </View>
       </View>

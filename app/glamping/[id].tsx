@@ -1,5 +1,6 @@
 import { useResponsive } from '@/components/ui/useResponsive';
 import { FIGMA_GLAMPING_DETAIL } from '@/src/constants/glampingDetailConstants';
+import { DesktopCategoryListingDetailScreen } from '@/src/screens/DesktopCategoryListingDetailScreen';
 import { MobileGlampingDetailsScreen } from '@/src/screens/MobileGlampingDetails';
 import { router, useLocalSearchParams } from 'expo-router';
 import React from 'react';
@@ -25,7 +26,12 @@ export default function GlampingDetailsRoute() {
   if (isDesktopWeb) {
     return (
       <View style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
-        <MobileGlampingDetailsScreen onBookNow={onBookNow} />
+        <DesktopCategoryListingDetailScreen
+          tab="glamping"
+          title={params.title}
+          priceLabel={params.price}
+          onBookNow={onBookNow}
+        />
       </View>
     );
   }

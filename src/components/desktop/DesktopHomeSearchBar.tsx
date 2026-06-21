@@ -32,8 +32,12 @@ function clamp(n: number, min: number, max: number) {
   return Math.min(max, Math.max(min, n));
 }
 
-export function DesktopHomeSearchBar() {
-  const { activeCategoryTab, enterSearchMode } = useHomeSearch();
+type DesktopHomeSearchBarProps = {
+  variant?: 'hero' | 'inline';
+};
+
+export function DesktopHomeSearchBar({ variant = 'hero' }: DesktopHomeSearchBarProps) {
+  const { activeCategoryTab, enterSearchMode, searchParams } = useHomeSearch();
   const config = HOME_SEARCH_BY_TAB[activeCategoryTab];
   const locationInputRef = useRef<TextInput>(null);
 
@@ -74,6 +78,16 @@ export function DesktopHomeSearchBar() {
     setDateDraft({ checkIn: config.defaultCheckIn, checkOut: config.defaultCheckOut });
     setGuestDraft(nextGuests);
   }, [activeCategoryTab, config]);
+
+  useEffect(() => {
+    if (variant !== 'inline' || !searchParams || searchParams.tab !== activeCategoryTab) return;
+    setLocation(searchParams.location);
+    setCheckIn(searchParams.checkIn);
+    setCheckOut(searchParams.checkOut);
+    setGuests(searchParams.guests);
+    setDateDraft({ checkIn: searchParams.checkIn, checkOut: searchParams.checkOut });
+    setGuestDraft(searchParams.guests);
+  }, [variant, searchParams, activeCategoryTab]);
 
   const openSection = (section: ExpandedSection) => {
     if (section !== 'location') {
@@ -117,7 +131,9 @@ export function DesktopHomeSearchBar() {
       guests,
       tab: activeCategoryTab,
     });
-    router.push(config.searchRoute);
+    if (Platform.OS !== 'web') {
+      router.push(config.searchRoute);
+    }
   };
 
   const closeLocationSection = () => {
@@ -253,11 +269,29 @@ export function DesktopHomeSearchBar() {
 
   const useFloatingPanels = Platform.OS === 'web';
 
+  const barRadius =
+    variant === 'inline'
+      ? {
+          borderTopLeftRadius: 12,
+          borderTopRightRadius: 12,
+          borderBottomLeftRadius: 12,
+          borderBottomRightRadius: 12,
+        }
+      : {
+          borderTopLeftRadius: SPECS.searchBorderTopLeft,
+          borderTopRightRadius: SPECS.searchBorderTopRight,
+          borderBottomLeftRadius: SPECS.searchBorderBottomLeft,
+          borderBottomRightRadius: SPECS.searchBorderBottomRight,
+        };
+
+  const isCompact = variant === 'inline';
+
   return (
     <View
       nativeID={SEARCH_ROOT_ID}
       style={[
         styles.wrap,
+        isCompact && styles.wrapCompact,
         useFloatingPanels && expanded && expanded !== 'location' ? styles.wrapAboveModal : null,
       ]}
     >
@@ -265,25 +299,28 @@ export function DesktopHomeSearchBar() {
         <Pressable style={styles.backdrop} onPress={closeSection} accessibilityLabel="Close search panel" />
       ) : null}
 
-      <View style={styles.stack} collapsable={false}>
-        <View style={styles.bar}>
+      <View style={[styles.stack, isCompact && styles.stackCompact]} collapsable={false}>
+        <View style={[styles.bar, barRadius, isCompact && styles.barCompact]}>
           <View
             style={[
               styles.locationField,
+              isCompact && styles.locationFieldCompact,
               expanded === 'location' && styles.fieldActive,
             ]}
           >
-            <View style={styles.fieldLabelRow}>
-              <BuildingIcon width={18} height={18} />
-              <Text style={styles.fieldLabel}>{config.locationLabel}</Text>
+            <View style={[styles.fieldLabelRow, isCompact && styles.fieldLabelRowCompact]}>
+              <BuildingIcon width={isCompact ? 12 : 18} height={isCompact ? 12 : 18} />
+              <Text style={[styles.fieldLabel, isCompact && styles.fieldLabelCompact]} numberOfLines={1}>
+                {config.locationLabel}
+              </Text>
             </View>
-            <View style={styles.valueBox}>
+            <View style={[styles.valueBox, isCompact && styles.valueBoxCompact]}>
               <TextInput
                 ref={locationInputRef}
                 value={location}
                 onChangeText={setLocation}
                 onFocus={() => openSection('location')}
-                style={styles.locationInput}
+                style={[styles.locationInput, isCompact && styles.locationInputCompact]}
                 placeholder="Search city or hotel"
                 placeholderTextColor="rgba(28, 32, 36, 0.4)"
               />
@@ -293,34 +330,46 @@ export function DesktopHomeSearchBar() {
           <View style={styles.vDivider} />
 
           <Pressable
-            style={[styles.dateRow, expanded === 'dates' && styles.fieldActiveSoft]}
+            style={[
+              styles.dateRow,
+              isCompact && styles.dateRowCompact,
+              expanded === 'dates' && styles.fieldActiveSoft,
+            ]}
             onPress={() => openSection('dates')}
             {...Platform.select({
               web: { accessibilityRole: 'button' as const },
               default: {},
             })}
           >
-            <View style={styles.dateField}>
-              <View style={styles.fieldLabelRow}>
-                <CalendarIcon width={18} height={18} />
-                <Text style={styles.fieldLabel}>Check In</Text>
+            <View style={[styles.dateField, isCompact && styles.dateFieldCompact]}>
+              <View style={[styles.fieldLabelRow, isCompact && styles.fieldLabelRowCompact]}>
+                <CalendarIcon width={isCompact ? 12 : 18} height={isCompact ? 12 : 18} />
+                <Text style={[styles.fieldLabel, isCompact && styles.fieldLabelCompact]}>Check In</Text>
               </View>
-              <View style={styles.valueBox}>
-                <View style={styles.dateValueRow}>
-                  <Text style={styles.dateValueSmall}>{checkInDisplay.date}</Text>
-                  <Text style={styles.dateValueDay}>{checkInDisplay.day}</Text>
+              <View style={[styles.valueBox, isCompact && styles.valueBoxCompact]}>
+                <View style={[styles.dateValueRow, isCompact && styles.dateValueRowCompact]}>
+                  <Text style={[styles.dateValueSmall, isCompact && styles.dateValueSmallCompact]}>
+                    {checkInDisplay.date}
+                  </Text>
+                  <Text style={[styles.dateValueDay, isCompact && styles.dateValueDayCompact]}>
+                    {checkInDisplay.day}
+                  </Text>
                 </View>
               </View>
             </View>
-            <View style={styles.dateField}>
-              <View style={styles.fieldLabelRow}>
-                <CalendarIcon width={18} height={18} />
-                <Text style={styles.fieldLabel}>Check Out</Text>
+            <View style={[styles.dateField, isCompact && styles.dateFieldCompact]}>
+              <View style={[styles.fieldLabelRow, isCompact && styles.fieldLabelRowCompact]}>
+                <CalendarIcon width={isCompact ? 12 : 18} height={isCompact ? 12 : 18} />
+                <Text style={[styles.fieldLabel, isCompact && styles.fieldLabelCompact]}>Check Out</Text>
               </View>
-              <View style={styles.valueBox}>
-                <View style={styles.dateValueRow}>
-                  <Text style={styles.dateValueSmall}>{checkOutDisplay.date}</Text>
-                  <Text style={styles.dateValueDay}>{checkOutDisplay.day}</Text>
+              <View style={[styles.valueBox, isCompact && styles.valueBoxCompact]}>
+                <View style={[styles.dateValueRow, isCompact && styles.dateValueRowCompact]}>
+                  <Text style={[styles.dateValueSmall, isCompact && styles.dateValueSmallCompact]}>
+                    {checkOutDisplay.date}
+                  </Text>
+                  <Text style={[styles.dateValueDay, isCompact && styles.dateValueDayCompact]}>
+                    {checkOutDisplay.day}
+                  </Text>
                 </View>
               </View>
             </View>
@@ -328,22 +377,30 @@ export function DesktopHomeSearchBar() {
 
           <View style={styles.vDivider} />
 
-          <View style={[styles.guestsField, expanded === 'guests' && styles.fieldActiveSoft]}>
-            <Pressable style={styles.guestsHeader} onPress={() => openSection('guests')}>
-              <View style={styles.fieldLabelRow}>
-                <SofaIcon width={18} height={18} />
-                <Text style={styles.fieldLabel}>{config.guestsLabel}</Text>
+          <View
+            style={[
+              styles.guestsField,
+              isCompact && styles.guestsFieldCompact,
+              expanded === 'guests' && styles.fieldActiveSoft,
+            ]}
+          >
+            <Pressable style={[styles.guestsHeader, isCompact && styles.guestsHeaderCompact]} onPress={() => openSection('guests')}>
+              <View style={[styles.fieldLabelRow, isCompact && styles.fieldLabelRowCompact]}>
+                <SofaIcon width={isCompact ? 12 : 18} height={isCompact ? 12 : 18} />
+                <Text style={[styles.fieldLabel, isCompact && styles.fieldLabelCompact]} numberOfLines={1}>
+                  {config.guestsLabel}
+                </Text>
               </View>
-              <View style={styles.valueBox}>
-                <View style={styles.guestValueRow}>
-                  <View style={styles.guestPart}>
-                    <Text style={styles.guestNum}>{guestTotal}</Text>
-                    <Text style={styles.guestUnit}>{config.guestUnit}</Text>
+              <View style={[styles.valueBox, isCompact && styles.valueBoxCompact]}>
+                <View style={[styles.guestValueRow, isCompact && styles.guestValueRowCompact]}>
+                  <View style={[styles.guestPart, isCompact && styles.guestPartCompact]}>
+                    <Text style={[styles.guestNum, isCompact && styles.guestNumCompact]}>{guestTotal}</Text>
+                    <Text style={[styles.guestUnit, isCompact && styles.guestUnitCompact]}>{config.guestUnit}</Text>
                   </View>
-                  <View style={styles.guestDivider} />
-                  <View style={styles.guestPart}>
-                    <Text style={styles.guestNum}>{guests.rooms}</Text>
-                    <Text style={styles.guestUnit}>
+                  <View style={[styles.guestDivider, isCompact && styles.guestDividerCompact]} />
+                  <View style={[styles.guestPart, isCompact && styles.guestPartCompact]}>
+                    <Text style={[styles.guestNum, isCompact && styles.guestNumCompact]}>{guests.rooms}</Text>
+                    <Text style={[styles.guestUnit, isCompact && styles.guestUnitCompact]} numberOfLines={1}>
                       {config.roomUnit}
                       {guests.rooms === 1 ? '' : 's'}
                     </Text>
@@ -354,8 +411,12 @@ export function DesktopHomeSearchBar() {
 
           </View>
 
-          <Pressable style={styles.searchBtn} onPress={handleSearch} accessibilityLabel="Search">
-            <SearchIcon width={24} height={24} />
+          <Pressable
+            style={[styles.searchBtn, isCompact && styles.searchBtnCompact]}
+            onPress={handleSearch}
+            accessibilityLabel="Search"
+          >
+            <SearchIcon width={isCompact ? 20 : 24} height={isCompact ? 20 : 24} />
           </Pressable>
         </View>
 
@@ -401,7 +462,7 @@ export function DesktopHomeSearchBar() {
         </Modal>
       ) : null}
 
-      {config.showPriceFilter ? (
+      {config.showPriceFilter && variant !== 'inline' ? (
         <Pressable style={styles.priceBtn} onPress={closeSection}>
           <Text style={styles.priceText}>Price</Text>
           <Ionicons name="options-outline" size={18} color={SPECS.accent} />
@@ -461,6 +522,11 @@ const styles = StyleSheet.create({
     zIndex: 50,
     overflow: 'visible',
   },
+  wrapCompact: {
+    flexDirection: 'column',
+    gap: 0,
+    flex: 1,
+  },
   wrapAboveModal: {
     position: 'relative',
     zIndex: 100000,
@@ -484,14 +550,14 @@ const styles = StyleSheet.create({
     zIndex: 2,
     overflow: 'visible',
   },
+  stackCompact: {
+    maxWidth: undefined,
+    width: '100%',
+  },
   bar: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.surface.white,
-    borderTopLeftRadius: SPECS.searchBorderTopLeft,
-    borderTopRightRadius: SPECS.searchBorderTopRight,
-    borderBottomLeftRadius: SPECS.searchBorderBottomLeft,
-    borderBottomRightRadius: SPECS.searchBorderBottomRight,
     padding: 12,
     gap: 12,
     minHeight: SPECS.searchHeight,
@@ -506,6 +572,110 @@ const styles = StyleSheet.create({
         elevation: 4,
       },
     }),
+  },
+  barCompact: {
+    minHeight: 79,
+    height: 79,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    gap: 0,
+    overflow: 'hidden',
+  },
+  locationFieldCompact: {
+    width: 242,
+    height: 52,
+    padding: 8,
+    gap: 4,
+    overflow: 'hidden',
+    alignSelf: 'center',
+  },
+  dateRowCompact: {
+    width: 345,
+    height: 54,
+    flexShrink: 1,
+    gap: 8,
+    paddingHorizontal: 8,
+    alignSelf: 'center',
+  },
+  dateFieldCompact: {
+    paddingHorizontal: 8,
+    paddingTop: 4,
+    paddingBottom: 4,
+    gap: 4,
+    overflow: 'hidden',
+  },
+  guestsFieldCompact: {
+    width: 210,
+    height: 55,
+    flexShrink: 1,
+    paddingHorizontal: 8,
+    paddingTop: 4,
+    paddingBottom: 4,
+    gap: 4,
+    overflow: 'hidden',
+    alignSelf: 'center',
+  },
+  guestsHeaderCompact: {
+    gap: 4,
+  },
+  fieldLabelRowCompact: {
+    gap: 8,
+  },
+  fieldLabelCompact: {
+    fontSize: 10,
+    lineHeight: 12,
+  },
+  valueBoxCompact: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    minHeight: 0,
+    height: 28,
+    overflow: 'hidden',
+  },
+  locationInputCompact: {
+    fontSize: 14,
+    lineHeight: 16,
+  },
+  dateValueRowCompact: {
+    gap: 4,
+    alignItems: 'center',
+  },
+  dateValueSmallCompact: {
+    fontSize: 10,
+    lineHeight: 12,
+  },
+  dateValueDayCompact: {
+    fontSize: 12,
+    lineHeight: 14,
+  },
+  guestValueRowCompact: {
+    justifyContent: 'flex-start',
+    gap: 4,
+  },
+  guestPartCompact: {
+    gap: 4,
+    flexShrink: 1,
+  },
+  guestNumCompact: {
+    fontSize: 12,
+    lineHeight: 14,
+  },
+  guestUnitCompact: {
+    fontSize: 10,
+    lineHeight: 12,
+    paddingBottom: 0,
+  },
+  guestDividerCompact: {
+    height: 10,
+    marginHorizontal: 4,
+  },
+  searchBtnCompact: {
+    width: 55,
+    height: 55,
+    borderWidth: 4,
+    marginLeft: 8,
+    alignSelf: 'center',
+    flexShrink: 0,
   },
   locationField: {
     width: 270,

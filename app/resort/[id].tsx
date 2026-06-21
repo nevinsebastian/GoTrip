@@ -16,6 +16,7 @@ import { useListings } from '@/src/hooks/useListings';
 import { useSendOtp } from '@/src/hooks/useSendOtp';
 import { useVerifyPayment } from '@/src/hooks/useVerifyPayment';
 import { MobileResortDetailsScreen } from '@/src/screens/MobileResortDetails';
+import { DesktopHotelDetailScreen } from '@/src/screens/DesktopHotelDetailScreen';
 import { getErrorMessage } from '@/src/utils/errorHandler';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -581,178 +582,16 @@ export default function ResortDetailsScreen() {
           onBookNow={openDateModal}
         />
       ) : (
-        <>
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Image carousel ~40% height */}
-        <View style={styles.heroWrap}>
-          <ScrollView
-            ref={scrollRef}
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            onMomentumScrollEnd={onCarouselScroll}
-            style={styles.carousel}
-          >
-            {(carouselImages.length ? carouselImages : [ResortImage]).map((img: any, i: number) => (
-              <Image
-                key={i}
-                source={typeof img === 'string' ? { uri: img } : img}
-                style={[styles.carouselSlide, { width: SCREEN_WIDTH }]}
-                resizeMode="cover"
-              />
-            ))}
-          </ScrollView>
-          {/* Carousel dots */}
-          <View style={styles.carouselDots}>
-            {(carouselImages.length ? carouselImages : [ResortImage]).map((_, i) => (
-              <View
-                key={i}
-                style={[styles.dot, i === carouselIndex && styles.dotActive]}
-              />
-            ))}
-          </View>
-          {/* Header buttons */}
-          <SafeAreaView style={styles.heroOverlay} edges={['top']}>
-            <View style={styles.heroHeader}>
-              <Pressable
-                style={styles.headerBtnGray}
-                onPress={() => router.back()}
-                hitSlop={12}
-                accessibilityLabel="Go back"
-              >
-                <Ionicons name="chevron-back" size={24} color={colors.text.primary} />
-              </Pressable>
-              <View style={styles.headerBtnRow}>
-                <Pressable style={styles.headerBtnGray} onPress={() => {}} accessibilityLabel="Share">
-                  <Ionicons name="share-outline" size={22} color={colors.text.primary} />
-                </Pressable>
-                <Pressable style={styles.headerBtnOrange} onPress={() => {}} accessibilityLabel="Save">
-                  <Ionicons name="heart" size={22} color={colors.surface.white} />
-                </Pressable>
-              </View>
-            </View>
-          </SafeAreaView>
-        </View>
-
-        {/* Content - white background */}
-        <View style={styles.content}>
-          {/* Title + rating pill */}
-          <View style={styles.titleColumn}>
-            <Text variant="caption" style={styles.locationLabel}>
-              {locationLabel}
-            </Text>
-            <Text variant="heading1" style={styles.title}>
-              {title}
-            </Text>
-            <View style={styles.reviewsRow}>
-              <Text variant="bodySemibold" style={styles.ratingValue}>
-                {rating}/10
-              </Text>
-              <Text variant="caption" style={styles.ratingText}>
-                Very good • 1,004 reviews
-              </Text>
-            </View>
-          </View>
-
-          <Text variant="body" style={styles.description}>
-            {listing?.description ?? DESCRIPTION}
-          </Text>
-
-          {/* Amenities */}
-          <Text variant="bodySemibold" style={styles.sectionHeading}>
-            Popular amenities
-          </Text>
-          <View style={styles.amenitiesGrid}>
-            {visibleAmenities.map((item) => (
-              <View key={item.id} style={styles.amenityCard}>
-                <View style={styles.amenityIconWrap}>
-                  <Ionicons name={item.icon} size={20} color={colors.text.primary} />
-                </View>
-                <Text variant="caption" style={styles.amenityLabel}>
-                  {item.label}
-                </Text>
-              </View>
-            ))}
-          </View>
-          {canExpandAmenities ? (
-            <Pressable
-              style={styles.secondaryBtn}
-              onPress={() => setShowAllAmenities((v) => !v)}
-              accessibilityLabel={showAllAmenities ? 'Show less amenities' : 'See all amenities'}
-            >
-              <Text variant="body" style={styles.secondaryBtnText}>
-                {showAllAmenities ? 'Show less' : 'See all amenities'}
-              </Text>
-            </Pressable>
-          ) : null}
-
-          {/* Map */}
-          <Text variant="bodySemibold" style={styles.sectionHeading}>
-            Location
-          </Text>
-          <View style={styles.mapCard}>
-            <ListingMap
-              latitude={Number.isFinite(lat) ? lat : 52.509669}
-              longitude={Number.isFinite(lng) ? lng : 13.376294}
-              style={styles.map}
-            />
-          </View>
-
-          {/* Host - compact */}
-          <Text variant="bodySemibold" style={styles.sectionHeading}>
-            Hosted by
-          </Text>
-          <View style={styles.hostCard}>
-            <Image source={ResortImage} style={styles.hostImage} resizeMode="cover" />
-            <View style={styles.hostInfo}>
-              <Text variant="bodySemibold" style={styles.hostName}>
-                {listing?.vendor?.business_name ?? 'Host'}
-              </Text>
-              <Text variant="caption" style={styles.hostDesc}>
-                {HOST_DESCRIPTION}
-              </Text>
-              <View style={styles.hostMeta}>
-                <View style={styles.hostRatingRow}>
-                  <Ionicons name="star" size={14} color={colors.rating.star} />
-                  <Text variant="caption" style={styles.hostRatingText}>
-                    4.5
-                  </Text>
-                </View>
-                <View style={styles.hostMetaDivider} />
-                <Text variant="caption" style={styles.hostCustomers}>
-                  500+ stays hosted
-                </Text>
-              </View>
-            </View>
-          </View>
-
-          <View style={styles.bottomSpacer} />
-        </View>
-      </ScrollView>
-
-      {/* Fixed footer: price + Reserve */}
-      <SafeAreaView style={styles.footer} edges={['bottom']}>
-        <View style={styles.footerInner}>
-          <View style={styles.footerPriceWrap}>
-            <Text variant="heading2" style={styles.footerPrice}>
-              {displayPrice}
-            </Text>
-            <Text variant="caption" style={styles.footerPriceSub}>
-              For 1 room/day.
-            </Text>
-          </View>
-          <Pressable style={styles.reserveBtn} onPress={openDateModal} accessibilityLabel="Reserve">
-            <Text variant="bodySemibold" style={styles.reserveBtnText}>
-              Reserve
-            </Text>
-          </Pressable>
-        </View>
-      </SafeAreaView>
-        </>
+        <DesktopHotelDetailScreen
+          listing={listing}
+          title={title}
+          locationLabel={locationLabel}
+          address={listing?.location ?? undefined}
+          rating={rating}
+          carouselImages={carouselImages}
+          displayPrice={displayPrice}
+          onBookNow={openDateModal}
+        />
       )}
 
       {/* Date selection modal */}
