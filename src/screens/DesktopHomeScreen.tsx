@@ -14,7 +14,7 @@ import { resolveDesktopListings } from '@/src/constants/desktopHomeConstants';
 import { DesktopHomeVendorSection } from '@/src/components/desktop/DesktopHomeVendorSection';
 import { DesktopPromoBanner } from '@/src/components/desktop/DesktopPromoBanner';
 import { DesktopSiteFooter } from '@/src/components/desktop/DesktopSiteFooter';
-import { HomeSearchProvider, useHomeSearch } from '@/src/components/home/HomeSearchContext';
+import { useHomeSearch } from '@/src/components/home/HomeSearchContext';
 import { DesktopSearchResultsScreen } from '@/src/screens/DesktopSearchResultsScreen';
 import { useListings } from '@/src/hooks/useListings';
 import { USER_PROFILE_QUERY_KEY, useUserProfile } from '@/src/hooks/useUserProfile';
@@ -185,11 +185,7 @@ function DesktopHomeContent() {
 }
 
 export function DesktopHomeScreen() {
-  return (
-    <HomeSearchProvider>
-      <DesktopHomeContent />
-    </HomeSearchProvider>
-  );
+  return <DesktopHomeContent />;
 }
 
 const styles = StyleSheet.create({

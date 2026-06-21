@@ -15,6 +15,7 @@ import { Platform } from 'react-native';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/components/useColorScheme';
+import { HomeSearchProvider } from '@/src/components/home/HomeSearchContext';
 
 export {
     // Catch any errors thrown in the navigation tree.
@@ -78,7 +79,8 @@ function RootLayoutNav() {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-        <Stack>
+        <HomeSearchProvider>
+          <Stack>
           <Stack.Screen name="index" options={{ headerShown: false }} />
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="login" options={{ headerShown: false }} />
@@ -97,6 +99,7 @@ function RootLayoutNav() {
           <Stack.Screen name="vendor" options={{ headerShown: false }} />
           <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
         </Stack>
+        </HomeSearchProvider>
       </ThemeProvider>
     </QueryClientProvider>
   );
