@@ -36,7 +36,7 @@ import { RESORT_PLACEHOLDER_IMAGE } from '@/src/constants/placeholderImages';
 
 const TICKETS_BG = '#FFF8F6';
 const ResortImage = RESORT_PLACEHOLDER_IMAGE;
-const WebLogo = require('../assets/images/logogotrip.png');
+import { DESKTOP_WEB_IMAGES } from '@/src/constants/desktopHomeConstants';
 
 function getPrimaryImage(media?: ListingMedia[]) {
   if (!media?.length) return null;
@@ -332,7 +332,7 @@ export default function ResortsScreen() {
           <View style={dw.container}>
             <View style={[dw.header, !isLoggedIn ? dw.headerLoggedOut : null]}>
               <Pressable onPress={() => router.replace('/(tabs)')} accessibilityLabel="Home">
-                <Image source={WebLogo} style={dw.logoImg} resizeMode="contain" />
+                <Image source={DESKTOP_WEB_IMAGES.logo} style={dw.logoImg} resizeMode="contain" />
               </Pressable>
               <View style={dw.searchWrap}>
                 <Input

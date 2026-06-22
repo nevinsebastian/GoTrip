@@ -28,7 +28,7 @@ import {
   View,
 } from 'react-native';
 
-const WebLogo = require('@/assets/images/logogotrip.png');
+import { DESKTOP_WEB_IMAGES } from '@/src/constants/desktopHomeConstants';
 const isWeb = Platform.OS === 'web';
 const socialIconSize = 20;
 const OTP_LENGTH = 4;
@@ -302,7 +302,7 @@ export function AuthWebModal({
               {!compactWeb ? (
                 <View style={styles.brand}>
                   <Image
-                    source={WebLogo}
+                    source={DESKTOP_WEB_IMAGES.logo}
                     style={styles.brandLogo}
                     resizeMode="contain"
                     accessibilityLabel="GoTrip Holiday"
@@ -338,7 +338,7 @@ export function AuthWebModal({
                 {compactWeb && step === 'credentials' ? (
                   <View style={styles.compactLogoRow} accessibilityRole="header">
                     <Image
-                      source={WebLogo}
+                      source={DESKTOP_WEB_IMAGES.logo}
                       style={styles.compactLogo}
                       resizeMode="contain"
                       accessibilityLabel="GoTrip Holiday"

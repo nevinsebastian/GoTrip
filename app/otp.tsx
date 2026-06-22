@@ -3,6 +3,7 @@ import { borderRadius, colors, spacing } from '@/constants/DesignTokens';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useRef, useState } from 'react';
 import {
+    Image,
     Keyboard,
     Platform,
     StyleSheet,
@@ -14,7 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 const isWeb = Platform.OS === 'web';
 
-import Logo from '@/assets/images/logogotrip.svg';
+const HeaderLogo = require('@/assets/images/login-figma/logo-header.png');
 import { useVerifyOtp } from '@/src/hooks/useVerifyOtp';
 import { getErrorMessage } from '@/src/utils/errorHandler';
 
@@ -142,7 +143,11 @@ export default function OtpScreen() {
             <Card padding="none" style={styles.card}>
               <View style={styles.cardInner}>
                 <View style={styles.logoWrap}>
-                  <Logo width={isIOS ? 120 : 100} height={isIOS ? 44 : 38} />
+                  <Image
+                    source={HeaderLogo}
+                    style={{ width: isIOS ? 120 : 100, height: isIOS ? 44 : 38 }}
+                    resizeMode="contain"
+                  />
                 </View>
 
                 <Text variant="bodySemibold" style={styles.enterOtpTitle}>

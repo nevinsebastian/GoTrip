@@ -38,7 +38,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { RESORT_PLACEHOLDER_IMAGE } from '@/src/constants/placeholderImages';
 
-const WebLogo = require('@/assets/images/logogotrip.png');
+import { DESKTOP_WEB_IMAGES } from '@/src/constants/desktopHomeConstants';
 const FALLBACK_PLACEHOLDER = RESORT_PLACEHOLDER_IMAGE;
 
 const COLUMNS = 5;
@@ -431,7 +431,7 @@ export function WishlistDesktopShell({
           <View style={dw.container}>
           <View style={[dw.header, !isLoggedIn ? dw.headerLoggedOut : null]}>
             <Pressable onPress={() => router.replace('/(tabs)')} accessibilityLabel="Home">
-              <Image source={WebLogo} style={dw.logoImg} resizeMode="contain" />
+              <Image source={DESKTOP_WEB_IMAGES.logo} style={dw.logoImg} resizeMode="contain" />
             </Pressable>
             <View style={dw.searchWrap}>
               <Input

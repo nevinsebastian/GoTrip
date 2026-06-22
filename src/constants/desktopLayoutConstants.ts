@@ -10,3 +10,11 @@ export const desktopContentShellStyle = {
   alignSelf: 'center' as const,
   paddingHorizontal: DESKTOP_LAYOUT.gutter,
 };
+
+/** Figma “Become a vendor - Web” card frame */
+export const DESKTOP_VENDOR_LANDING_CARD = {
+  width: 1280,
+  height: 750,
+  borderRadius: 24,
+  backgroundColor: '#FFFFFF',
+} as const;

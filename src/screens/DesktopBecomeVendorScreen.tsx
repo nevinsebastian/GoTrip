@@ -1,0 +1,1010 @@
+import MailIcon from '@/assets/images/mail.svg';
+import { Input, Text } from '@/components/ui';
+import { colors, typography } from '@/constants/DesignTokens';
+import {
+  completeVendorAccountSetup,
+  resendVendorRegistrationOtp,
+  sendVendorRegistrationOtp,
+  uploadVendorDocument,
+  verifyVendorRegistrationOtp,
+} from '@/src/api/vendorOnboarding.service';
+import { DesktopVendorOnboardingShell } from '@/src/components/desktop/DesktopVendorOnboardingShell';
+import { VendorDocTypePickerSheet } from '@/src/components/vendor/VendorDocTypePickerSheet';
+import { VendorListingCategorySheet } from '@/src/components/vendor/VendorListingCategorySheet';
+import { VendorUploadOptionsSheet } from '@/src/components/vendor/VendorUploadOptionsSheet';
+import { authFieldInputStyle } from '@/src/constants/authInputStyles';
+import {
+  EMPTY_VENDOR_FORM,
+  getVendorListingCategory,
+  VENDOR_ONBOARDING,
+  type VendorDocumentField,
+  type VendorListingCategoryId,
+  type VendorRegistrationForm,
+} from '@/src/constants/vendorOnboardingConstants';
+import { activateVendorSession } from '@/src/utils/vendorSession';
+import { useFocusEffect } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  Image,
+  Keyboard,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  View,
+} from 'react-native';
+
+const GoogleIcon = require('../../assets/images/google.png');
+
+const ACCENT = colors.accent.main;
+const OTP_LENGTH = VENDOR_ONBOARDING.otpLength;
+
+const FEATURE_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
+  payments: 'people-outline',
+  risk: 'shield-checkmark-outline',
+  rules: 'clipboard-outline',
+  steps: 'play-circle-outline',
+};
+
+type VendorStep = 'landing' | 'register' | 'otp' | 'documents' | 'setupDone' | 'category';
+
+function OrDivider() {
+  return (
+    <View style={styles.orDivider}>
+      <View style={styles.orLinePrimary} />
+      <Text style={styles.orText}>OR</Text>
+      <View style={styles.orLineMuted} />
+    </View>
+  );
+}
+
+export function DesktopBecomeVendorScreen() {
+  const otpInputRefs = useRef<(TextInput | null)[]>([]);
+
+  const [step, setStep] = useState<VendorStep>('landing');
+  const [form, setForm] = useState<VendorRegistrationForm>(EMPTY_VENDOR_FORM);
+  const [digits, setDigits] = useState<string[]>(Array(OTP_LENGTH).fill(''));
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [isSendingOtp, setIsSendingOtp] = useState(false);
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
+  const [isResending, setIsResending] = useState(false);
+  const [idType, setIdType] = useState(VENDOR_ONBOARDING.idTypes[0]);
+  const [propertyDocType, setPropertyDocType] = useState(VENDOR_ONBOARDING.propertyDocTypes[0]);
+  const [idFileName, setIdFileName] = useState<string | undefined>();
+  const [propertyFileName, setPropertyFileName] = useState<string | undefined>();
+  const [pickerField, setPickerField] = useState<VendorDocumentField | null>(null);
+  const [uploadField, setUploadField] = useState<VendorDocumentField | null>(null);
+  const [uploadingField, setUploadingField] = useState<VendorDocumentField | null>(null);
+  const [isCompletingSetup, setIsCompletingSetup] = useState(false);
+  const [listingCategory, setListingCategory] = useState<VendorListingCategoryId>('property');
+  const [categoryPickerOpen, setCategoryPickerOpen] = useState(false);
+  const [isProceedingCategory, setIsProceedingCategory] = useState(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      return () => setStep('landing');
+    }, []),
+  );
+
+  useEffect(() => {
+    if (step === 'otp') {
+      setDigits(Array(OTP_LENGTH).fill(''));
+      setSubmitError(null);
+      setTimeout(() => otpInputRefs.current[0]?.focus(), 200);
+    }
+  }, [step]);
+
+  const updateForm = (field: keyof VendorRegistrationForm, value: string) => {
+    setForm((prev) => ({ ...prev, [field]: value }));
+    setSubmitError(null);
+  };
+
+  const validateForm = (): boolean => {
+    if (!form.fullName.trim()) {
+      setSubmitError('Please enter your full name.');
+      return false;
+    }
+    if (!form.email.trim()) {
+      setSubmitError('Please enter your email.');
+      return false;
+    }
+    if (!form.phone.trim()) {
+      setSubmitError('Please enter your phone number.');
+      return false;
+    }
+    return true;
+  };
+
+  const handleGetOtp = async () => {
+    if (!validateForm()) return;
+    setIsSendingOtp(true);
+    setSubmitError(null);
+    try {
+      const res = await sendVendorRegistrationOtp(form);
+      if (res.success) {
+        Keyboard.dismiss();
+        setStep('otp');
+        return;
+      }
+      setSubmitError(res.message ?? 'Failed to send OTP. Please try again.');
+    } finally {
+      setIsSendingOtp(false);
+    }
+  };
+
+  const handleDigitChange = (index: number, value: string) => {
+    const num = value.replace(/\D/g, '');
+    if (num.length > 1) {
+      const chars = num.slice(0, OTP_LENGTH).split('');
+      const next = [...digits];
+      chars.forEach((c, i) => {
+        if (index + i < OTP_LENGTH) next[index + i] = c;
+      });
+      setDigits(next);
+      otpInputRefs.current[Math.min(index + chars.length, OTP_LENGTH - 1)]?.focus();
+      return;
+    }
+    const next = [...digits];
+    next[index] = num;
+    setDigits(next);
+    if (num && index < OTP_LENGTH - 1) otpInputRefs.current[index + 1]?.focus();
+  };
+
+  const handleOtpKeyPress = (index: number, key: string) => {
+    if (key === 'Backspace' && !digits[index] && index > 0) {
+      otpInputRefs.current[index - 1]?.focus();
+    }
+  };
+
+  const handleResendOtp = async () => {
+    setIsResending(true);
+    setSubmitError(null);
+    try {
+      await resendVendorRegistrationOtp(form);
+    } finally {
+      setIsResending(false);
+    }
+  };
+
+  const handleSubmitOtp = async () => {
+    const code = digits.join('');
+    if (code.length !== OTP_LENGTH || isVerifyingOtp) return;
+    setIsVerifyingOtp(true);
+    setSubmitError(null);
+    try {
+      const res = await verifyVendorRegistrationOtp({ ...form, otp: code });
+      if (res.success) {
+        Keyboard.dismiss();
+        setStep('documents');
+        return;
+      }
+      setSubmitError(res.message ?? 'Invalid or expired OTP.');
+    } finally {
+      setIsVerifyingOtp(false);
+    }
+  };
+
+  const handleCloseOtp = () => {
+    setSubmitError(null);
+    setDigits(Array(OTP_LENGTH).fill(''));
+    setStep('register');
+  };
+
+  const handleUploadOption = async (source: 'camera' | 'gallery' | 'files') => {
+    if (!uploadField) return;
+    const field = uploadField;
+    setUploadField(null);
+    setUploadingField(field);
+    setSubmitError(null);
+    try {
+      const documentType = field === 'id' ? idType : propertyDocType;
+      const res = await uploadVendorDocument({ field, source, documentType });
+      if (res.success) {
+        if (field === 'id') setIdFileName(res.fileName);
+        else setPropertyFileName(res.fileName);
+        return;
+      }
+      setSubmitError(res.message ?? 'Upload failed. Please try again.');
+    } finally {
+      setUploadingField(null);
+    }
+  };
+
+  const handleCompleteSetup = async () => {
+    setIsCompletingSetup(true);
+    setSubmitError(null);
+    try {
+      const res = await completeVendorAccountSetup({
+        ...form,
+        documents: [
+          ...(idFileName ? [{ field: 'id' as const, source: 'files' as const, documentType: idType, fileName: idFileName }] : []),
+          ...(propertyFileName
+            ? [{ field: 'property' as const, source: 'files' as const, documentType: propertyDocType, fileName: propertyFileName }]
+            : []),
+        ],
+      });
+      if (res.success) {
+        setStep('setupDone');
+        return;
+      }
+      setSubmitError(res.message ?? 'Could not complete setup. Please try again.');
+    } finally {
+      setIsCompletingSetup(false);
+    }
+  };
+
+  const handleCategoryNext = async () => {
+    setIsProceedingCategory(true);
+    try {
+      await activateVendorSession(listingCategory);
+      if (listingCategory === 'property') {
+        router.replace('/vendor/describe-property');
+        return;
+      }
+      if (listingCategory === 'glamping') {
+        router.replace('/vendor/describe-camp');
+        return;
+      }
+      if (listingCategory === 'packages') {
+        router.replace('/vendor/describe-package');
+        return;
+      }
+      if (listingCategory === 'activities') {
+        router.replace('/vendor/describe-activity');
+        return;
+      }
+      router.replace('/vendor/select-location');
+    } finally {
+      setIsProceedingCategory(false);
+    }
+  };
+
+  const otpCode = digits.join('');
+  const canSubmitOtp = otpCode.length === OTP_LENGTH && !isVerifyingOtp;
+  const category = getVendorListingCategory(listingCategory);
+
+  const heroPill =
+    step === 'landing' ? VENDOR_ONBOARDING.listPropertyCategory : category.pillLabel;
+
+  const renderContent = () => {
+    if (step === 'landing') {
+      return (
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.landingScroll}>
+          <Text style={styles.landingTitle}>{VENDOR_ONBOARDING.landingTitle}</Text>
+          <Text style={styles.headline}>{VENDOR_ONBOARDING.landingHeadline}</Text>
+          <Text style={styles.earnings}>
+            {VENDOR_ONBOARDING.earningsPrefix}
+            <Text style={styles.earningsAmount}>{VENDOR_ONBOARDING.earningsAmount}</Text>
+          </Text>
+          <View style={styles.featureList}>
+            {VENDOR_ONBOARDING.features.map((feature) => (
+              <View key={feature.id} style={styles.featureRow}>
+                <Ionicons name={FEATURE_ICONS[feature.id] ?? feature.icon} size={20} color={ACCENT} />
+                <Text style={styles.featureText}>{feature.label}</Text>
+              </View>
+            ))}
+          </View>
+          <View style={styles.landingCtaRow}>
+            <Pressable style={styles.primaryCta} onPress={() => setStep('register')}>
+              <Text style={styles.primaryCtaText}>Become a Vendor</Text>
+            </Pressable>
+            <Pressable style={styles.helpBtn}>
+              <Ionicons name="help-circle-outline" size={18} color={colors.text.primary} />
+              <Text style={styles.helpText}>Help</Text>
+            </Pressable>
+          </View>
+        </ScrollView>
+      );
+    }
+
+    if (step === 'register') {
+      return (
+        <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+          <Text style={styles.stepTitle}>{VENDOR_ONBOARDING.registerTitle}</Text>
+          <Text style={styles.stepSubtitle}>{VENDOR_ONBOARDING.landingTitle}</Text>
+          <View style={styles.inputStack}>
+            <Input
+              placeholder="Full name"
+              autoCapitalize="words"
+              placeholderTextColor={colors.text.placeholder}
+              style={authFieldInputStyle.field}
+              value={form.fullName}
+              onChangeText={(v) => updateForm('fullName', v)}
+            />
+            <Input
+              placeholder="Email"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              placeholderTextColor={colors.text.placeholder}
+              style={authFieldInputStyle.field}
+              value={form.email}
+              onChangeText={(v) => updateForm('email', v)}
+            />
+            <View>
+              <Input
+                placeholder="Phone number"
+                keyboardType="phone-pad"
+                placeholderTextColor={colors.text.placeholder}
+                style={authFieldInputStyle.field}
+                value={form.phone}
+                onChangeText={(v) => updateForm('phone', v)}
+              />
+              <Text style={styles.helper}>You&apos;ll get OTP to this number.</Text>
+            </View>
+          </View>
+          {submitError ? <Text style={styles.errorText}>{submitError}</Text> : null}
+        </ScrollView>
+      );
+    }
+
+    if (step === 'otp') {
+      return (
+        <View style={styles.otpCenter}>
+          <View style={styles.otpCard}>
+            <View style={styles.otpCardHeader}>
+              <Text style={styles.otpCardTitle}>Enter OTP</Text>
+              <Pressable onPress={handleCloseOtp} hitSlop={12}>
+                <Ionicons name="close" size={22} color={colors.text.secondary} />
+              </Pressable>
+            </View>
+            <Text style={styles.otpSubtitle}>
+              Please enter the OTP as shared on your mobile as SMS/Email
+            </Text>
+            <View style={styles.otpIconWrap}>
+              <Ionicons name="phone-portrait-outline" size={32} color={ACCENT} />
+            </View>
+            <View style={styles.otpRow}>
+              {digits.map((digit, index) => (
+                <TextInput
+                  key={index}
+                  ref={(el) => {
+                    otpInputRefs.current[index] = el;
+                  }}
+                  value={digit}
+                  onChangeText={(value) => handleDigitChange(index, value)}
+                  onKeyPress={({ nativeEvent }) => handleOtpKeyPress(index, nativeEvent.key)}
+                  keyboardType="number-pad"
+                  maxLength={2}
+                  style={styles.otpBox}
+                  placeholder="•"
+                  placeholderTextColor="rgba(0, 5, 29, 0.25)"
+                  selectTextOnFocus
+                />
+              ))}
+            </View>
+            <View style={styles.resendRow}>
+              <Text style={styles.resendHint}>Didn&apos;t receive OTP?</Text>
+              <Pressable onPress={handleResendOtp} disabled={isResending}>
+                {isResending ? (
+                  <ActivityIndicator size="small" color={ACCENT} />
+                ) : (
+                  <Text style={styles.resendLink}>Resend OTP</Text>
+                )}
+              </Pressable>
+            </View>
+            {submitError ? <Text style={styles.errorText}>{submitError}</Text> : null}
+            <Pressable
+              style={[styles.primaryCta, styles.otpSubmitBtn, (!canSubmitOtp || isVerifyingOtp) && styles.btnDisabled]}
+              onPress={handleSubmitOtp}
+              disabled={!canSubmitOtp || isVerifyingOtp}
+            >
+              {isVerifyingOtp ? (
+                <ActivityIndicator color={colors.surface.white} size="small" />
+              ) : (
+                <Text style={styles.primaryCtaText}>Submit OTP</Text>
+              )}
+            </Pressable>
+          </View>
+        </View>
+      );
+    }
+
+    if (step === 'documents') {
+      return (
+        <ScrollView showsVerticalScrollIndicator={false}>
+          <Text style={styles.stepTitle}>{VENDOR_ONBOARDING.documentsTitle}</Text>
+          <DocumentRowDesktop
+            label={VENDOR_ONBOARDING.idTypeLabel}
+            value={idType}
+            fileName={idFileName}
+            onOpenPicker={() => setPickerField('id')}
+            onUpload={() => setUploadField('id')}
+            isUploading={uploadingField === 'id'}
+          />
+          <DocumentRowDesktop
+            label={VENDOR_ONBOARDING.propertyDocLabel}
+            value={propertyDocType}
+            fileName={propertyFileName}
+            onOpenPicker={() => setPickerField('property')}
+            onUpload={() => setUploadField('property')}
+            isUploading={uploadingField === 'property'}
+          />
+          {submitError ? <Text style={styles.errorText}>{submitError}</Text> : null}
+        </ScrollView>
+      );
+    }
+
+    if (step === 'setupDone') {
+      return (
+        <View style={styles.setupDoneCenter}>
+          <View style={styles.setupDoneCard}>
+            <Text style={styles.setupDoneTitle}>{VENDOR_ONBOARDING.setupDoneTitle}</Text>
+            <View style={styles.setupDoneIcon}>
+              <Ionicons name="person-outline" size={28} color={colors.text.primary} />
+            </View>
+            <Text style={styles.setupDoneSubtitle}>{VENDOR_ONBOARDING.setupDoneSubtitle}</Text>
+            <Pressable style={[styles.primaryCta, styles.setupDoneCta]} onPress={() => setStep('category')}>
+              <Text style={styles.primaryCtaText}>{VENDOR_ONBOARDING.proceedToListingCta}</Text>
+            </Pressable>
+            <Pressable onPress={() => setStep('category')}>
+              <Text style={styles.skipLink}>{VENDOR_ONBOARDING.skipSetupLink}</Text>
+            </Pressable>
+          </View>
+        </View>
+      );
+    }
+
+    return (
+      <ScrollView showsVerticalScrollIndicator={false}>
+        <Text style={styles.stepTitle}>{VENDOR_ONBOARDING.categoryTitle}</Text>
+        <Text style={styles.stepSubtitle}>{VENDOR_ONBOARDING.categorySubtitle}</Text>
+        <Pressable style={styles.categoryCard} onPress={() => setCategoryPickerOpen(true)}>
+          <Image source={category.thumbnail} style={styles.categoryThumb} resizeMode="cover" />
+          <View style={styles.categoryCardText}>
+            <Text style={styles.categoryCardTitle}>
+              {category.title} - {category.subtitle}
+            </Text>
+          </View>
+          <Ionicons name="chevron-down" size={18} color="rgba(28, 32, 36, 0.45)" />
+        </Pressable>
+      </ScrollView>
+    );
+  };
+
+  const renderFooter = () => {
+    if (step === 'register') {
+      return (
+        <>
+          <Pressable
+            style={[styles.primaryCta, styles.footerCta, isSendingOtp && styles.btnDisabled]}
+            onPress={handleGetOtp}
+            disabled={isSendingOtp}
+          >
+            {isSendingOtp ? (
+              <ActivityIndicator color={colors.surface.white} size="small" />
+            ) : (
+              <Text style={styles.primaryCtaText}>Get OTP</Text>
+            )}
+          </Pressable>
+          <OrDivider />
+          <View style={styles.socialStack}>
+            <Pressable style={styles.socialButton}>
+              <MailIcon width={16} height={16} />
+              <Text style={styles.socialButtonText}>Log in with mail</Text>
+            </Pressable>
+            <Pressable style={styles.socialButton}>
+              <Image source={GoogleIcon} style={{ width: 16, height: 16 }} resizeMode="contain" />
+              <Text style={styles.socialButtonText}>Continue with Google</Text>
+            </Pressable>
+            <Pressable style={styles.socialButton}>
+              <Ionicons name="logo-apple" size={18} color={colors.text.primary} />
+              <Text style={styles.socialButtonText}>Continue with Apple</Text>
+            </Pressable>
+            <Pressable style={styles.socialButton}>
+              <Ionicons name="logo-facebook" size={18} color="#1877F2" />
+              <Text style={styles.socialButtonText}>Continue with Facebook</Text>
+            </Pressable>
+          </View>
+        </>
+      );
+    }
+
+    if (step === 'documents') {
+      return (
+        <Pressable
+          style={[styles.docNextBtn, isCompletingSetup && styles.btnDisabled]}
+          onPress={handleCompleteSetup}
+          disabled={isCompletingSetup}
+        >
+          {isCompletingSetup ? (
+            <ActivityIndicator color={colors.surface.white} size="small" />
+          ) : (
+            <Text style={styles.docNextText}>{VENDOR_ONBOARDING.completeSetupCtaDesktop}</Text>
+          )}
+        </Pressable>
+      );
+    }
+
+    if (step === 'category') {
+      return (
+        <Pressable
+          style={[styles.docNextBtn, isProceedingCategory && styles.btnDisabled]}
+          onPress={handleCategoryNext}
+          disabled={isProceedingCategory}
+        >
+          {isProceedingCategory ? (
+            <ActivityIndicator color={colors.surface.white} size="small" />
+          ) : (
+            <Text style={styles.docNextText}>
+              {VENDOR_ONBOARDING.categoryNextCta} {'>'} {VENDOR_ONBOARDING.categoryNextSuffix}
+            </Text>
+          )}
+        </Pressable>
+      );
+    }
+
+    return null;
+  };
+
+  return (
+    <>
+      <DesktopVendorOnboardingShell
+        heroPillLabel={heroPill}
+        listingCategoryId={step === 'category' ? listingCategory : undefined}
+        rightPanelBlur={step === 'otp' || step === 'setupDone'}
+        footer={renderFooter()}
+      >
+        {renderContent()}
+      </DesktopVendorOnboardingShell>
+
+      <VendorDocTypePickerSheet
+        visible={pickerField === 'id'}
+        title={VENDOR_ONBOARDING.idTypeLabel}
+        options={[...VENDOR_ONBOARDING.idTypes]}
+        selected={idType}
+        onClose={() => setPickerField(null)}
+        onSelect={(value) => {
+          setIdType(value);
+          setPickerField(null);
+        }}
+      />
+      <VendorDocTypePickerSheet
+        visible={pickerField === 'property'}
+        title={VENDOR_ONBOARDING.propertyDocLabel}
+        options={[...VENDOR_ONBOARDING.propertyDocTypes]}
+        selected={propertyDocType}
+        onClose={() => setPickerField(null)}
+        onSelect={(value) => {
+          setPropertyDocType(value);
+          setPickerField(null);
+        }}
+      />
+      <VendorUploadOptionsSheet
+        visible={uploadField !== null}
+        onClose={() => setUploadField(null)}
+        onSelect={handleUploadOption}
+      />
+      <VendorListingCategorySheet
+        visible={categoryPickerOpen}
+        selectedId={listingCategory}
+        onClose={() => setCategoryPickerOpen(false)}
+        onSelect={(id) => {
+          setListingCategory(id);
+          setCategoryPickerOpen(false);
+        }}
+      />
+    </>
+  );
+}
+
+function DocumentRowDesktop({
+  label,
+  value,
+  fileName,
+  onOpenPicker,
+  onUpload,
+  isUploading,
+}: {
+  label: string;
+  value: string;
+  fileName?: string;
+  onOpenPicker: () => void;
+  onUpload: () => void;
+  isUploading?: boolean;
+}) {
+  return (
+    <View style={styles.documentRow}>
+      <Text style={styles.documentLabel}>{label}</Text>
+      <View style={styles.documentControls}>
+        <Pressable style={styles.documentSelect} onPress={onOpenPicker}>
+          <Text style={styles.documentSelectText} numberOfLines={1}>
+            {value}
+          </Text>
+          <Ionicons name="chevron-down" size={16} color="rgba(28, 32, 36, 0.45)" />
+        </Pressable>
+        <Pressable style={[styles.uploadButton, isUploading && styles.btnDisabled]} onPress={onUpload} disabled={isUploading}>
+          {isUploading ? (
+            <ActivityIndicator color={colors.surface.white} size="small" />
+          ) : (
+            <>
+              <Ionicons name="cloud-upload-outline" size={14} color={colors.surface.white} />
+              <Text style={styles.uploadButtonText}>Upload from device</Text>
+            </>
+          )}
+        </Pressable>
+      </View>
+      {fileName ? <Text style={styles.uploadedFileName}>{fileName}</Text> : null}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  landingScroll: {
+    gap: 16,
+    paddingBottom: 8,
+  },
+  landingTitle: {
+    fontFamily: typography.fontFamily.text,
+    fontSize: 14,
+    fontWeight: typography.fontWeight.medium,
+    color: colors.text.secondary,
+  },
+  headline: {
+    fontFamily: typography.fontFamily.text,
+    fontSize: 28,
+    fontWeight: typography.fontWeight.bold,
+    color: ACCENT,
+    lineHeight: 36,
+  },
+  earnings: {
+    fontFamily: typography.fontFamily.text,
+    fontSize: 18,
+    color: colors.text.primary,
+  },
+  earningsAmount: {
+    textDecorationLine: 'underline',
+    fontWeight: typography.fontWeight.semibold,
+  },
+  featureList: {
+    gap: 12,
+    marginTop: 8,
+  },
+  featureRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  featureText: {
+    fontFamily: typography.fontFamily.text,
+    fontSize: 15,
+    color: colors.text.primary,
+  },
+  landingCtaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginTop: 16,
+    flexWrap: 'wrap',
+  },
+  primaryCta: {
+    backgroundColor: ACCENT,
+    borderRadius: 100,
+    paddingVertical: 14,
+    paddingHorizontal: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 48,
+  },
+  primaryCtaText: {
+    fontFamily: typography.fontFamily.text,
+    fontSize: 16,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.surface.white,
+  },
+  helpBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderWidth: 1.5,
+    borderColor: colors.text.primary,
+    borderRadius: 100,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+  },
+  helpText: {
+    fontFamily: typography.fontFamily.text,
+    fontSize: 14,
+    fontWeight: typography.fontWeight.medium,
+    color: colors.text.primary,
+  },
+  stepTitle: {
+    fontFamily: typography.fontFamily.text,
+    fontSize: 26,
+    fontWeight: typography.fontWeight.semibold,
+    color: ACCENT,
+    marginBottom: 8,
+  },
+  stepSubtitle: {
+    fontFamily: typography.fontFamily.text,
+    fontSize: 14,
+    color: colors.text.secondary,
+    marginBottom: 20,
+  },
+  inputStack: {
+    gap: 12,
+  },
+  helper: {
+    fontFamily: typography.fontFamily.text,
+    fontSize: 11,
+    color: 'rgba(28, 32, 36, 0.5)',
+    textAlign: 'right',
+    marginTop: 4,
+  },
+  errorText: {
+    fontFamily: typography.fontFamily.text,
+    fontSize: 13,
+    color: colors.primaryAlt,
+    marginTop: 8,
+  },
+  orDivider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginVertical: 4,
+  },
+  orLinePrimary: {
+    flex: 1,
+    height: 1,
+    backgroundColor: ACCENT,
+  },
+  orText: {
+    fontFamily: typography.fontFamily.text,
+    fontSize: 12,
+    color: colors.text.secondary,
+  },
+  orLineMuted: {
+    flex: 1,
+    height: 1,
+    backgroundColor: 'rgba(28, 32, 36, 0.15)',
+  },
+  socialStack: {
+    gap: 10,
+  },
+  socialButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    height: 44,
+    borderRadius: 100,
+    borderWidth: 1,
+    borderColor: 'rgba(28, 32, 36, 0.15)',
+    backgroundColor: colors.surface.white,
+  },
+  socialButtonText: {
+    fontFamily: typography.fontFamily.text,
+    fontSize: 14,
+    color: colors.text.primary,
+  },
+  footerCta: {
+    width: '100%',
+  },
+  btnDisabled: {
+    opacity: 0.6,
+  },
+  otpCenter: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: '100%',
+  },
+  otpCard: {
+    width: '100%',
+    maxWidth: 360,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(28, 32, 36, 0.1)',
+    backgroundColor: colors.surface.white,
+    padding: 20,
+    gap: 14,
+    ...Platform.select({
+      web: { boxShadow: '0 8px 24px rgba(0, 0, 0, 0.1)' },
+      default: {},
+    }),
+  },
+  otpCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  otpCardTitle: {
+    fontFamily: typography.fontFamily.text,
+    fontSize: 16,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.text.primary,
+  },
+  otpSubtitle: {
+    fontFamily: typography.fontFamily.text,
+    fontSize: 12,
+    lineHeight: 18,
+    color: colors.text.secondary,
+  },
+  otpIconWrap: {
+    alignSelf: 'center',
+    paddingVertical: 8,
+  },
+  otpRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  otpBox: {
+    flex: 1,
+    height: 44,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(28, 32, 36, 0.15)',
+    textAlign: 'center',
+    fontFamily: typography.fontFamily.text,
+    fontSize: 18,
+    color: colors.text.primary,
+    backgroundColor: colors.surface.white,
+  },
+  resendRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  resendHint: {
+    fontFamily: typography.fontFamily.text,
+    fontSize: 12,
+    color: colors.text.secondary,
+  },
+  resendLink: {
+    fontFamily: typography.fontFamily.text,
+    fontSize: 12,
+    fontWeight: typography.fontWeight.semibold,
+    color: ACCENT,
+  },
+  otpSubmitBtn: {
+    width: '100%',
+    marginTop: 4,
+  },
+  documentRow: {
+    marginBottom: 20,
+    gap: 8,
+  },
+  documentLabel: {
+    fontFamily: typography.fontFamily.text,
+    fontSize: 14,
+    color: colors.text.secondary,
+  },
+  documentControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  documentSelect: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    height: 44,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(28, 32, 36, 0.15)',
+    paddingHorizontal: 12,
+    backgroundColor: colors.surface.white,
+  },
+  documentSelectText: {
+    flex: 1,
+    fontFamily: typography.fontFamily.text,
+    fontSize: 14,
+    color: colors.text.primary,
+    marginRight: 8,
+  },
+  uploadButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: ACCENT,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    height: 44,
+  },
+  uploadButtonText: {
+    fontFamily: typography.fontFamily.text,
+    fontSize: 12,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.surface.white,
+  },
+  uploadedFileName: {
+    fontFamily: typography.fontFamily.text,
+    fontSize: 11,
+    color: colors.text.secondary,
+  },
+  docNextBtn: {
+    alignSelf: 'flex-end',
+    backgroundColor: ACCENT,
+    borderRadius: 100,
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    minHeight: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  docNextText: {
+    fontFamily: typography.fontFamily.text,
+    fontSize: 14,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.surface.white,
+  },
+  setupDoneCenter: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: '100%',
+  },
+  setupDoneCard: {
+    width: '100%',
+    maxWidth: 360,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(28, 32, 36, 0.1)',
+    backgroundColor: colors.surface.white,
+    padding: 24,
+    alignItems: 'center',
+    gap: 16,
+    ...Platform.select({
+      web: { boxShadow: '0 8px 24px rgba(0, 0, 0, 0.1)' },
+      default: {},
+    }),
+  },
+  setupDoneTitle: {
+    fontFamily: typography.fontFamily.text,
+    fontSize: 18,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.text.primary,
+  },
+  setupDoneIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(28, 32, 36, 0.05)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  setupDoneSubtitle: {
+    fontFamily: typography.fontFamily.text,
+    fontSize: 14,
+    color: colors.text.secondary,
+    textAlign: 'center',
+  },
+  setupDoneCta: {
+    width: '100%',
+  },
+  skipLink: {
+    fontFamily: typography.fontFamily.text,
+    fontSize: 13,
+    color: colors.text.secondary,
+    textDecorationLine: 'underline',
+  },
+  categoryCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(28, 32, 36, 0.15)',
+    borderRadius: 12,
+    padding: 12,
+    backgroundColor: colors.surface.white,
+  },
+  categoryThumb: {
+    width: 48,
+    height: 48,
+    borderRadius: 8,
+  },
+  categoryCardText: {
+    flex: 1,
+  },
+  categoryCardTitle: {
+    fontFamily: typography.fontFamily.text,
+    fontSize: 14,
+    fontWeight: typography.fontWeight.medium,
+    color: colors.text.primary,
+  },
+});
