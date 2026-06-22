@@ -7,6 +7,7 @@ import { GlassSurface } from '@/src/components/home/GlassSurface';
 import { HOME_SEARCH_BY_TAB, type HomeCategoryTab } from '@/src/components/home/homeSearchConfig';
 import { useHomeSearch } from '@/src/components/home/HomeSearchContext';
 import { PillButton } from '@/src/components/home/PillButton';
+import { desktopContentShellStyle } from '@/src/constants/desktopLayoutConstants';
 import {
   DESKTOP_HERO_BY_TAB,
   DESKTOP_HERO_SPECS,
@@ -112,10 +113,7 @@ export function DesktopHomeHero({
 
 const styles = StyleSheet.create({
   outer: {
-    width: '100%',
-    maxWidth: 1280,
-    alignSelf: 'center',
-    paddingHorizontal: 24,
+    ...desktopContentShellStyle,
     paddingTop: 24,
     position: 'relative',
     zIndex: 100,

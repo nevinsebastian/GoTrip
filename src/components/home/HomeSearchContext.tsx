@@ -11,13 +11,24 @@ export type HomeSearchSubmit = {
   activityMood?: string;
 };
 
+export type SearchSelectedListing = {
+  id: string;
+  title: string;
+  price_start?: string | null;
+  location?: string | null;
+  tab: HomeCategoryTab;
+};
+
 type HomeSearchContextValue = {
   searchMode: boolean;
   searchParams: HomeSearchSubmit | null;
+  selectedSearchListing: SearchSelectedListing | null;
   activeCategoryTab: HomeCategoryTab;
   setActiveCategoryTab: (tab: HomeCategoryTab) => void;
   enterSearchMode: (params: HomeSearchSubmit) => void;
   exitSearchMode: () => void;
+  openSearchListing: (listing: SearchSelectedListing) => void;
+  closeSearchListing: () => void;
   updateSearchLocation: (location: string) => void;
 };
 
@@ -26,15 +37,26 @@ const HomeSearchContext = createContext<HomeSearchContextValue | null>(null);
 export function HomeSearchProvider({ children }: { children: React.ReactNode }) {
   const [searchMode, setSearchMode] = useState(false);
   const [searchParams, setSearchParams] = useState<HomeSearchSubmit | null>(null);
+  const [selectedSearchListing, setSelectedSearchListing] = useState<SearchSelectedListing | null>(null);
   const [activeCategoryTab, setActiveCategoryTab] = useState<HomeCategoryTab>('hotels');
 
   const enterSearchMode = useCallback((params: HomeSearchSubmit) => {
     setSearchParams(params);
     setSearchMode(true);
+    setSelectedSearchListing(null);
   }, []);
 
   const exitSearchMode = useCallback(() => {
     setSearchMode(false);
+    setSelectedSearchListing(null);
+  }, []);
+
+  const openSearchListing = useCallback((listing: SearchSelectedListing) => {
+    setSelectedSearchListing(listing);
+  }, []);
+
+  const closeSearchListing = useCallback(() => {
+    setSelectedSearchListing(null);
   }, []);
 
   const updateSearchLocation = useCallback((location: string) => {
@@ -45,13 +67,26 @@ export function HomeSearchProvider({ children }: { children: React.ReactNode }) 
     () => ({
       searchMode,
       searchParams,
+      selectedSearchListing,
       activeCategoryTab,
       setActiveCategoryTab,
       enterSearchMode,
       exitSearchMode,
+      openSearchListing,
+      closeSearchListing,
       updateSearchLocation,
     }),
-    [searchMode, searchParams, activeCategoryTab, enterSearchMode, exitSearchMode, updateSearchLocation],
+    [
+      searchMode,
+      searchParams,
+      selectedSearchListing,
+      activeCategoryTab,
+      enterSearchMode,
+      exitSearchMode,
+      openSearchListing,
+      closeSearchListing,
+      updateSearchLocation,
+    ],
   );
 
   return <HomeSearchContext.Provider value={value}>{children}</HomeSearchContext.Provider>;

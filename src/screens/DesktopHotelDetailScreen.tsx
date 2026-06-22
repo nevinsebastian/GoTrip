@@ -2,6 +2,7 @@ import { Text } from '@/components/ui';
 import { colors, typography } from '@/constants/DesignTokens';
 import type { Listing, ListingDetail } from '@/src/api/types';
 import { DesktopSearchResultsHeader } from '@/src/components/desktop/DesktopSearchResultsHeader';
+import { DesktopBookingFocusOverlay } from '@/src/components/desktop/DesktopBookingFocusOverlay';
 import { DesktopSiteFooter } from '@/src/components/desktop/DesktopSiteFooter';
 import {
   CANCELLATION_TEXT,
@@ -16,6 +17,7 @@ import {
   ROOM_DESCRIPTION,
 } from '@/src/components/resort/resortConstants';
 import type { HomeCategoryTab } from '@/src/components/home/homeSearchConfig';
+import { desktopContentShellStyle } from '@/src/constants/desktopLayoutConstants';
 import { RESORT_PLACEHOLDER_IMAGE } from '@/src/constants/placeholderImages';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -48,6 +50,12 @@ type DesktopHotelDetailScreenProps = {
   onMenuPress?: () => void;
   onProfilePress?: () => void;
   onLoginPress?: () => void;
+  onBack?: () => void;
+  bookingFocus?: {
+    visible: boolean;
+    sectionTitle: string;
+    modalContent: React.ReactNode;
+  };
 };
 
 function AmenityChip({ icon, label }: { icon: keyof typeof Ionicons.glyphMap; label: string }) {
@@ -180,8 +188,11 @@ export function DesktopHotelDetailScreen({
   onMenuPress,
   onProfilePress,
   onLoginPress,
+  onBack,
+  bookingFocus,
 }: DesktopHotelDetailScreenProps) {
   const [carouselIndex, setCarouselIndex] = useState(0);
+  const [galleryWidth, setGalleryWidth] = useState(620);
   const carouselRef = useRef<ScrollView>(null);
   const slides = carouselImages.length ? carouselImages : [null];
   const featuredRoom = DEFAULT_ROOM_CONFIGS[0];
@@ -189,7 +200,8 @@ export function DesktopHotelDetailScreen({
 
   const onCarouselScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const { contentOffset, layoutMeasurement } = e.nativeEvent;
-    const index = Math.round(contentOffset.x / (layoutMeasurement.width || 588));
+    const slideWidth = layoutMeasurement.width || galleryWidth;
+    const index = Math.round(contentOffset.x / slideWidth);
     setCarouselIndex(Math.min(index, slides.length - 1));
   };
 
@@ -198,24 +210,37 @@ export function DesktopHotelDetailScreen({
       direction === 'prev'
         ? Math.max(0, carouselIndex - 1)
         : Math.min(slides.length - 1, carouselIndex + 1);
-    carouselRef.current?.scrollTo({ x: next * 588, animated: true });
+    carouselRef.current?.scrollTo({ x: next * galleryWidth, animated: true });
     setCarouselIndex(next);
   };
 
   return (
-    <ScrollView style={styles.page} contentContainerStyle={styles.pageContent} showsVerticalScrollIndicator>
-      <View style={styles.headerWrap}>
-        <DesktopSearchResultsHeader
-          activeTab={activeTab}
-          onTabChange={onTabChange ?? (() => {})}
-          isLoggedIn={isLoggedIn}
-          onMenuPress={onMenuPress}
-          onProfilePress={onProfilePress}
-          onLoginPress={onLoginPress}
-        />
-      </View>
+    <View style={styles.pageRoot}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator
+        scrollEnabled={!bookingFocus?.visible}
+      >
+        <View style={styles.contentShell}>
+          <View style={styles.headerWrap}>
+            <DesktopSearchResultsHeader
+              activeTab={activeTab}
+              onTabChange={onTabChange ?? (() => {})}
+              isLoggedIn={isLoggedIn}
+              onMenuPress={onMenuPress}
+              onProfilePress={onProfilePress}
+              onLoginPress={onLoginPress}
+            />
+          </View>
 
-      <View style={styles.main}>
+          <View style={styles.main}>
+        {onBack ? (
+          <Pressable style={styles.backRow} onPress={onBack} accessibilityLabel="Back to search results">
+            <Ionicons name="arrow-back" size={18} color={colors.text.primary} />
+            <Text style={styles.backText}>Back to results</Text>
+          </Pressable>
+        ) : null}
         <View style={styles.propertyHeader}>
           <Text style={styles.propertyTitle}>{title}</Text>
           <View style={styles.propertyMeta}>
@@ -230,7 +255,13 @@ export function DesktopHotelDetailScreen({
         </View>
 
         <View style={styles.featuredRow}>
-          <View style={styles.galleryCol}>
+          <View
+            style={styles.galleryCol}
+            onLayout={(e) => {
+              const w = e.nativeEvent.layout.width;
+              if (w > 0) setGalleryWidth(w);
+            }}
+          >
             <ScrollView
               ref={carouselRef}
               horizontal
@@ -240,7 +271,7 @@ export function DesktopHotelDetailScreen({
               style={styles.galleryScroll}
             >
               {slides.map((uri, i) => (
-                <View key={i} style={styles.gallerySlide}>
+                <View key={i} style={[styles.gallerySlide, { width: galleryWidth }]}>
                   {uri ? (
                     <Image source={{ uri }} style={styles.galleryImage} resizeMode="cover" />
                   ) : (
@@ -429,38 +460,63 @@ export function DesktopHotelDetailScreen({
             ))}
           </View>
         </View>
-      </View>
+        </View>
+        </View>
 
-      <DesktopSiteFooter />
-    </ScrollView>
+        <DesktopSiteFooter />
+      </ScrollView>
+
+      {bookingFocus ? (
+        <DesktopBookingFocusOverlay
+          visible={bookingFocus.visible}
+          sectionTitle={bookingFocus.sectionTitle}
+        >
+          {bookingFocus.modalContent}
+        </DesktopBookingFocusOverlay>
+      ) : null}
+    </View>
   );
 }
 
-const GALLERY_W = 588;
-
 const styles = StyleSheet.create({
-  page: {
+  pageRoot: {
+    flex: 1,
+    width: '100%',
+    alignSelf: 'stretch',
+    backgroundColor: colors.surface.white,
+    position: 'relative',
+  },
+  scroll: {
     flex: 1,
     backgroundColor: colors.surface.white,
   },
-  pageContent: {
+  scrollContent: {
     paddingBottom: 48,
   },
+  contentShell: {
+    ...desktopContentShellStyle,
+  },
   headerWrap: {
-    maxWidth: 1280,
     width: '100%',
-    alignSelf: 'center',
-    paddingHorizontal: 24,
     paddingTop: 24,
-    zIndex: 100,
+    zIndex: 300,
   },
   main: {
-    maxWidth: 1280,
     width: '100%',
-    alignSelf: 'center',
-    paddingHorizontal: 24,
     paddingTop: 24,
     gap: 32,
+  },
+  backRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    alignSelf: 'flex-start',
+  },
+  backText: {
+    fontFamily: typography.fontFamily.text,
+    fontSize: 14,
+    fontWeight: typography.fontWeight.medium,
+    color: colors.text.primary,
   },
   propertyHeader: {
     gap: 12,
@@ -505,19 +561,18 @@ const styles = StyleSheet.create({
     alignItems: 'stretch',
   },
   galleryCol: {
-    width: GALLERY_W,
+    flex: 1.15,
+    minWidth: 480,
     height: 413,
     borderRadius: 16,
     overflow: 'hidden',
     position: 'relative',
     backgroundColor: colors.gray?.['2'] ?? '#eee',
-    flexShrink: 0,
   },
   galleryScroll: {
     flex: 1,
   },
   gallerySlide: {
-    width: GALLERY_W,
     height: 413,
   },
   galleryImage: {

@@ -4,6 +4,7 @@ import { GlassSurface } from '@/src/components/home/GlassSurface';
 import { PillButton } from '@/src/components/home/PillButton';
 import type { HomeCategoryTab } from '@/src/components/home/homeSearchConfig';
 import type { Listing } from '@/src/api/types';
+import { DESKTOP_LAYOUT } from '@/src/constants/desktopLayoutConstants';
 import { DESKTOP_DESTINATIONS, DESKTOP_LISTING_FALLBACK_IMAGE, DESKTOP_MOODS } from '@/src/constants/desktopHomeConstants';
 import { getPrimaryImage } from '@/src/utils/getPrimaryImage';
 import { Ionicons } from '@expo/vector-icons';
@@ -585,7 +586,7 @@ const styles = StyleSheet.create({
     color: colors.text.primary,
     textAlign: 'center',
     width: '100%',
-    maxWidth: 1280,
+    maxWidth: DESKTOP_LAYOUT.maxWidth,
     lineHeight: 17,
   },
   destGrid: {

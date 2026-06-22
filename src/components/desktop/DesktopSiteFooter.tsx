@@ -1,5 +1,6 @@
 import { Text } from '@/components/ui';
 import { colors, typography } from '@/constants/DesignTokens';
+import { desktopContentShellStyle } from '@/src/constants/desktopLayoutConstants';
 import {
   DESKTOP_FOOTER_COLUMNS,
   DESKTOP_FOOTER_DESCRIPTION,
@@ -94,10 +95,7 @@ const styles = StyleSheet.create({
     backgroundColor: DESKTOP_WEB_COLORS.accentLineMuted,
   },
   inner: {
-    maxWidth: 1280,
-    width: '100%',
-    alignSelf: 'center',
-    paddingHorizontal: 24,
+    ...desktopContentShellStyle,
     paddingTop: 40,
     paddingBottom: 32,
     gap: 32,

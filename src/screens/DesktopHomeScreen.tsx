@@ -10,6 +10,7 @@ import {
     DesktopMoodSection,
     DesktopSuggestedSection,
 } from '@/src/components/desktop/DesktopHomeListingSections';
+import { desktopContentShellStyle } from '@/src/constants/desktopLayoutConstants';
 import { resolveDesktopListings } from '@/src/constants/desktopHomeConstants';
 import { DesktopHomeVendorSection } from '@/src/components/desktop/DesktopHomeVendorSection';
 import { DesktopPromoBanner } from '@/src/components/desktop/DesktopPromoBanner';
@@ -142,12 +143,14 @@ function DesktopHomeContent() {
       />
 
       {searchMode ? (
-        <DesktopSearchResultsScreen
-          isLoggedIn={isLoggedIn}
-          onMenuPress={() => setWebMenuOpen(true)}
-          onProfilePress={() => router.push('/(tabs)/four')}
-          onLoginPress={() => setWebAuthModal({ visible: true, mode: 'login' })}
-        />
+        <View style={styles.searchShell}>
+          <DesktopSearchResultsScreen
+            isLoggedIn={isLoggedIn}
+            onMenuPress={() => setWebMenuOpen(true)}
+            onProfilePress={() => router.push('/(tabs)/four')}
+            onLoginPress={() => setWebAuthModal({ visible: true, mode: 'login' })}
+          />
+        </View>
       ) : (
         <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator>
           <DesktopHomeHero
@@ -193,15 +196,18 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.surface.white,
   },
+  searchShell: {
+    flex: 1,
+    width: '100%',
+    alignSelf: 'stretch',
+    backgroundColor: colors.surface.white,
+  },
   scroll: { flex: 1 },
   scrollContent: {
     paddingBottom: spacing['5'],
   },
   main: {
-    maxWidth: 1280,
-    width: '100%',
-    alignSelf: 'center',
-    paddingHorizontal: 24,
+    ...desktopContentShellStyle,
   },
   menuOverlay: {
     flex: 1,

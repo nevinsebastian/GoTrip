@@ -545,7 +545,7 @@ const styles = StyleSheet.create({
   },
   stack: {
     flex: 1,
-    maxWidth: 1052,
+    width: '100%',
     position: 'relative',
     zIndex: 2,
     overflow: 'visible',

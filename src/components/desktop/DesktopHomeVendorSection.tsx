@@ -111,7 +111,6 @@ const styles = StyleSheet.create({
   },
   frame: {
     width: '100%',
-    maxWidth: 1280,
     backgroundColor: 'rgba(229, 77, 46, 0.05)',
     borderRadius: 24,
     padding: 42,

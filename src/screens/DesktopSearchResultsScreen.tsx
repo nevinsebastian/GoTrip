@@ -4,6 +4,7 @@ import { DesktopSearchResultsHeader } from '@/src/components/desktop/DesktopSear
 import { DesktopSiteFooter } from '@/src/components/desktop/DesktopSiteFooter';
 import type { HomeCategoryTab } from '@/src/components/home/homeSearchConfig';
 import { useHomeSearch } from '@/src/components/home/HomeSearchContext';
+import { desktopContentShellStyle } from '@/src/constants/desktopLayoutConstants';
 import {
   DESKTOP_SEARCH_CATEGORY_TITLES,
   DESKTOP_SEARCH_FILTER_CHIPS,
@@ -13,8 +14,8 @@ import {
   type DesktopSearchListingMeta,
 } from '@/src/constants/desktopSearchConstants';
 import { useListings } from '@/src/hooks/useListings';
+import { DesktopSearchListingDetail } from '@/src/screens/DesktopSearchListingDetail';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Image, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
@@ -27,19 +28,13 @@ type DesktopSearchResultsScreenProps = {
   onLoginPress?: () => void;
 };
 
-function listingRoute(tab: HomeCategoryTab, listing: DesktopSearchListingMeta) {
-  const price =
-    listing.price_start != null
-      ? `₹${Number(listing.price_start).toLocaleString('en-IN')}`
-      : '';
-  const params = { id: listing.id, title: listing.title, price, rating: '4.5' };
-  if (tab === 'packages') return { pathname: '/package/[id]' as const, params };
-  if (tab === 'glamping') return { pathname: '/glamping/[id]' as const, params };
-  if (tab === 'activities') return { pathname: '/activity/[id]' as const, params };
-  return { pathname: '/resort/[id]' as const, params };
-}
-
-function HotelResultCard({ listing }: { listing: DesktopSearchListingMeta }) {
+function HotelResultCard({
+  listing,
+  onPress,
+}: {
+  listing: DesktopSearchListingMeta;
+  onPress: (listing: DesktopSearchListingMeta) => void;
+}) {
   const image = DESKTOP_SEARCH_LISTING_IMAGES.hotels;
   const price =
     listing.price_start != null
@@ -47,10 +42,7 @@ function HotelResultCard({ listing }: { listing: DesktopSearchListingMeta }) {
       : '—';
 
   return (
-    <Pressable
-      style={styles.hotelCard}
-      onPress={() => router.push(listingRoute('hotels', listing))}
-    >
+    <Pressable style={styles.hotelCard} onPress={() => onPress(listing)}>
       <View style={styles.hotelImageWrap}>
         <Image source={image} style={styles.hotelImage} resizeMode="cover" />
         <View style={styles.hotelHeart}>
@@ -74,15 +66,12 @@ function HotelResultCard({ listing }: { listing: DesktopSearchListingMeta }) {
         </View>
         <View style={styles.hotelFooter}>
           <Text style={styles.hotelPrice}>₹ {price}/night</Text>
-          <Pressable
-            style={styles.viewRoomsBtn}
-            onPress={() => router.push(listingRoute('hotels', listing))}
-          >
+          <View style={styles.viewRoomsBtn}>
             <Text style={styles.viewRoomsText}>View Rooms</Text>
             <View style={styles.viewRoomsIcon}>
               <Ionicons name="water-outline" size={16} color={colors.accent.main} />
             </View>
-          </Pressable>
+          </View>
         </View>
       </View>
     </Pressable>
@@ -92,9 +81,11 @@ function HotelResultCard({ listing }: { listing: DesktopSearchListingMeta }) {
 function CategoryResultCard({
   listing,
   tab,
+  onPress,
 }: {
   listing: DesktopSearchListingMeta;
   tab: HomeCategoryTab;
+  onPress: (listing: DesktopSearchListingMeta) => void;
 }) {
   const copy = DESKTOP_SEARCH_SECTION_COPY[tab];
   const price =
@@ -109,7 +100,7 @@ function CategoryResultCard({
       : copy.durationSuffix;
 
   return (
-    <Pressable style={styles.resultCard} onPress={() => router.push(listingRoute(tab, listing))}>
+    <Pressable style={styles.resultCard} onPress={() => onPress(listing)}>
       <View style={styles.resultImageWrap}>
         <Image source={image} style={styles.resultImage} resizeMode="cover" />
         <View style={styles.resultHeart}>
@@ -140,10 +131,12 @@ function CategorySection({
   title,
   listings,
   tab,
+  onListingPress,
 }: {
   title: string;
   listings: DesktopSearchListingMeta[];
   tab: HomeCategoryTab;
+  onListingPress: (listing: DesktopSearchListingMeta) => void;
 }) {
   return (
     <View style={styles.section}>
@@ -156,7 +149,12 @@ function CategorySection({
       </View>
       <View style={styles.cardRow}>
         {listings.slice(0, 5).map((listing) => (
-          <CategoryResultCard key={listing.id} listing={listing} tab={tab} />
+          <CategoryResultCard
+            key={listing.id}
+            listing={listing}
+            tab={tab}
+            onPress={onListingPress}
+          />
         ))}
       </View>
     </View>
@@ -169,7 +167,15 @@ export function DesktopSearchResultsScreen({
   onProfilePress,
   onLoginPress,
 }: DesktopSearchResultsScreenProps) {
-  const { searchParams, activeCategoryTab, setActiveCategoryTab, exitSearchMode } = useHomeSearch();
+  const {
+    searchParams,
+    activeCategoryTab,
+    setActiveCategoryTab,
+    exitSearchMode,
+    selectedSearchListing,
+    openSearchListing,
+    closeSearchListing,
+  } = useHomeSearch();
   const tab = searchParams?.tab ?? activeCategoryTab;
   const locationQuery = searchParams?.location?.trim() ?? '';
   const [selectedChip, setSelectedChip] = useState(
@@ -184,6 +190,16 @@ export function DesktopSearchResultsScreen({
   useEffect(() => {
     setSelectedChip(searchParams?.packageMood ?? searchParams?.activityMood ?? 'budget');
   }, [searchParams?.packageMood, searchParams?.activityMood, tab]);
+
+  const openListing = (listing: DesktopSearchListingMeta) => {
+    openSearchListing({
+      id: listing.id,
+      title: listing.title,
+      price_start: listing.price_start,
+      location: listing.location,
+      tab,
+    });
+  };
 
   const mockListings = useMemo(
     () => resolveDesktopSearchListings(tab, locationQuery),
@@ -207,23 +223,44 @@ export function DesktopSearchResultsScreen({
   const locationLabel = locationQuery || (isHotels ? 'Varkala, Kerala' : locationQuery);
   const propertyCount = isHotels ? hotelListings.length * 33 || 133 : categoryListings.length;
 
-  return (
-    <ScrollView style={styles.page} contentContainerStyle={styles.pageContent} showsVerticalScrollIndicator>
-      <View style={styles.navWrap}>
-        <DesktopSearchResultsHeader
-          activeTab={activeCategoryTab}
-          onTabChange={(next) => {
-            setActiveCategoryTab(next);
-            exitSearchMode();
-          }}
+  if (selectedSearchListing) {
+    return (
+      <View style={styles.detailShell}>
+        <DesktopSearchListingDetail
+          listing={selectedSearchListing}
+          tab={selectedSearchListing.tab}
+          onBack={closeSearchListing}
           isLoggedIn={isLoggedIn}
           onMenuPress={onMenuPress}
           onProfilePress={onProfilePress}
           onLoginPress={onLoginPress}
+          onTabChange={(next) => {
+            closeSearchListing();
+            setActiveCategoryTab(next);
+          }}
         />
       </View>
+    );
+  }
 
-      <View style={styles.chipsWrap}>
+  return (
+    <ScrollView style={styles.page} contentContainerStyle={styles.pageContent} showsVerticalScrollIndicator>
+      <View style={styles.contentShell}>
+        <View style={styles.navWrap}>
+          <DesktopSearchResultsHeader
+            activeTab={activeCategoryTab}
+            onTabChange={(next) => {
+              setActiveCategoryTab(next);
+              exitSearchMode();
+            }}
+            isLoggedIn={isLoggedIn}
+            onMenuPress={onMenuPress}
+            onProfilePress={onProfilePress}
+            onLoginPress={onLoginPress}
+          />
+        </View>
+
+        <View style={styles.chipsWrap}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
           {filterChips.map((chip) => {
             const selected = selectedChip === chip.id;
@@ -264,10 +301,10 @@ export function DesktopSearchResultsScreen({
 
             <View style={styles.hotelGrid}>
               {hotelListings.map((listing) => (
-                <HotelResultCard key={listing.id} listing={listing} />
+                <HotelResultCard key={listing.id} listing={listing} onPress={openListing} />
               ))}
               {hotelListings.map((listing) => (
-                <HotelResultCard key={`${listing.id}-dup`} listing={listing} />
+                <HotelResultCard key={`${listing.id}-dup`} listing={listing} onPress={openListing} />
               ))}
             </View>
           </>
@@ -279,10 +316,21 @@ export function DesktopSearchResultsScreen({
                 <Ionicons name="close" size={20} color={colors.text.primary} />
               </Pressable>
             </View>
-            <CategorySection title={copy.suggested} listings={categoryListings} tab={tab} />
-            <CategorySection title={copy.topRated} listings={[...categoryListings].reverse()} tab={tab} />
+            <CategorySection
+              title={copy.suggested}
+              listings={categoryListings}
+              tab={tab}
+              onListingPress={openListing}
+            />
+            <CategorySection
+              title={copy.topRated}
+              listings={[...categoryListings].reverse()}
+              tab={tab}
+              onListingPress={openListing}
+            />
           </>
         )}
+      </View>
       </View>
 
       <DesktopSiteFooter />
@@ -294,6 +342,12 @@ const HOTEL_CARD_W = 290;
 const CATEGORY_CARD_W = 240;
 
 const styles = StyleSheet.create({
+  detailShell: {
+    flex: 1,
+    width: '100%',
+    alignSelf: 'stretch',
+    backgroundColor: colors.surface.white,
+  },
   page: {
     flex: 1,
     backgroundColor: colors.surface.white,
@@ -301,19 +355,16 @@ const styles = StyleSheet.create({
   pageContent: {
     paddingBottom: 48,
   },
+  contentShell: {
+    ...desktopContentShellStyle,
+  },
   navWrap: {
     width: '100%',
-    maxWidth: 1280,
-    alignSelf: 'center',
-    paddingHorizontal: 24,
     paddingTop: 24,
     zIndex: 100,
   },
   chipsWrap: {
     width: '100%',
-    maxWidth: 820,
-    alignSelf: 'center',
-    paddingHorizontal: 24,
     paddingTop: 24,
   },
   chipRow: {
@@ -348,9 +399,6 @@ const styles = StyleSheet.create({
   },
   main: {
     width: '100%',
-    maxWidth: 1280,
-    alignSelf: 'center',
-    paddingHorizontal: 24,
     paddingTop: 24,
     gap: 32,
   },

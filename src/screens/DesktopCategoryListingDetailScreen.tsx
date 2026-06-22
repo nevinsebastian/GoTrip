@@ -1,8 +1,11 @@
 import { Text } from '@/components/ui';
 import { colors, typography } from '@/constants/DesignTokens';
 import { DesktopSearchResultsHeader } from '@/src/components/desktop/DesktopSearchResultsHeader';
+import { DesktopBookingFocusOverlay } from '@/src/components/desktop/DesktopBookingFocusOverlay';
 import { DesktopSiteFooter } from '@/src/components/desktop/DesktopSiteFooter';
+import type { DesktopBookingFocusState } from '@/src/hooks/useDesktopBookingFocus';
 import type { HomeCategoryTab } from '@/src/components/home/homeSearchConfig';
+import { desktopContentShellStyle } from '@/src/constants/desktopLayoutConstants';
 import { FIGMA_ACTIVITY_DETAIL } from '@/src/constants/activityDetailConstants';
 import { FIGMA_GLAMPING_DETAIL } from '@/src/constants/glampingDetailConstants';
 import { FIGMA_PACKAGE_DETAIL } from '@/src/constants/packageDetailConstants';
@@ -100,6 +103,9 @@ type DesktopCategoryListingDetailScreenProps = {
   onMenuPress?: () => void;
   onProfilePress?: () => void;
   onLoginPress?: () => void;
+  onBack?: () => void;
+  onTabChange?: (tab: HomeCategoryTab) => void;
+  bookingFocus?: DesktopBookingFocusState;
 };
 
 export function DesktopCategoryListingDetailScreen({
@@ -111,132 +117,175 @@ export function DesktopCategoryListingDetailScreen({
   onMenuPress,
   onProfilePress,
   onLoginPress,
+  onBack,
+  onTabChange,
+  bookingFocus,
 }: DesktopCategoryListingDetailScreenProps) {
   const copy = copyForTab(tab, title, priceLabel);
 
   return (
-    <ScrollView style={styles.page} contentContainerStyle={styles.pageContent} showsVerticalScrollIndicator>
-      <View style={styles.headerWrap}>
-        <DesktopSearchResultsHeader
-          activeTab={tab}
-          onTabChange={() => {}}
-          isLoggedIn={isLoggedIn}
-          onMenuPress={onMenuPress}
-          onProfilePress={onProfilePress}
-          onLoginPress={onLoginPress}
-        />
-      </View>
-
-      <View style={styles.main}>
-        <View style={styles.propertyHeader}>
-          <Text style={styles.propertyTitle}>{copy.title}</Text>
-          <Pressable style={styles.viewLocationBtn}>
-            <Text style={styles.viewLocationText}>{copy.locationLabel}</Text>
-            <Ionicons name="location-outline" size={16} color={colors.accent.main} />
-          </Pressable>
-        </View>
-
-        <View style={styles.featuredRow}>
-          <View style={styles.galleryCol}>
-            <Image source={copy.heroImage} style={styles.galleryImage} resizeMode="cover" />
-            <View style={styles.galleryActions}>
-              <Pressable style={styles.shareBtn}>
-                <Ionicons name="share-outline" size={18} color={colors.text.primary} />
-              </Pressable>
-              <Pressable style={styles.saveBtn}>
-                <Ionicons name="heart" size={18} color={colors.surface.white} />
-              </Pressable>
-            </View>
+    <View style={styles.pageRoot}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator
+        scrollEnabled={!bookingFocus?.visible}
+      >
+        <View style={styles.contentShell}>
+          <View style={styles.headerWrap}>
+            <DesktopSearchResultsHeader
+              activeTab={tab}
+              onTabChange={onTabChange ?? (() => {})}
+              isLoggedIn={isLoggedIn}
+              onMenuPress={onMenuPress}
+              onProfilePress={onProfilePress}
+              onLoginPress={onLoginPress}
+            />
           </View>
 
-          <View style={styles.featuredPanel}>
-            <View style={styles.coupleBadge}>
-              <Text style={styles.coupleBadgeText}>COUPLE</Text>
-            </View>
+          <View style={styles.main}>
+          {onBack ? (
+            <Pressable style={styles.backRow} onPress={onBack} accessibilityLabel="Back to search results">
+              <Ionicons name="arrow-back" size={18} color={colors.text.primary} />
+              <Text style={styles.backText}>Back to results</Text>
+            </Pressable>
+          ) : null}
+          <View style={styles.propertyHeader}>
+            <Text style={styles.propertyTitle}>{copy.title}</Text>
+            <Pressable style={styles.viewLocationBtn}>
+              <Text style={styles.viewLocationText}>{copy.locationLabel}</Text>
+              <Ionicons name="location-outline" size={16} color={colors.accent.main} />
+            </Pressable>
+          </View>
 
-            <Text style={styles.featuredDesc}>{copy.description}</Text>
-
-            <View style={styles.ratingRow}>
-              <Ionicons name="star" size={14} color={colors.accent.main} />
-              <Text style={styles.ratingValue}>{copy.rating}</Text>
-              <Text style={styles.ratingDivider}>|</Text>
-              <Text style={styles.customersLabel}>{copy.customersLabel}</Text>
-            </View>
-
-            <View style={styles.amenitiesSection}>
-              <View style={styles.amenitiesHeader}>
-                <Text style={styles.amenitiesTitle}>{copy.providesTitle}</Text>
-                <Pressable>
-                  <Text style={styles.amenitiesLink}>{copy.providesLink}</Text>
+          <View style={styles.featuredRow}>
+            <View style={styles.galleryCol}>
+              <Image source={copy.heroImage} style={styles.galleryImage} resizeMode="cover" />
+              <View style={styles.galleryActions}>
+                <Pressable style={styles.shareBtn}>
+                  <Ionicons name="share-outline" size={18} color={colors.text.primary} />
+                </Pressable>
+                <Pressable style={styles.saveBtn}>
+                  <Ionicons name="heart" size={18} color={colors.surface.white} />
                 </Pressable>
               </View>
-              <View style={styles.providesGrid}>
-                {copy.provides.map((item) => (
-                  <View key={item.id} style={styles.provideChip}>
-                    <View style={styles.provideIcon}>
-                      <Ionicons
-                        name={item.icon ?? 'checkmark-circle-outline'}
-                        size={18}
-                        color={colors.text.primary}
-                      />
+            </View>
+
+            <View style={styles.featuredPanel}>
+              <View style={styles.coupleBadge}>
+                <Text style={styles.coupleBadgeText}>COUPLE</Text>
+              </View>
+
+              <Text style={styles.featuredDesc}>{copy.description}</Text>
+
+              <View style={styles.ratingRow}>
+                <Ionicons name="star" size={14} color={colors.accent.main} />
+                <Text style={styles.ratingValue}>{copy.rating}</Text>
+                <Text style={styles.ratingDivider}>|</Text>
+                <Text style={styles.customersLabel}>{copy.customersLabel}</Text>
+              </View>
+
+              <View style={styles.amenitiesSection}>
+                <View style={styles.amenitiesHeader}>
+                  <Text style={styles.amenitiesTitle}>{copy.providesTitle}</Text>
+                  <Pressable>
+                    <Text style={styles.amenitiesLink}>{copy.providesLink}</Text>
+                  </Pressable>
+                </View>
+                <View style={styles.providesGrid}>
+                  {copy.provides.map((item) => (
+                    <View key={item.id} style={styles.provideChip}>
+                      <View style={styles.provideIcon}>
+                        <Ionicons
+                          name={item.icon ?? 'checkmark-circle-outline'}
+                          size={18}
+                          color={colors.text.primary}
+                        />
+                      </View>
+                      <Text style={styles.provideLabel}>{item.label}</Text>
                     </View>
-                    <Text style={styles.provideLabel}>{item.label}</Text>
-                  </View>
-                ))}
+                  ))}
+                </View>
               </View>
-            </View>
 
-            <View style={styles.priceRow}>
-              <View>
-                <Text style={styles.durationLabel}>{copy.durationLabel}</Text>
-                <Text style={styles.cancelText}>{copy.cancellationText}</Text>
+              <View style={styles.priceRow}>
+                <View>
+                  <Text style={styles.durationLabel}>{copy.durationLabel}</Text>
+                  <Text style={styles.cancelText}>{copy.cancellationText}</Text>
+                </View>
+                <View style={styles.priceRight}>
+                  <Text style={styles.price}>{copy.priceLabel}</Text>
+                  <Text style={styles.tax}>{copy.taxLabel}</Text>
+                </View>
               </View>
-              <View style={styles.priceRight}>
-                <Text style={styles.price}>{copy.priceLabel}</Text>
-                <Text style={styles.tax}>{copy.taxLabel}</Text>
-              </View>
-            </View>
 
-            <View style={styles.actions}>
-              <Pressable style={styles.outlineBtn}>
-                <Text style={styles.outlineBtnText}>{copy.primaryButtons.contact}</Text>
-              </Pressable>
-              <Pressable style={styles.bookBtn} onPress={onBookNow}>
-                <Text style={styles.bookBtnText}>{copy.primaryButtons.book}</Text>
-              </Pressable>
+              <View style={styles.actions}>
+                <Pressable style={styles.outlineBtn}>
+                  <Text style={styles.outlineBtnText}>{copy.primaryButtons.contact}</Text>
+                </Pressable>
+                <Pressable style={styles.bookBtn} onPress={onBookNow}>
+                  <Text style={styles.bookBtnText}>{copy.primaryButtons.book}</Text>
+                </Pressable>
+              </View>
             </View>
           </View>
         </View>
-      </View>
+        </View>
 
-      <DesktopSiteFooter />
-    </ScrollView>
+        <DesktopSiteFooter />
+      </ScrollView>
+
+      {bookingFocus ? (
+        <DesktopBookingFocusOverlay
+          visible={bookingFocus.visible}
+          sectionTitle={bookingFocus.sectionTitle}
+        >
+          {bookingFocus.modalContent}
+        </DesktopBookingFocusOverlay>
+      ) : null}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  page: {
+  pageRoot: {
+    flex: 1,
+    width: '100%',
+    alignSelf: 'stretch',
+    backgroundColor: colors.surface.white,
+    position: 'relative',
+  },
+  scroll: {
     flex: 1,
     backgroundColor: colors.surface.white,
   },
-  pageContent: {
+  scrollContent: {
     paddingBottom: 48,
   },
+  contentShell: {
+    ...desktopContentShellStyle,
+  },
   headerWrap: {
-    maxWidth: 1280,
     width: '100%',
-    alignSelf: 'center',
-    paddingHorizontal: 24,
     paddingTop: 24,
     zIndex: 100,
   },
   main: {
-    maxWidth: 1280,
     width: '100%',
-    alignSelf: 'center',
-    paddingHorizontal: 24,
     paddingTop: 24,
     gap: 24,
+  },
+  backRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    alignSelf: 'flex-start',
+  },
+  backText: {
+    fontFamily: typography.fontFamily.text,
+    fontSize: 14,
+    fontWeight: typography.fontWeight.medium,
+    color: colors.text.primary,
   },
   propertyHeader: {
     gap: 12,
@@ -269,12 +318,12 @@ const styles = StyleSheet.create({
     gap: 24,
   },
   galleryCol: {
-    width: 588,
+    flex: 1.15,
+    minWidth: 480,
     height: 413,
     borderRadius: 16,
     overflow: 'hidden',
     position: 'relative',
-    flexShrink: 0,
   },
   galleryImage: {
     width: '100%',

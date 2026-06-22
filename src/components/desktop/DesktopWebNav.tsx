@@ -156,7 +156,6 @@ const styles = StyleSheet.create({
   },
   tabsShell: {
     flex: 1,
-    maxWidth: 817,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -165,6 +164,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: 'rgba(255, 255, 255, 0.4)',
     gap: 8,
+    minWidth: 0,
   },
   tabRing: {
     borderWidth: 2,

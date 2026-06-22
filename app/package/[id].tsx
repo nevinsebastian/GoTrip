@@ -1,10 +1,11 @@
 import { useResponsive } from '@/components/ui/useResponsive';
 import { FIGMA_PACKAGE_DETAIL } from '@/src/constants/packageDetailConstants';
+import { useDesktopBookingFocus } from '@/src/hooks/useDesktopBookingFocus';
 import { DesktopCategoryListingDetailScreen } from '@/src/screens/DesktopCategoryListingDetailScreen';
 import { MobilePackageDetailsScreen } from '@/src/screens/MobilePackageDetails';
 import { getPackageFixedDates } from '@/src/utils/packageDates';
 import { router, useLocalSearchParams } from 'expo-router';
-import React from 'react';
+import React, { useCallback } from 'react';
 import { Platform, View } from 'react-native';
 
 export default function PackageDetailsScreen() {
@@ -13,7 +14,27 @@ export default function PackageDetailsScreen() {
   const params = useLocalSearchParams<{ id?: string; title?: string; price?: string }>();
   const listingId = typeof params.id === 'string' ? params.id : undefined;
 
-  const onBookNow = () => {
+  const onGuestSave = useCallback(
+    (details: { checkIn: string | null; checkOut: string | null }) => {
+      const packageDates = getPackageFixedDates(listingId);
+      router.push({
+        pathname: '/booking/review',
+        params: {
+          listingId: listingId ?? '',
+          listingType: 'package',
+          title: params.title ?? FIGMA_PACKAGE_DETAIL.title,
+          price: params.price ?? FIGMA_PACKAGE_DETAIL.priceLabel,
+          checkIn: details.checkIn ?? packageDates.startDate,
+          checkOut: details.checkOut ?? packageDates.endDate,
+        },
+      });
+    },
+    [listingId, params.price, params.title],
+  );
+
+  const { openDateModal, bookingFocus } = useDesktopBookingFocus({ onGuestSave });
+
+  const onBookNowMobile = () => {
     router.push({
       pathname: '/booking/review',
       params: {
@@ -34,7 +55,8 @@ export default function PackageDetailsScreen() {
           tab="packages"
           title={params.title}
           priceLabel={params.price}
-          onBookNow={onBookNow}
+          onBookNow={openDateModal}
+          bookingFocus={bookingFocus}
         />
       </View>
     );
@@ -42,7 +64,7 @@ export default function PackageDetailsScreen() {
 
   return (
     <View style={{ flex: 1 }}>
-      <MobilePackageDetailsScreen listingId={listingId} onBookNow={onBookNow} />
+      <MobilePackageDetailsScreen listingId={listingId} onBookNow={onBookNowMobile} />
     </View>
   );
 }

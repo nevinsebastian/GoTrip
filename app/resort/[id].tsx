@@ -17,7 +17,11 @@ import { useSendOtp } from '@/src/hooks/useSendOtp';
 import { useVerifyPayment } from '@/src/hooks/useVerifyPayment';
 import { MobileResortDetailsScreen } from '@/src/screens/MobileResortDetails';
 import { DesktopHotelDetailScreen } from '@/src/screens/DesktopHotelDetailScreen';
+import { DesktopConfirmDatesModal } from '@/src/components/desktop/DesktopConfirmDatesModal';
+import { DesktopConfirmGuestsModal } from '@/src/components/desktop/DesktopConfirmGuestsModal';
+import { useHomeSearch } from '@/src/components/home/HomeSearchContext';
 import { getErrorMessage } from '@/src/utils/errorHandler';
+import { getListingCarouselImages } from '@/src/utils/listingNavigation';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
@@ -42,6 +46,11 @@ import { RESORT_PLACEHOLDER_IMAGE } from '@/src/constants/placeholderImages';
 const ResortImage = RESORT_PLACEHOLDER_IMAGE;
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
+function paramString(value: string | string[] | undefined): string | undefined {
+  if (Array.isArray(value)) return value[0];
+  return typeof value === 'string' && value.length > 0 ? value : undefined;
+}
 
 const AMENITIES: { id: string; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
   { id: 'wifi', label: 'Free WiFi', icon: 'wifi-outline' },
@@ -69,7 +78,8 @@ export default function ResortDetailsScreen() {
     latitude?: string;
     longitude?: string;
   }>();
-  const listingId = typeof params.id === 'string' ? params.id : undefined;
+  const { searchParams } = useHomeSearch();
+  const listingId = paramString(params.id);
   const { data: listingRes } = useListingDetails(listingId);
   const listing = listingRes?.data;
   const { data: relatedRes } = useListings(
@@ -118,10 +128,12 @@ export default function ResortDetailsScreen() {
   const { mutate: createOrderMut, isPending: isCreatingOrder } = useCreateOrder();
   const { mutate: verifyPaymentMut, isPending: isVerifyingPayment } = useVerifyPayment();
 
-  const title = listing?.title ?? params.title ?? 'TITANIC Comfort Berlin Mitte';
+  const title = listing?.title ?? paramString(params.title) ?? 'TITANIC Comfort Berlin Mitte';
   const displayPrice =
-    listing?.price_start != null ? `₹${Number(listing.price_start).toLocaleString('en-IN')}` : (params.price ?? '₹2,420');
-  const rating = params.rating ?? '4.5';
+    listing?.price_start != null
+      ? `₹${Number(listing.price_start).toLocaleString('en-IN')}`
+      : (paramString(params.price) ?? '₹2,420');
+  const rating = paramString(params.rating) ?? '4.5';
 
   const locationLabel = (() => {
     const loc = (listing?.location ?? '').trim();
@@ -133,24 +145,7 @@ export default function ResortDetailsScreen() {
   const lat = listing?.latitude ? parseFloat(String(listing.latitude)) : typeof params.latitude === 'string' ? parseFloat(params.latitude) : 52.509669;
   const lng = listing?.longitude ? parseFloat(String(listing.longitude)) : typeof params.longitude === 'string' ? parseFloat(params.longitude) : 13.376294;
 
-  const getDirectImageUrl = (url?: string | null) => {
-    if (!url) return null;
-    const u = url.toLowerCase();
-    if (!u.startsWith('http')) return null;
-    if (u.includes('i.ibb.co/')) return url;
-    if (u.endsWith('.jpg') || u.endsWith('.jpeg') || u.endsWith('.png') || u.endsWith('.webp') || u.endsWith('.gif')) return url;
-    return null;
-  };
-
-  const carouselImages = (() => {
-    const media = listing?.media ?? [];
-    const imgs = media
-      .filter((m) => m.media_type === 'image')
-      .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
-      .map((m) => getDirectImageUrl(m.url))
-      .filter(Boolean) as string[];
-    return imgs.length ? imgs : [];
-  })();
+  const carouselImages = getListingCarouselImages(listing?.media);
 
   const normalizeAmenity = (label: string) => label.toLowerCase().replace(/\s+/g, ' ').trim();
 
@@ -201,6 +196,10 @@ export default function ResortDetailsScreen() {
         },
       });
       return;
+    }
+    if (searchParams?.checkIn) {
+      setCheckInDate(searchParams.checkIn);
+      setCheckOutDate(searchParams.checkOut ?? null);
     }
     setDateModalStep('dates');
     setDateModalVisible(true);
@@ -591,12 +590,43 @@ export default function ResortDetailsScreen() {
           carouselImages={carouselImages}
           displayPrice={displayPrice}
           onBookNow={openDateModal}
+          bookingFocus={
+            dateModalVisible && (dateModalStep === 'dates' || dateModalStep === 'guests')
+              ? {
+                  visible: true,
+                  sectionTitle: 'Confirm dates and Guest Details',
+                  modalContent:
+                    dateModalStep === 'dates' ? (
+                      <DesktopConfirmDatesModal
+                        checkIn={checkInDate}
+                        checkOut={checkOutDate}
+                        onCheckInChange={setCheckInDate}
+                        onCheckOutChange={setCheckOutDate}
+                        onClose={closeDateModal}
+                        onSave={handleDatesSave}
+                      />
+                    ) : (
+                      <DesktopConfirmGuestsModal
+                        adults={adultsCount}
+                        children={childrenCount}
+                        infants={infantsCount}
+                        onAdultsChange={setAdultsCount}
+                        onChildrenChange={setChildrenCount}
+                        onInfantsChange={setInfantsCount}
+                        onClose={closeDateModal}
+                        onBack={() => setDateModalStep('dates')}
+                        onSave={handleGuestSave}
+                      />
+                    ),
+                }
+              : undefined
+          }
         />
       )}
 
-      {/* Date selection modal */}
+      {/* Date selection modal — desktop price/login steps + mobile all steps */}
       <Modal
-        visible={dateModalVisible}
+        visible={dateModalVisible && (!isDesktopWeb || dateModalStep === 'price' || dateModalStep === 'login')}
         transparent
         animationType="fade"
         onRequestClose={closeDateModal}
