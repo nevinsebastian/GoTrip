@@ -1,18 +1,26 @@
 /**
- * Desktop web-only tickets / bookings (Figma go-man ~197:2719).
- * Gated by parent: Platform.OS === 'web' && isDesktop — native and mobile web unchanged.
+ * Desktop web-only tickets / bookings (Figma ticket details).
+ * Gated by parent: Platform.OS === 'web' && isDesktop.
  */
 
 import BellBadgeIcon from '@/assets/images/bell-badge.svg';
 import FilterIcon from '@/assets/images/wishlist-desktop-figma/filter-icon.svg';
+import HeartFilledIcon from '@/assets/images/heart-filled.svg';
 import LogoutIcon from '@/assets/images/logout.svg';
 import TicketConfirmationIcon from '@/assets/images/ticket-confirmation.svg';
-import HeartFilledIcon from '@/assets/images/heart-filled.svg';
 import { Button, Input, Text } from '@/components/ui';
-import { borderRadius, colors, spacing } from '@/constants/DesignTokens';
+import { colors, spacing, typography } from '@/constants/DesignTokens';
 import { logout } from '@/src/api/auth.service';
 import type { Booking } from '@/src/api/types';
 import { AuthWebModal } from '@/src/components/AuthWebModal';
+import { DesktopNavFrame } from '@/src/components/desktop/DesktopNavFrame';
+import { DesktopSiteFooter } from '@/src/components/desktop/DesktopSiteFooter';
+import { DesktopWebNav } from '@/src/components/desktop/DesktopWebNav';
+import { useHomeSearch } from '@/src/components/home/HomeSearchContext';
+import type { HomeCategoryTab } from '@/src/components/home/homeSearchConfig';
+import { DESKTOP_LAYOUT, desktopContentShellStyle } from '@/src/constants/desktopLayoutConstants';
+import { DESKTOP_VENDOR_LANDING } from '@/src/constants/desktopWebConstants';
+import { RESORT_PLACEHOLDER_IMAGE } from '@/src/constants/placeholderImages';
 import { useBookings } from '@/src/hooks/useBookings';
 import { USER_PROFILE_QUERY_KEY, useUserProfile } from '@/src/hooks/useUserProfile';
 import { getErrorMessage } from '@/src/utils/errorHandler';
@@ -32,14 +40,10 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { RESORT_PLACEHOLDER_IMAGE } from '@/src/constants/placeholderImages';
 
-const WebLogo = require('@/assets/images/logogotrip.png');
 const ResortImage = RESORT_PLACEHOLDER_IMAGE;
-
-const PAGE_PAD = 16;
 const GRID_COLS = 3;
-const CARD_MAX_WIDTH = 400;
+const GRID_GAP = 24;
 const THUMB_W = 145;
 const THUMB_H = 95;
 
@@ -50,13 +54,20 @@ function toDateOnly(input: string) {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate());
 }
 
-function formatDateRange(start: string, end: string) {
-  const fmt = (d: string) => {
-    const dt = new Date(d);
-    if (Number.isNaN(dt.getTime())) return d;
-    return dt.toLocaleString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
-  };
-  return `${fmt(start)} - ${fmt(end)}`;
+function formatCompactDateRange(start: string, end: string) {
+  const s = new Date(start);
+  const e = new Date(end);
+  if (Number.isNaN(s.getTime()) || Number.isNaN(e.getTime())) {
+    return `${start} - ${end}`;
+  }
+  const month = s.toLocaleString('en-US', { month: 'long' });
+  const year = s.getFullYear();
+  if (s.getMonth() === e.getMonth() && s.getFullYear() === e.getFullYear()) {
+    return `${s.getDate()}-${e.getDate()} ${month} ${year}`;
+  }
+  const fmt = (d: Date) =>
+    d.toLocaleString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+  return `${fmt(s)} - ${fmt(e)}`;
 }
 
 function bookingCode(id: string) {
@@ -74,7 +85,9 @@ function moneyLabel(value?: string | null) {
 export function TicketsDesktopShell() {
   const queryClient = useQueryClient();
   const { width: viewportW } = useWindowDimensions();
-  const [activeTab, setActiveTab] = useState<TabKey>('active');
+  const { activeCategoryTab, setActiveCategoryTab, exitSearchMode } = useHomeSearch();
+
+  const [activeTab, setActiveTab] = useState<TabKey>('past');
   const [searchQuery, setSearchQuery] = useState('');
   const [webMenuOpen, setWebMenuOpen] = useState(false);
   const [webAuthModal, setWebAuthModal] = useState<{ visible: boolean; mode: 'login' | 'signup' }>({
@@ -103,14 +116,15 @@ export function TicketsDesktopShell() {
   const isLoggedIn = Boolean(user) && !isUnauthorized;
 
   const cardSlotWidth = useMemo(() => {
-    const gap = spacing['4'];
-    const inner = Math.max(0, viewportW - 2 * PAGE_PAD);
-    const equal = (inner - (GRID_COLS - 1) * gap) / GRID_COLS;
-    return Math.min(CARD_MAX_WIDTH, Math.max(200, Math.floor(equal)));
+    const contentWidth = Math.min(viewportW, DESKTOP_LAYOUT.maxWidth) - DESKTOP_LAYOUT.gutter * 2;
+    const equal = (contentWidth - (GRID_COLS - 1) * GRID_GAP) / GRID_COLS;
+    return Math.max(280, Math.floor(equal));
   }, [viewportW]);
 
-  const today = new Date();
-  const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const todayOnly = useMemo(() => {
+    const today = new Date();
+    return new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  }, []);
 
   const bookings = bookingsRes?.data ?? [];
   const filteredByDate = bookings.filter((b) => {
@@ -138,6 +152,12 @@ export function TicketsDesktopShell() {
           title: 'No Bookings yet',
           subtitle: 'Your past tickets & booking details will appear here.',
         };
+
+  const handleTabChange = (tab: HomeCategoryTab) => {
+    setActiveCategoryTab(tab);
+    exitSearchMode();
+    router.replace('/(tabs)');
+  };
 
   const handleWebMenuLogout = async () => {
     setWebMenuOpen(false);
@@ -203,91 +223,64 @@ export function TicketsDesktopShell() {
   ];
 
   const renderBookingCard = (b: Booking) => {
-    const loc = b.listing?.location?.trim();
-    const descParts = [b.listing?.title ?? 'Booking', b.guests ? `${b.guests} ${b.guests === 1 ? 'guest' : 'guests'}` : null, loc || null].filter(
-      Boolean,
-    ) as string[];
-    const descLine = descParts.join(' | ');
+    const title = b.listing?.title ?? 'Booking';
+    const dateLabel = formatCompactDateRange(b.start_date, b.end_date);
 
     return (
       <View key={b.id} style={[dt.card, { width: cardSlotWidth }]}>
         <View style={dt.bookingHeaderRow}>
-          <Text variant="caption" style={dt.bookingId}>
+          <Text style={dt.bookingId}>
             Booking ID# : <Text style={dt.bookingIdBold}>{bookingCode(b.id)}</Text>
           </Text>
+          <Ionicons name="chevron-down" size={18} color={colors.text.primary} />
         </View>
-
-        <View style={dt.separator} />
 
         <View style={dt.bookingBodyRow}>
           <View style={dt.thumbWrap}>
             <Image source={ResortImage} style={dt.thumbImg} resizeMode="cover" />
           </View>
           <View style={dt.bookingBodyRight}>
-            <Text variant="bodySemibold" numberOfLines={3} style={dt.bookingTitle}>
-              {descLine}
+            <Text numberOfLines={3} style={dt.bookingTitle}>
+              {title}
             </Text>
-            <Text variant="caption" style={dt.bookingMeta}>
-              {formatDateRange(b.start_date, b.end_date)}
-            </Text>
+            <View style={dt.ratingRow}>
+              <Ionicons name="star" size={12} color={colors.accent.main} />
+              <Text style={dt.ratingText}>4.5</Text>
+              <Text style={dt.ratingDivider}>|</Text>
+              <Text style={dt.ratingText}>500+ customers</Text>
+            </View>
           </View>
-        </View>
-
-        <View style={dt.metaLineRow}>
-          <View style={dt.ratingRow}>
-            <Ionicons name="star" size={12} color={colors.primary} />
-            <Text variant="caption" style={dt.ratingText}>
-              4.5
-            </Text>
-          </View>
-          <Text variant="caption" style={dt.customersText}>
-            500+ customers
-          </Text>
         </View>
 
         <Pressable style={dt.messageBtn} accessibilityLabel="Message host">
           <Ionicons name="chatbubbles-outline" size={14} color={colors.text.primary} />
-          <Text variant="caption" style={dt.messageBtnText}>
-            Message Host
-          </Text>
+          <Text style={dt.messageBtnText}>Message Host</Text>
         </Pressable>
 
-        <View style={dt.separator} />
+        <View style={dt.detailsBox}>
+          <View style={dt.detailsGrid}>
+            <View style={dt.detailCol}>
+              <Text style={dt.detailLabel}>Dates</Text>
+              <Text style={dt.detailValue}>{dateLabel}</Text>
+            </View>
+            <View style={dt.detailColRight}>
+              <Text style={dt.detailLabel}>Guests</Text>
+              <Text style={dt.detailValue}>{b.guests} adults</Text>
+            </View>
+          </View>
 
-        <View style={dt.detailsGrid}>
-          <View style={dt.detailCol}>
-            <Text variant="bodySemibold" style={dt.detailLabel}>
-              Dates
-            </Text>
-            <Text variant="caption" style={dt.detailValue}>
-              {formatDateRange(b.start_date, b.end_date)}
-            </Text>
+          <View style={dt.totalRow}>
+            <View style={dt.totalLeft}>
+              <Text style={dt.detailLabel}>Total price</Text>
+              <Text style={dt.totalValue}>
+                <Text style={dt.totalRupee}>{moneyLabel(b.total_amount) ?? '—'}</Text>
+                {' including tax'}
+              </Text>
+            </View>
+            <Pressable style={dt.detailsBtn} accessibilityLabel="Details">
+              <Text style={dt.detailsBtnText}>Details</Text>
+            </Pressable>
           </View>
-          <View style={dt.detailColRight}>
-            <Text variant="bodySemibold" style={dt.detailLabel}>
-              Guests
-            </Text>
-            <Text variant="caption" style={dt.detailValue}>
-              {b.guests} adults
-            </Text>
-          </View>
-        </View>
-
-        <View style={dt.totalRow}>
-          <View style={dt.totalLeft}>
-            <Text variant="bodySemibold" style={dt.detailLabel}>
-              Total price
-            </Text>
-            <Text variant="caption" style={dt.totalValue}>
-              <Text style={dt.totalRupee}>{moneyLabel(b.total_amount) ?? '—'}</Text>
-              {' including tax'}
-            </Text>
-          </View>
-          <Pressable style={dt.detailsBtn} accessibilityLabel="Details">
-            <Text variant="caption" style={dt.detailsBtnText}>
-              Details
-            </Text>
-          </Pressable>
         </View>
       </View>
     );
@@ -297,7 +290,7 @@ export function TicketsDesktopShell() {
     if (profileLoading) {
       return (
         <View style={dt.centerBlock}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <ActivityIndicator size="large" color={colors.accent.main} />
         </View>
       );
     }
@@ -305,12 +298,8 @@ export function TicketsDesktopShell() {
       return (
         <View style={dt.centerBlock}>
           <View style={dt.messageCard}>
-            <Text variant="heading2" style={dt.messageTitle}>
-              {"You're not logged in"}
-            </Text>
-            <Text variant="body" style={dt.messageBody}>
-              Log in to see your tickets and booking details.
-            </Text>
+            <Text style={dt.messageTitle}>{"You're not logged in"}</Text>
+            <Text style={dt.messageBody}>Log in to see your tickets and booking details.</Text>
             <Button variant="primary" size="default" onPress={() => setWebAuthModal({ visible: true, mode: 'login' })}>
               Log in
             </Button>
@@ -321,9 +310,7 @@ export function TicketsDesktopShell() {
     if (profileFetchError) {
       return (
         <View style={dt.centerBlock}>
-          <Text variant="body" style={dt.errorText}>
-            {getErrorMessage(profileError as Error)}
-          </Text>
+          <Text style={dt.errorText}>{getErrorMessage(profileError as Error)}</Text>
           <Button variant="primary" size="default" onPress={() => refetchProfile()}>
             Try again
           </Button>
@@ -333,16 +320,14 @@ export function TicketsDesktopShell() {
     if (bookingsLoading) {
       return (
         <View style={dt.centerBlock}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <ActivityIndicator size="large" color={colors.accent.main} />
         </View>
       );
     }
     if (bookingsError) {
       return (
         <View style={dt.centerBlock}>
-          <Text variant="body" style={dt.errorText}>
-            {getErrorMessage(bookingsError as Error)}
-          </Text>
+          <Text style={dt.errorText}>{getErrorMessage(bookingsError as Error)}</Text>
           <Button variant="primary" size="default" onPress={() => refetchBookings()}>
             Try again
           </Button>
@@ -352,12 +337,8 @@ export function TicketsDesktopShell() {
     if (visibleBookings.length === 0) {
       return (
         <View style={dt.centerBlock}>
-          <Text variant="heading2" style={dt.messageTitle}>
-            {emptyState.title}
-          </Text>
-          <Text variant="body" style={dt.messageBody}>
-            {emptyState.subtitle}
-          </Text>
+          <Text style={dt.messageTitle}>{emptyState.title}</Text>
+          <Text style={dt.messageBody}>{emptyState.subtitle}</Text>
         </View>
       );
     }
@@ -379,9 +360,7 @@ export function TicketsDesktopShell() {
                   accessibilityLabel={item.label}
                 >
                   <View style={dt.menuIconBox}>{item.node}</View>
-                  <Text variant="body" style={[dt.menuLabel, item.labelPrimary ? dt.menuLabelLogout : null]}>
-                    {item.label}
-                  </Text>
+                  <Text style={[dt.menuLabel, item.labelPrimary ? dt.menuLabelLogout : null]}>{item.label}</Text>
                 </Pressable>
               </React.Fragment>
             ))}
@@ -397,277 +376,166 @@ export function TicketsDesktopShell() {
         onAuthenticated={() => queryClient.invalidateQueries({ queryKey: USER_PROFILE_QUERY_KEY })}
       />
 
-      <View style={dt.columnFill}>
-        <ScrollView style={dt.scrollFlex} contentContainerStyle={dt.scrollContent} showsVerticalScrollIndicator>
-          <View style={dt.container}>
-            <View style={[dt.header, !isLoggedIn ? dt.headerLoggedOut : null]}>
-              <Pressable onPress={() => router.replace('/(tabs)')} accessibilityLabel="Home">
-                <Image source={WebLogo} style={dt.logoImg} resizeMode="contain" />
+      <ScrollView style={dt.scroll} contentContainerStyle={dt.scrollContent} showsVerticalScrollIndicator>
+        <View style={dt.contentShell}>
+          <DesktopNavFrame>
+            <DesktopWebNav
+              embedded
+              activeTab={activeCategoryTab}
+              onTabChange={handleTabChange}
+              isLoggedIn={isLoggedIn}
+              onMenuPress={() => setWebMenuOpen(true)}
+              onProfilePress={() => router.push('/(tabs)/four')}
+              onLoginPress={() => setWebAuthModal({ visible: true, mode: 'login' })}
+            />
+          </DesktopNavFrame>
+
+          <Text style={dt.pageTitle}>Ticket details</Text>
+
+          <View style={dt.filterBar}>
+            <View style={dt.tabGroup}>
+              <Pressable
+                onPress={() => setActiveTab('active')}
+                style={[dt.tabChip, activeTab === 'active' && dt.tabChipActive]}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: activeTab === 'active' }}
+              >
+                <Ionicons
+                  name="ellipse-outline"
+                  size={16}
+                  color={activeTab === 'active' ? colors.surface.white : colors.accent.main}
+                />
+                <Text style={[dt.tabChipLabel, activeTab === 'active' && dt.tabChipLabelActive]}>Active Tickets</Text>
               </Pressable>
-              <View style={dt.searchWrap}>
+              <Pressable
+                onPress={() => setActiveTab('past')}
+                style={[dt.tabChip, activeTab === 'past' && dt.tabChipActive]}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: activeTab === 'past' }}
+              >
+                <Ionicons
+                  name="clipboard-outline"
+                  size={16}
+                  color={activeTab === 'past' ? colors.surface.white : colors.accent.main}
+                />
+                <Text style={[dt.tabChipLabel, activeTab === 'past' && dt.tabChipLabelActive]}>Past Bookings</Text>
+              </Pressable>
+            </View>
+
+            <View style={dt.searchFilterRight}>
+              <View style={dt.inlineSearchWrap}>
                 <Input
                   placeholder="Search"
-                  style={[dt.searchInput, !isLoggedIn ? dt.searchInputLoggedOut : null]}
-                  placeholderTextColor="rgba(28,32,36,0.7)"
-                  editable={false}
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                  style={dt.inlineSearchInput}
+                  placeholderTextColor="rgba(28,32,36,0.5)"
                 />
-                <View style={dt.searchIcon}>
-                  <Ionicons name="search" size={18} color={colors.primary} />
+                <View style={dt.inlineSearchIcon}>
+                  <Ionicons name="search" size={18} color={colors.accent.main} />
                 </View>
               </View>
-              {isLoggedIn ? (
-                <View style={dt.headerActions}>
-                  <Pressable style={[dt.iconBtn, dt.avatarBtn]} accessibilityLabel="Profile">
-                    <Ionicons name="person-outline" size={20} color={colors.surface.white} />
-                  </Pressable>
-                  <Pressable style={dt.menuBtn} accessibilityLabel="Menu" onPress={() => setWebMenuOpen(true)}>
-                    <Ionicons name="menu" size={24} color={colors.primary} />
-                  </Pressable>
-                </View>
-              ) : (
-                <View style={dt.headerAuthActions}>
-                  <Button
-                    variant="outline"
-                    size="compact"
-                    onPress={() => setWebAuthModal({ visible: true, mode: 'login' })}
-                  >
-                    Log in
-                  </Button>
-                  <Button
-                    variant="primary"
-                    size="compact"
-                    onPress={() => setWebAuthModal({ visible: true, mode: 'signup' })}
-                  >
-                    Sign Up
-                  </Button>
-                </View>
-              )}
-            </View>
-
-            <Text variant="heading2" style={dt.pageTitle}>
-              Ticket details
-            </Text>
-
-            <View style={dt.filterBar}>
-              <View style={dt.tabGroup}>
-                <Pressable
-                  onPress={() => setActiveTab('active')}
-                  style={[dt.tabChip, activeTab === 'active' && dt.tabChipActive]}
-                  accessibilityRole="tab"
-                  accessibilityState={{ selected: activeTab === 'active' }}
-                >
-                  <Ionicons
-                    name="ticket-outline"
-                    size={18}
-                    color={activeTab === 'active' ? colors.surface.white : colors.primary}
-                  />
-                  <Text style={[dt.tabChipLabel, activeTab === 'active' && dt.tabChipLabelActive]}>Active tickets</Text>
-                </Pressable>
-                <Pressable
-                  onPress={() => setActiveTab('past')}
-                  style={[dt.tabChip, activeTab === 'past' && dt.tabChipActive]}
-                  accessibilityRole="tab"
-                  accessibilityState={{ selected: activeTab === 'past' }}
-                >
-                  <Ionicons
-                    name="calendar-outline"
-                    size={18}
-                    color={activeTab === 'past' ? colors.surface.white : colors.primary}
-                  />
-                  <Text style={[dt.tabChipLabel, activeTab === 'past' && dt.tabChipLabelActive]}>Past bookings</Text>
-                </Pressable>
-              </View>
-              <View style={dt.searchFilterRight}>
-                <View style={dt.inlineSearchWrap}>
-                  <Input
-                    placeholder="Search your bookings"
-                    value={searchQuery}
-                    onChangeText={setSearchQuery}
-                    style={dt.inlineSearchInput}
-                    placeholderTextColor="rgba(28,32,36,0.7)"
-                  />
-                  <View style={dt.inlineSearchIcon}>
-                    <Ionicons name="search" size={18} color={colors.primary} />
-                  </View>
-                </View>
-                <Pressable style={dt.filterBtn} accessibilityLabel="Filter">
-                  <FilterIcon width={22} height={22} />
-                </Pressable>
-              </View>
-            </View>
-
-            {mainBody()}
-          </View>
-        </ScrollView>
-
-        <View style={dt.footer}>
-          <View style={dt.footerInner}>
-            <View style={dt.footerGroup}>
-              <Text variant="caption" style={dt.footerLink}>
-                More info
-              </Text>
-              <Text variant="caption" style={dt.footerLink}>
-                Link 1
-              </Text>
-              <Text variant="caption" style={dt.footerLink}>
-                Link 2
-              </Text>
-            </View>
-            <Text variant="caption" style={dt.footerBrand}>
-              GOTRIP HOLIDAY
-            </Text>
-            <View style={dt.footerGroup}>
-              <Text variant="caption" style={dt.footerLink}>
-                More info
-              </Text>
-              <Text variant="caption" style={dt.footerLink}>
-                Link 1
-              </Text>
-              <Text variant="caption" style={dt.footerLink}>
-                Link 2
-              </Text>
+              <Pressable style={dt.filterBtn} accessibilityLabel="Filter">
+                <FilterIcon width={22} height={22} />
+              </Pressable>
             </View>
           </View>
-          <Text variant="caption" style={dt.footerCopyright}>
-            © Copyright 2026 Gotrip Holiday - All Rights Reserved.
-          </Text>
+
+          {mainBody()}
+
+          <Text style={dt.introText}>{DESKTOP_VENDOR_LANDING.discoverBody}</Text>
         </View>
-      </View>
+
+        <DesktopSiteFooter />
+      </ScrollView>
     </SafeAreaView>
   );
 }
 
 const dt = StyleSheet.create({
-  page: { flex: 1, backgroundColor: colors.surface.white },
-  columnFill: { flex: 1, flexDirection: 'column', minHeight: 0 },
-  scrollFlex: { flex: 1, minHeight: 0 },
+  page: {
+    flex: 1,
+    backgroundColor: colors.surface.white,
+  },
+  scroll: {
+    flex: 1,
+  },
   scrollContent: {
-    flexGrow: 1,
-    paddingBottom: spacing['8'],
+    paddingBottom: 48,
   },
-  container: {
-    width: '100%',
-    paddingHorizontal: PAGE_PAD,
+  contentShell: {
+    ...desktopContentShellStyle,
+    paddingTop: 24,
+    gap: 24,
   },
-  header: {
-    marginTop: spacing['4'],
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing['4'],
-    marginBottom: spacing['5'],
-  },
-  headerLoggedOut: {
-    marginHorizontal: -PAGE_PAD,
-    paddingHorizontal: PAGE_PAD,
-    paddingBottom: spacing['4'],
-    marginBottom: spacing['3'],
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border.light,
-  },
-  logoImg: { width: 120, height: 54 },
-  searchWrap: { flex: 1, maxWidth: 720, position: 'relative' },
-  searchInput: {
-    height: 44,
-    borderRadius: borderRadius.pill,
-    backgroundColor: 'rgba(229,77,46,0.10)',
-    borderWidth: 0,
-    paddingLeft: spacing['4'],
-    paddingRight: 44,
-  },
-  searchInputLoggedOut: {
-    borderWidth: 1,
-    borderColor: colors.border.primary,
-    backgroundColor: colors.surface.lightPink,
-  },
-  searchIcon: {
-    position: 'absolute',
-    right: 12,
-    top: 0,
-    bottom: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: 32,
-  },
-  headerActions: { flexDirection: 'row', alignItems: 'center', gap: spacing['3'] },
-  iconBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: borderRadius.lg,
-    borderWidth: 1,
-    borderColor: colors.primary,
-    backgroundColor: 'rgba(229,77,46,0.05)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarBtn: { backgroundColor: colors.primary },
-  menuBtn: { width: 22, height: 40, alignItems: 'center', justifyContent: 'center' },
-  headerAuthActions: { flexDirection: 'row', alignItems: 'center', gap: spacing['2'] },
   pageTitle: {
-    color: colors.primary,
-    fontSize: 32,
-    lineHeight: 40,
-    fontWeight: '700',
-    marginBottom: spacing['5'],
+    fontFamily: typography.fontFamily.text,
+    fontSize: 24,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.accent.main,
   },
   filterBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: spacing['3'],
-    marginBottom: spacing['6'],
-    width: '100%',
     flexWrap: 'wrap',
   },
   tabGroup: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing['3'],
+    gap: 12,
     flexShrink: 0,
   },
   tabChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing['2'],
-    paddingVertical: spacing['2'],
-    paddingHorizontal: spacing['4'],
-    borderRadius: borderRadius.pill,
+    gap: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 100,
     borderWidth: 1,
-    borderColor: colors.primary,
+    borderColor: colors.accent.main,
     backgroundColor: colors.surface.white,
   },
   tabChipActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
+    backgroundColor: colors.accent.main,
+    borderColor: colors.accent.main,
   },
   tabChipLabel: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: colors.primary,
+    fontFamily: typography.fontFamily.text,
+    fontSize: 14,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.accent.main,
   },
-  tabChipLabelActive: { color: colors.surface.white },
+  tabChipLabelActive: {
+    color: colors.surface.white,
+  },
   searchFilterRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing['2'],
-    flexShrink: 0,
-    width: 380,
-    maxWidth: '38%',
-    minWidth: 200,
+    gap: 8,
+    flex: 1,
+    minWidth: 280,
+    maxWidth: 420,
+    justifyContent: 'flex-end',
   },
-  inlineSearchWrap: { flex: 1, position: 'relative' },
+  inlineSearchWrap: {
+    flex: 1,
+    position: 'relative',
+  },
   inlineSearchInput: {
     height: 44,
-    borderRadius: borderRadius.pill,
-    backgroundColor: 'rgba(229,77,46,0.10)',
+    borderRadius: 100,
+    backgroundColor: 'rgba(28, 32, 36, 0.05)',
     borderWidth: 1,
-    borderColor: 'rgba(0,7,20,0.25)',
-    paddingLeft: spacing['4'],
+    borderColor: 'rgba(28, 32, 36, 0.12)',
+    paddingLeft: 16,
     paddingRight: 40,
   },
   inlineSearchIcon: {
     position: 'absolute',
-    right: 8,
+    right: 12,
     top: 0,
     bottom: 0,
     justifyContent: 'center',
@@ -677,31 +545,27 @@ const dt = StyleSheet.create({
   filterBtn: {
     width: 44,
     height: 44,
-    borderRadius: 24,
+    borderRadius: 8,
     borderWidth: 1,
-    borderColor: 'rgba(28,32,36,0.25)',
-    backgroundColor: 'rgba(229,77,46,0.10)',
+    borderColor: 'rgba(28, 32, 36, 0.15)',
+    backgroundColor: colors.surface.white,
     alignItems: 'center',
     justifyContent: 'center',
   },
   cardRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'flex-start',
-    gap: spacing['4'],
+    gap: GRID_GAP,
     width: '100%',
-    alignSelf: 'stretch',
-    marginBottom: spacing['6'],
   },
   card: {
     flexShrink: 0,
     backgroundColor: colors.surface.white,
     borderRadius: 16,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    padding: 14,
     borderWidth: 1,
-    borderColor: 'rgba(28,32,36,0.15)',
-    gap: spacing['2'],
+    borderColor: 'rgba(28, 32, 36, 0.15)',
+    gap: 12,
     ...Platform.select({
       web: { boxShadow: '0px 4px 20px rgba(0,0,0,0.06)' },
       ios: {
@@ -719,19 +583,17 @@ const dt = StyleSheet.create({
     justifyContent: 'space-between',
   },
   bookingId: {
-    color: 'rgba(0,7,20,0.62)',
+    fontFamily: typography.fontFamily.text,
+    fontSize: 12,
+    color: 'rgba(28, 32, 36, 0.6)',
   },
   bookingIdBold: {
+    fontWeight: typography.fontWeight.bold,
     color: colors.text.primary,
-    fontWeight: '700',
-  },
-  separator: {
-    height: 1,
-    backgroundColor: 'rgba(0,9,50,0.12)',
   },
   bookingBodyRow: {
     flexDirection: 'row',
-    gap: 16,
+    gap: 12,
     alignItems: 'flex-start',
   },
   thumbWrap: {
@@ -740,8 +602,9 @@ const dt = StyleSheet.create({
     borderRadius: 8,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: colors.border.light,
+    borderColor: 'rgba(28, 32, 36, 0.1)',
     backgroundColor: colors.gray['2'],
+    flexShrink: 0,
   },
   thumbImg: {
     width: '100%',
@@ -750,22 +613,14 @@ const dt = StyleSheet.create({
   bookingBodyRight: {
     flex: 1,
     minWidth: 0,
-    justifyContent: 'flex-start',
-    gap: 4,
+    gap: 8,
   },
   bookingTitle: {
+    fontFamily: typography.fontFamily.text,
+    fontSize: 13,
+    fontWeight: typography.fontWeight.semibold,
+    lineHeight: 18,
     color: colors.text.primary,
-    fontSize: 12,
-    lineHeight: 16,
-  },
-  bookingMeta: {
-    color: 'rgba(28,32,36,0.6)',
-    fontSize: 10,
-  },
-  metaLineRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
   },
   ratingRow: {
     flexDirection: 'row',
@@ -773,18 +628,20 @@ const dt = StyleSheet.create({
     gap: 4,
   },
   ratingText: {
-    color: colors.primary,
-    fontSize: 10,
+    fontFamily: typography.fontFamily.text,
+    fontSize: 11,
+    color: colors.accent.main,
   },
-  customersText: {
-    color: colors.primary,
-    fontSize: 10,
+  ratingDivider: {
+    fontFamily: typography.fontFamily.text,
+    fontSize: 11,
+    color: colors.accent.main,
   },
   messageBtn: {
-    height: 28,
-    borderRadius: 6,
+    height: 32,
+    borderRadius: 8,
     borderWidth: 1,
-    borderColor: 'rgba(0,9,50,0.12)',
+    borderColor: 'rgba(28, 32, 36, 0.12)',
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
@@ -792,8 +649,17 @@ const dt = StyleSheet.create({
     backgroundColor: colors.surface.white,
   },
   messageBtnText: {
+    fontFamily: typography.fontFamily.text,
+    fontSize: 12,
     color: colors.text.primary,
-    fontSize: 10,
+  },
+  detailsBox: {
+    borderWidth: 1,
+    borderColor: 'rgba(28, 32, 36, 0.12)',
+    borderRadius: 8,
+    padding: 12,
+    gap: 12,
+    backgroundColor: 'rgba(28, 32, 36, 0.02)',
   },
   detailsGrid: {
     flexDirection: 'row',
@@ -807,47 +673,55 @@ const dt = StyleSheet.create({
     alignItems: 'flex-end',
   },
   detailLabel: {
-    color: colors.text.primary,
+    fontFamily: typography.fontFamily.text,
     fontSize: 12,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.text.primary,
   },
   detailValue: {
-    color: 'rgba(0,7,20,0.62)',
-    fontSize: 10,
+    fontFamily: typography.fontFamily.text,
+    fontSize: 11,
+    color: 'rgba(28, 32, 36, 0.65)',
     marginTop: 4,
   },
   totalRow: {
     flexDirection: 'row',
     alignItems: 'flex-end',
     justifyContent: 'space-between',
-    paddingBottom: 4,
   },
-  totalLeft: { flex: 1, minWidth: 0, paddingRight: spacing['2'] },
+  totalLeft: {
+    flex: 1,
+    minWidth: 0,
+    paddingRight: 8,
+  },
   totalValue: {
-    color: 'rgba(0,7,20,0.62)',
-    fontSize: 10,
+    fontFamily: typography.fontFamily.text,
+    fontSize: 11,
+    color: 'rgba(28, 32, 36, 0.65)',
     marginTop: 4,
   },
   totalRupee: {
-    color: colors.primary,
-    fontWeight: '700',
+    fontFamily: typography.fontFamily.text,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.accent.main,
   },
   detailsBtn: {
-    height: 24,
+    height: 28,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: 'rgba(0,9,50,0.12)',
-    paddingHorizontal: 10,
+    borderColor: 'rgba(28, 32, 36, 0.12)',
+    paddingHorizontal: 12,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.surface.white,
   },
   detailsBtnText: {
+    fontFamily: typography.fontFamily.text,
+    fontSize: 11,
     color: colors.text.primary,
-    fontSize: 10,
   },
   centerBlock: {
-    flexGrow: 1,
-    minHeight: 320,
+    minHeight: 280,
     justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: spacing['7'],
@@ -855,41 +729,68 @@ const dt = StyleSheet.create({
   },
   messageCard: {
     backgroundColor: colors.surface.white,
-    borderRadius: borderRadius['2xl'],
+    borderRadius: 16,
     padding: spacing['6'],
     maxWidth: 440,
     width: '100%',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: colors.border.light,
+    borderColor: 'rgba(28, 32, 36, 0.1)',
+    gap: 12,
   },
-  messageTitle: { marginBottom: spacing['2'], textAlign: 'center' },
-  messageBody: { marginBottom: spacing['5'], textAlign: 'center', color: colors.text.secondary },
-  errorText: { color: colors.primaryAlt, marginBottom: spacing['4'], textAlign: 'center' },
+  messageTitle: {
+    fontFamily: typography.fontFamily.text,
+    fontSize: 20,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.text.primary,
+    textAlign: 'center',
+  },
+  messageBody: {
+    fontFamily: typography.fontFamily.text,
+    fontSize: 14,
+    color: colors.text.secondary,
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  errorText: {
+    fontFamily: typography.fontFamily.text,
+    fontSize: 14,
+    color: colors.primaryAlt,
+    marginBottom: spacing['4'],
+    textAlign: 'center',
+  },
+  introText: {
+    fontFamily: typography.fontFamily.text,
+    fontSize: 14,
+    lineHeight: 22,
+    color: 'rgba(28, 32, 36, 0.7)',
+    textAlign: 'center',
+    paddingVertical: 8,
+  },
   menuOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.42)',
     justifyContent: 'flex-start',
     alignItems: 'flex-end',
     paddingTop: 72,
-    paddingRight: 16,
+    paddingRight: 32,
     ...(Platform.OS === 'web'
-      ? ({
-          backdropFilter: 'blur(4px)',
-          WebkitBackdropFilter: 'blur(4px)',
-        } as Record<string, string>)
+      ? ({ backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)' } as Record<string, string>)
       : {}),
   },
   menuPanel: {
     width: 280,
-    borderRadius: borderRadius['3xl'],
+    borderRadius: 16,
     backgroundColor: colors.surface.white,
     borderWidth: 1,
-    borderColor: 'rgba(0, 9, 50, 0.08)',
+    borderColor: 'rgba(28, 32, 36, 0.08)',
     overflow: 'hidden',
     ...Platform.select({ web: { boxShadow: '0 12px 40px rgba(0,0,0,0.18)' } }),
   },
-  menuDivider: { height: StyleSheet.hairlineWidth, backgroundColor: colors.border.light },
+  menuDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: 'rgba(28, 32, 36, 0.08)',
+  },
   menuRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -897,52 +798,25 @@ const dt = StyleSheet.create({
     paddingVertical: spacing['4'],
     gap: spacing['3'],
   },
-  menuRowPressed: { backgroundColor: 'rgba(229,77,46,0.05)' },
+  menuRowPressed: {
+    backgroundColor: 'rgba(229, 77, 46, 0.05)',
+  },
   menuIconBox: {
     width: 40,
     height: 40,
-    borderRadius: borderRadius.lg,
+    borderRadius: 10,
     backgroundColor: 'rgba(255, 92, 55, 0.10)',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  menuLabel: { flex: 1, color: colors.text.primary },
-  menuLabelLogout: { color: colors.primary, fontWeight: '600' },
-  footer: {
-    marginTop: 0,
-    backgroundColor: colors.primary,
-    paddingVertical: spacing['5'],
-    paddingBottom: spacing['6'],
-  },
-  footerInner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing['5'],
-    width: '100%',
-    paddingHorizontal: PAGE_PAD,
-  },
-  footerGroup: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing['4'],
-    minWidth: 200,
-    flexWrap: 'wrap',
-  },
-  footerLink: { color: colors.surface.white, fontSize: 14 },
-  footerBrand: {
-    color: colors.surface.white,
-    letterSpacing: 4,
-    fontSize: 13,
-    fontWeight: '700',
-    textAlign: 'center',
+  menuLabel: {
     flex: 1,
+    fontFamily: typography.fontFamily.text,
+    fontSize: 14,
+    color: colors.text.primary,
   },
-  footerCopyright: {
-    marginTop: spacing['4'],
-    textAlign: 'center',
-    color: 'rgba(255,255,255,0.85)',
-    fontSize: 12,
-    paddingHorizontal: PAGE_PAD,
+  menuLabelLogout: {
+    color: colors.accent.main,
+    fontWeight: typography.fontWeight.semibold,
   },
 });

@@ -1,4 +1,3 @@
-import HeartIcon from '@/assets/images/heart.svg';
 import BellBadgeIcon from '@/assets/images/bell-badge.svg';
 import HeartFilledIcon from '@/assets/images/heart-filled.svg';
 import LogoutIcon from '@/assets/images/logout.svg';
@@ -238,7 +237,7 @@ export function DesktopProfileScreen() {
               onPress={() => router.push('/(tabs)/two')}
               accessibilityLabel="Wishlist"
             >
-              <HeartIcon width={20} height={20} />
+              <Ionicons name="heart-outline" size={20} color={colors.accent.main} />
             </Pressable>
           </View>
 
