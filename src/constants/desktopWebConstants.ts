@@ -39,3 +39,8 @@ export const DESKTOP_VENDOR_LANDING = {
   exploreMore: 'Explore more',
   help: 'Help',
 };
+
+export const DESKTOP_ACCOUNT_SETTINGS_INTRO = [
+  'GoTrip offers curated hotels, travel packages, exciting activities, and immersive glamping experiences — all blended into one seamless journey. Whether it\'s a relaxing getaway, an adventurous escape, or a unique outdoor retreat, every option is carefully crafted to make your travels meaningful, personalized, and hassle-free.',
+  'From cozy stays to thrilling adventures under the stars, GoTrip ensures every trip resonates with your mood, style, and curiosity.',
+] as const;
