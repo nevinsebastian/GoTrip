@@ -1,27 +1,27 @@
 import BellBadgeIcon from '@/assets/images/bell-badge.svg';
-import FilterIcon from '@/assets/images/wishlist-desktop-figma/filter-icon.svg';
 import HeartFilledIcon from '@/assets/images/heart-filled.svg';
-import LogoutIcon from '@/assets/images/logout.svg';
-import TicketConfirmationIcon from '@/assets/images/ticket-confirmation.svg';
 import HotelIcon from '@/assets/images/login-figma/hotel-icon.svg';
 import SpeechBubbleIcon from '@/assets/images/login-figma/speech-bubble.svg';
+import LogoutIcon from '@/assets/images/logout.svg';
+import TicketConfirmationIcon from '@/assets/images/ticket-confirmation.svg';
+import FilterIcon from '@/assets/images/wishlist-desktop-figma/filter-icon.svg';
 import { Input, Text } from '@/components/ui';
 import { colors, typography } from '@/constants/DesignTokens';
 import { logout } from '@/src/api/auth.service';
 import { AuthWebModal } from '@/src/components/AuthWebModal';
-import { desktopContentShellStyle, DESKTOP_VENDOR_LANDING_CARD } from '@/src/constants/desktopLayoutConstants';
 import { DESKTOP_WEB_IMAGES } from '@/src/constants/desktopHomeConstants';
+import { DESKTOP_VENDOR_LANDING_CARD, desktopContentShellStyle } from '@/src/constants/desktopLayoutConstants';
 import {
-  getVendorListingCategory,
-  VENDOR_ONBOARDING,
-  type VendorListingCategoryId,
+    getVendorListingCategory,
+    VENDOR_ONBOARDING,
+    type VendorListingCategoryId,
 } from '@/src/constants/vendorOnboardingConstants';
 import { USER_PROFILE_QUERY_KEY, useUserProfile } from '@/src/hooks/useUserProfile';
 import { Ionicons } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
-import { Image, Modal, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { Image, Modal, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const HeroLogoWhite = require('@/assets/images/login-figma/logo-hero-white.png');
@@ -144,7 +144,13 @@ export function DesktopVendorOnboardingShell({
         onAuthenticated={() => queryClient.invalidateQueries({ queryKey: USER_PROFILE_QUERY_KEY })}
       />
 
-      <View style={styles.contentShell}>
+      <ScrollView
+        style={styles.pageScroll}
+        contentContainerStyle={styles.pageScrollContent}
+        showsVerticalScrollIndicator={Platform.OS === 'web'}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={styles.contentShell}>
         <View style={styles.header}>
           <Pressable onPress={() => router.replace('/(tabs)')} accessibilityLabel="Home">
             <Image source={DESKTOP_WEB_IMAGES.logo} style={styles.logoImg} resizeMode="contain" />
@@ -219,11 +225,22 @@ export function DesktopVendorOnboardingShell({
 
           <View style={styles.rightPanel}>
             {rightPanelBlur ? <View style={styles.rightBlur} /> : null}
-            <View style={styles.rightContent}>{children}</View>
-            {footer ? <View style={styles.rightFooter}>{footer}</View> : null}
+            <ScrollView
+              style={styles.rightScroll}
+              contentContainerStyle={[
+                styles.rightScrollContent,
+                rightPanelBlur ? styles.rightScrollContentCentered : null,
+              ]}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+            >
+              <View style={styles.rightContent}>{children}</View>
+              {footer ? <View style={styles.rightFooter}>{footer}</View> : null}
+            </ScrollView>
           </View>
         </View>
       </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -233,9 +250,14 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.surface.white,
   },
+  pageScroll: {
+    flex: 1,
+  },
+  pageScrollContent: {
+    flexGrow: 1,
+  },
   contentShell: {
     ...desktopContentShellStyle,
-    flex: 1,
     paddingTop: 24,
     paddingBottom: 32,
     gap: 32,
@@ -411,6 +433,7 @@ const styles = StyleSheet.create({
   rightPanel: {
     flex: 1,
     height: '100%',
+    minHeight: 0,
     position: 'relative',
     backgroundColor: colors.surface.white,
   },
@@ -426,15 +449,26 @@ const styles = StyleSheet.create({
       default: {},
     }),
   },
-  rightContent: {
+  rightScroll: {
     flex: 1,
+    minHeight: 0,
+    zIndex: 2,
+  },
+  rightScrollContent: {
+    flexGrow: 1,
+  },
+  rightScrollContentCentered: {
+    justifyContent: 'center',
+    minHeight: DESKTOP_VENDOR_LANDING_CARD.height,
+  },
+  rightContent: {
     paddingHorizontal: 40,
     paddingTop: 40,
-    paddingBottom: 16,
     zIndex: 2,
   },
   rightFooter: {
     paddingHorizontal: 40,
+    paddingTop: 16,
     paddingBottom: 32,
     zIndex: 2,
     gap: 12,

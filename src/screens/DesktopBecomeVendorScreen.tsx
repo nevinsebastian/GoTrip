@@ -2,11 +2,11 @@ import MailIcon from '@/assets/images/mail.svg';
 import { Input, Text } from '@/components/ui';
 import { colors, typography } from '@/constants/DesignTokens';
 import {
-  completeVendorAccountSetup,
-  resendVendorRegistrationOtp,
-  sendVendorRegistrationOtp,
-  uploadVendorDocument,
-  verifyVendorRegistrationOtp,
+    completeVendorAccountSetup,
+    resendVendorRegistrationOtp,
+    sendVendorRegistrationOtp,
+    uploadVendorDocument,
+    verifyVendorRegistrationOtp,
 } from '@/src/api/vendorOnboarding.service';
 import { DesktopVendorOnboardingShell } from '@/src/components/desktop/DesktopVendorOnboardingShell';
 import { VendorDocTypePickerSheet } from '@/src/components/vendor/VendorDocTypePickerSheet';
@@ -14,28 +14,27 @@ import { VendorListingCategorySheet } from '@/src/components/vendor/VendorListin
 import { VendorUploadOptionsSheet } from '@/src/components/vendor/VendorUploadOptionsSheet';
 import { authFieldInputStyle } from '@/src/constants/authInputStyles';
 import {
-  EMPTY_VENDOR_FORM,
-  getVendorListingCategory,
-  VENDOR_ONBOARDING,
-  type VendorDocumentField,
-  type VendorListingCategoryId,
-  type VendorRegistrationForm,
+    EMPTY_VENDOR_FORM,
+    getVendorListingCategory,
+    VENDOR_ONBOARDING,
+    type VendorDocumentField,
+    type VendorListingCategoryId,
+    type VendorRegistrationForm,
 } from '@/src/constants/vendorOnboardingConstants';
 import { activateVendorSession } from '@/src/utils/vendorSession';
-import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import { router } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
-  Image,
-  Keyboard,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  TextInput,
-  View,
+    ActivityIndicator,
+    Image,
+    Keyboard,
+    Platform,
+    Pressable,
+    StyleSheet,
+    TextInput,
+    View,
 } from 'react-native';
 
 const GoogleIcon = require('../../assets/images/google.png');
@@ -273,7 +272,7 @@ export function DesktopBecomeVendorScreen() {
   const renderContent = () => {
     if (step === 'landing') {
       return (
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.landingScroll}>
+        <View style={styles.landingScroll}>
           <Text style={styles.landingTitle}>{VENDOR_ONBOARDING.landingTitle}</Text>
           <Text style={styles.headline}>{VENDOR_ONBOARDING.landingHeadline}</Text>
           <Text style={styles.earnings}>
@@ -297,13 +296,13 @@ export function DesktopBecomeVendorScreen() {
               <Text style={styles.helpText}>Help</Text>
             </Pressable>
           </View>
-        </ScrollView>
+        </View>
       );
     }
 
     if (step === 'register') {
       return (
-        <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+        <View>
           <Text style={styles.stepTitle}>{VENDOR_ONBOARDING.registerTitle}</Text>
           <Text style={styles.stepSubtitle}>{VENDOR_ONBOARDING.landingTitle}</Text>
           <View style={styles.inputStack}>
@@ -337,7 +336,7 @@ export function DesktopBecomeVendorScreen() {
             </View>
           </View>
           {submitError ? <Text style={styles.errorText}>{submitError}</Text> : null}
-        </ScrollView>
+        </View>
       );
     }
 
@@ -405,7 +404,7 @@ export function DesktopBecomeVendorScreen() {
 
     if (step === 'documents') {
       return (
-        <ScrollView showsVerticalScrollIndicator={false}>
+        <View>
           <Text style={styles.stepTitle}>{VENDOR_ONBOARDING.documentsTitle}</Text>
           <DocumentRowDesktop
             label={VENDOR_ONBOARDING.idTypeLabel}
@@ -424,7 +423,7 @@ export function DesktopBecomeVendorScreen() {
             isUploading={uploadingField === 'property'}
           />
           {submitError ? <Text style={styles.errorText}>{submitError}</Text> : null}
-        </ScrollView>
+        </View>
       );
     }
 
@@ -449,7 +448,7 @@ export function DesktopBecomeVendorScreen() {
     }
 
     return (
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <View>
         <Text style={styles.stepTitle}>{VENDOR_ONBOARDING.categoryTitle}</Text>
         <Text style={styles.stepSubtitle}>{VENDOR_ONBOARDING.categorySubtitle}</Text>
         <Pressable style={styles.categoryCard} onPress={() => setCategoryPickerOpen(true)}>
@@ -461,7 +460,7 @@ export function DesktopBecomeVendorScreen() {
           </View>
           <Ionicons name="chevron-down" size={18} color="rgba(28, 32, 36, 0.45)" />
         </Pressable>
-      </ScrollView>
+      </View>
     );
   };
 
