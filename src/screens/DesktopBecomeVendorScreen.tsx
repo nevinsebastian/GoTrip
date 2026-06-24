@@ -9,13 +9,14 @@ import {
     verifyVendorRegistrationOtp,
 } from '@/src/api/vendorOnboarding.service';
 import { DesktopVendorOnboardingShell } from '@/src/components/desktop/DesktopVendorOnboardingShell';
-import { VendorDocTypePickerSheet } from '@/src/components/vendor/VendorDocTypePickerSheet';
-import { VendorListingCategorySheet } from '@/src/components/vendor/VendorListingCategorySheet';
+import { DesktopVendorOtpStep } from '@/src/components/desktop/DesktopVendorOtpStep';
+import { DesktopInlineSelect } from '@/src/components/desktop/DesktopInlineSelect';
 import { VendorUploadOptionsSheet } from '@/src/components/vendor/VendorUploadOptionsSheet';
 import { authFieldInputStyle } from '@/src/constants/authInputStyles';
 import {
     EMPTY_VENDOR_FORM,
     getVendorListingCategory,
+    VENDOR_LISTING_CATEGORIES,
     VENDOR_ONBOARDING,
     type VendorDocumentField,
     type VendorListingCategoryId,
@@ -75,12 +76,10 @@ export function DesktopBecomeVendorScreen() {
   const [propertyDocType, setPropertyDocType] = useState(VENDOR_ONBOARDING.propertyDocTypes[0]);
   const [idFileName, setIdFileName] = useState<string | undefined>();
   const [propertyFileName, setPropertyFileName] = useState<string | undefined>();
-  const [pickerField, setPickerField] = useState<VendorDocumentField | null>(null);
   const [uploadField, setUploadField] = useState<VendorDocumentField | null>(null);
   const [uploadingField, setUploadingField] = useState<VendorDocumentField | null>(null);
   const [isCompletingSetup, setIsCompletingSetup] = useState(false);
   const [listingCategory, setListingCategory] = useState<VendorListingCategoryId>('property');
-  const [categoryPickerOpen, setCategoryPickerOpen] = useState(false);
   const [isProceedingCategory, setIsProceedingCategory] = useState(false);
 
   useFocusEffect(
@@ -342,63 +341,20 @@ export function DesktopBecomeVendorScreen() {
 
     if (step === 'otp') {
       return (
-        <View style={styles.otpCenter}>
-          <View style={styles.otpCard}>
-            <View style={styles.otpCardHeader}>
-              <Text style={styles.otpCardTitle}>Enter OTP</Text>
-              <Pressable onPress={handleCloseOtp} hitSlop={12}>
-                <Ionicons name="close" size={22} color={colors.text.secondary} />
-              </Pressable>
-            </View>
-            <Text style={styles.otpSubtitle}>
-              Please enter the OTP as shared on your mobile as SMS/Email
-            </Text>
-            <View style={styles.otpIconWrap}>
-              <Ionicons name="phone-portrait-outline" size={32} color={ACCENT} />
-            </View>
-            <View style={styles.otpRow}>
-              {digits.map((digit, index) => (
-                <TextInput
-                  key={index}
-                  ref={(el) => {
-                    otpInputRefs.current[index] = el;
-                  }}
-                  value={digit}
-                  onChangeText={(value) => handleDigitChange(index, value)}
-                  onKeyPress={({ nativeEvent }) => handleOtpKeyPress(index, nativeEvent.key)}
-                  keyboardType="number-pad"
-                  maxLength={2}
-                  style={styles.otpBox}
-                  placeholder="•"
-                  placeholderTextColor="rgba(0, 5, 29, 0.25)"
-                  selectTextOnFocus
-                />
-              ))}
-            </View>
-            <View style={styles.resendRow}>
-              <Text style={styles.resendHint}>Didn&apos;t receive OTP?</Text>
-              <Pressable onPress={handleResendOtp} disabled={isResending}>
-                {isResending ? (
-                  <ActivityIndicator size="small" color={ACCENT} />
-                ) : (
-                  <Text style={styles.resendLink}>Resend OTP</Text>
-                )}
-              </Pressable>
-            </View>
-            {submitError ? <Text style={styles.errorText}>{submitError}</Text> : null}
-            <Pressable
-              style={[styles.primaryCta, styles.otpSubmitBtn, (!canSubmitOtp || isVerifyingOtp) && styles.btnDisabled]}
-              onPress={handleSubmitOtp}
-              disabled={!canSubmitOtp || isVerifyingOtp}
-            >
-              {isVerifyingOtp ? (
-                <ActivityIndicator color={colors.surface.white} size="small" />
-              ) : (
-                <Text style={styles.primaryCtaText}>Submit OTP</Text>
-              )}
-            </Pressable>
-          </View>
-        </View>
+        <DesktopVendorOtpStep
+          form={form}
+          digits={digits}
+          inputRefs={otpInputRefs}
+          onDigitChange={handleDigitChange}
+          onKeyPress={handleOtpKeyPress}
+          onClose={handleCloseOtp}
+          onResend={handleResendOtp}
+          onSubmit={handleSubmitOtp}
+          isResending={isResending}
+          isVerifying={isVerifyingOtp}
+          canSubmit={canSubmitOtp}
+          error={submitError}
+        />
       );
     }
 
@@ -409,16 +365,18 @@ export function DesktopBecomeVendorScreen() {
           <DocumentRowDesktop
             label={VENDOR_ONBOARDING.idTypeLabel}
             value={idType}
+            options={VENDOR_ONBOARDING.idTypes}
+            onSelect={setIdType}
             fileName={idFileName}
-            onOpenPicker={() => setPickerField('id')}
             onUpload={() => setUploadField('id')}
             isUploading={uploadingField === 'id'}
           />
           <DocumentRowDesktop
             label={VENDOR_ONBOARDING.propertyDocLabel}
             value={propertyDocType}
+            options={VENDOR_ONBOARDING.propertyDocTypes}
+            onSelect={setPropertyDocType}
             fileName={propertyFileName}
-            onOpenPicker={() => setPickerField('property')}
             onUpload={() => setUploadField('property')}
             isUploading={uploadingField === 'property'}
           />
@@ -451,15 +409,37 @@ export function DesktopBecomeVendorScreen() {
       <View>
         <Text style={styles.stepTitle}>{VENDOR_ONBOARDING.categoryTitle}</Text>
         <Text style={styles.stepSubtitle}>{VENDOR_ONBOARDING.categorySubtitle}</Text>
-        <Pressable style={styles.categoryCard} onPress={() => setCategoryPickerOpen(true)}>
-          <Image source={category.thumbnail} style={styles.categoryThumb} resizeMode="cover" />
-          <View style={styles.categoryCardText}>
-            <Text style={styles.categoryCardTitle}>
-              {category.title} - {category.subtitle}
-            </Text>
-          </View>
-          <Ionicons name="chevron-down" size={18} color="rgba(28, 32, 36, 0.45)" />
-        </Pressable>
+        <DesktopInlineSelect
+          value={listingCategory}
+          options={VENDOR_LISTING_CATEGORIES.map((item) => ({
+            value: item.id,
+            label: `${item.title} - ${item.subtitle}`,
+          }))}
+          onSelect={(value) => setListingCategory(value as VendorListingCategoryId)}
+          menuMaxHeight={280}
+          startAdornment={
+            <Image source={category.thumbnail} style={styles.categoryThumb} resizeMode="cover" />
+          }
+          renderOption={(option, selected) => {
+            const item = getVendorListingCategory(option.value as VendorListingCategoryId);
+            return (
+              <View style={styles.categoryOptionContent}>
+                <Image source={item.thumbnail} style={styles.categoryOptionThumb} resizeMode="cover" />
+                <View style={styles.categoryOptionText}>
+                  <Text style={[styles.categoryOptionTitle, selected && styles.categoryOptionTitleSelected]}>
+                    {item.title}
+                  </Text>
+                  <Text style={styles.categoryOptionSubtitle} numberOfLines={2}>
+                    {item.subtitle}
+                  </Text>
+                </View>
+                {selected ? (
+                  <Ionicons name="checkmark" size={16} color={ACCENT} />
+                ) : null}
+              </View>
+            );
+          }}
+        />
       </View>
     );
   };
@@ -544,47 +524,17 @@ export function DesktopBecomeVendorScreen() {
       <DesktopVendorOnboardingShell
         heroPillLabel={heroPill}
         listingCategoryId={step === 'category' ? listingCategory : undefined}
-        rightPanelBlur={step === 'otp' || step === 'setupDone'}
+        rightPanelBlur={step === 'setupDone'}
+        rightPanelOverlay={step === 'otp' || step === 'setupDone'}
         footer={renderFooter()}
       >
         {renderContent()}
       </DesktopVendorOnboardingShell>
 
-      <VendorDocTypePickerSheet
-        visible={pickerField === 'id'}
-        title={VENDOR_ONBOARDING.idTypeLabel}
-        options={[...VENDOR_ONBOARDING.idTypes]}
-        selected={idType}
-        onClose={() => setPickerField(null)}
-        onSelect={(value) => {
-          setIdType(value);
-          setPickerField(null);
-        }}
-      />
-      <VendorDocTypePickerSheet
-        visible={pickerField === 'property'}
-        title={VENDOR_ONBOARDING.propertyDocLabel}
-        options={[...VENDOR_ONBOARDING.propertyDocTypes]}
-        selected={propertyDocType}
-        onClose={() => setPickerField(null)}
-        onSelect={(value) => {
-          setPropertyDocType(value);
-          setPickerField(null);
-        }}
-      />
       <VendorUploadOptionsSheet
         visible={uploadField !== null}
         onClose={() => setUploadField(null)}
         onSelect={handleUploadOption}
-      />
-      <VendorListingCategorySheet
-        visible={categoryPickerOpen}
-        selectedId={listingCategory}
-        onClose={() => setCategoryPickerOpen(false)}
-        onSelect={(id) => {
-          setListingCategory(id);
-          setCategoryPickerOpen(false);
-        }}
       />
     </>
   );
@@ -593,15 +543,17 @@ export function DesktopBecomeVendorScreen() {
 function DocumentRowDesktop({
   label,
   value,
+  options,
+  onSelect,
   fileName,
-  onOpenPicker,
   onUpload,
   isUploading,
 }: {
   label: string;
   value: string;
+  options: readonly string[];
+  onSelect: (value: string) => void;
   fileName?: string;
-  onOpenPicker: () => void;
   onUpload: () => void;
   isUploading?: boolean;
 }) {
@@ -609,12 +561,7 @@ function DocumentRowDesktop({
     <View style={styles.documentRow}>
       <Text style={styles.documentLabel}>{label}</Text>
       <View style={styles.documentControls}>
-        <Pressable style={styles.documentSelect} onPress={onOpenPicker}>
-          <Text style={styles.documentSelectText} numberOfLines={1}>
-            {value}
-          </Text>
-          <Ionicons name="chevron-down" size={16} color="rgba(28, 32, 36, 0.45)" />
-        </Pressable>
+        <DesktopInlineSelect value={value} options={options} onSelect={onSelect} />
         <Pressable style={[styles.uploadButton, isUploading && styles.btnDisabled]} onPress={onUpload} disabled={isUploading}>
           {isUploading ? (
             <ActivityIndicator color={colors.surface.white} size="small" />
@@ -785,84 +732,6 @@ const styles = StyleSheet.create({
   btnDisabled: {
     opacity: 0.6,
   },
-  otpCenter: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    width: '100%',
-  },
-  otpCard: {
-    width: '100%',
-    maxWidth: 360,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(28, 32, 36, 0.1)',
-    backgroundColor: colors.surface.white,
-    padding: 20,
-    gap: 14,
-    ...Platform.select({
-      web: { boxShadow: '0 8px 24px rgba(0, 0, 0, 0.1)' },
-      default: {},
-    }),
-  },
-  otpCardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  otpCardTitle: {
-    fontFamily: typography.fontFamily.text,
-    fontSize: 16,
-    fontWeight: typography.fontWeight.semibold,
-    color: colors.text.primary,
-  },
-  otpSubtitle: {
-    fontFamily: typography.fontFamily.text,
-    fontSize: 12,
-    lineHeight: 18,
-    color: colors.text.secondary,
-  },
-  otpIconWrap: {
-    alignSelf: 'center',
-    paddingVertical: 8,
-  },
-  otpRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 8,
-  },
-  otpBox: {
-    flex: 1,
-    height: 44,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(28, 32, 36, 0.15)',
-    textAlign: 'center',
-    fontFamily: typography.fontFamily.text,
-    fontSize: 18,
-    color: colors.text.primary,
-    backgroundColor: colors.surface.white,
-  },
-  resendRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  resendHint: {
-    fontFamily: typography.fontFamily.text,
-    fontSize: 12,
-    color: colors.text.secondary,
-  },
-  resendLink: {
-    fontFamily: typography.fontFamily.text,
-    fontSize: 12,
-    fontWeight: typography.fontWeight.semibold,
-    color: ACCENT,
-  },
-  otpSubmitBtn: {
-    width: '100%',
-    marginTop: 4,
-  },
   documentRow: {
     marginBottom: 20,
     gap: 8,
@@ -876,25 +745,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-  },
-  documentSelect: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    height: 44,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(28, 32, 36, 0.15)',
-    paddingHorizontal: 12,
-    backgroundColor: colors.surface.white,
-  },
-  documentSelectText: {
-    flex: 1,
-    fontFamily: typography.fontFamily.text,
-    fontSize: 14,
-    color: colors.text.primary,
-    marginRight: 8,
   },
   uploadButton: {
     flexDirection: 'row',
@@ -982,28 +832,38 @@ const styles = StyleSheet.create({
     color: colors.text.secondary,
     textDecorationLine: 'underline',
   },
-  categoryCard: {
+  categoryThumb: {
+    width: 32,
+    height: 32,
+    borderRadius: 6,
+  },
+  categoryOptionContent: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(28, 32, 36, 0.15)',
-    borderRadius: 12,
-    padding: 12,
-    backgroundColor: colors.surface.white,
+    gap: 10,
   },
-  categoryThumb: {
-    width: 48,
-    height: 48,
-    borderRadius: 8,
+  categoryOptionThumb: {
+    width: 40,
+    height: 32,
+    borderRadius: 6,
   },
-  categoryCardText: {
+  categoryOptionText: {
     flex: 1,
+    gap: 2,
   },
-  categoryCardTitle: {
+  categoryOptionTitle: {
     fontFamily: typography.fontFamily.text,
     fontSize: 14,
     fontWeight: typography.fontWeight.medium,
     color: colors.text.primary,
+  },
+  categoryOptionTitleSelected: {
+    color: ACCENT,
+  },
+  categoryOptionSubtitle: {
+    fontFamily: typography.fontFamily.text,
+    fontSize: 11,
+    color: 'rgba(28, 32, 36, 0.55)',
   },
 });

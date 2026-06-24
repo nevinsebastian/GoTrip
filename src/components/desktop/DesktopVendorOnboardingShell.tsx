@@ -31,6 +31,8 @@ type DesktopVendorOnboardingShellProps = {
   heroPillLabel?: string;
   listingCategoryId?: VendorListingCategoryId;
   rightPanelBlur?: boolean;
+  /** Full-bleed right panel for centered modals (OTP, setup done). */
+  rightPanelOverlay?: boolean;
   children: React.ReactNode;
   footer?: React.ReactNode;
 };
@@ -39,6 +41,7 @@ export function DesktopVendorOnboardingShell({
   heroPillLabel = VENDOR_ONBOARDING.listPropertyCategory,
   listingCategoryId,
   rightPanelBlur = false,
+  rightPanelOverlay = false,
   children,
   footer,
 }: DesktopVendorOnboardingShellProps) {
@@ -225,18 +228,22 @@ export function DesktopVendorOnboardingShell({
 
           <View style={styles.rightPanel}>
             {rightPanelBlur ? <View style={styles.rightBlur} /> : null}
-            <ScrollView
-              style={styles.rightScroll}
-              contentContainerStyle={[
-                styles.rightScrollContent,
-                rightPanelBlur ? styles.rightScrollContentCentered : null,
-              ]}
-              showsVerticalScrollIndicator={false}
-              keyboardShouldPersistTaps="handled"
-            >
-              <View style={styles.rightContent}>{children}</View>
-              {footer ? <View style={styles.rightFooter}>{footer}</View> : null}
-            </ScrollView>
+            {rightPanelOverlay ? (
+              <View style={styles.rightOverlay}>{children}</View>
+            ) : (
+              <ScrollView
+                style={styles.rightScroll}
+                contentContainerStyle={[
+                  styles.rightScrollContent,
+                  rightPanelBlur ? styles.rightScrollContentCentered : null,
+                ]}
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+              >
+                <View style={styles.rightContent}>{children}</View>
+                {footer ? <View style={styles.rightFooter}>{footer}</View> : null}
+              </ScrollView>
+            )}
           </View>
         </View>
       </View>
@@ -450,6 +457,11 @@ const styles = StyleSheet.create({
     }),
   },
   rightScroll: {
+    flex: 1,
+    minHeight: 0,
+    zIndex: 2,
+  },
+  rightOverlay: {
     flex: 1,
     minHeight: 0,
     zIndex: 2,
