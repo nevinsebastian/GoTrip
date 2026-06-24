@@ -9,6 +9,7 @@ import {
   VENDOR_PHOTOS_COPY,
   type VendorListingPhoto,
 } from '@/src/constants/vendorListingConstants';
+import { useVendorListingCategory } from '@/src/hooks/useVendorListingCategory';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
@@ -33,6 +34,7 @@ function createPhotoFromSource(
 }
 
 export function DesktopVendorPhotosScreen() {
+  const listingCategoryId = useVendorListingCategory();
   const [photos, setPhotos] = useState<VendorListingPhoto[]>([]);
   const [coverPhotoId, setCoverPhotoId] = useState<string | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -70,7 +72,7 @@ export function DesktopVendorPhotosScreen() {
   return (
     <>
       <DesktopVendorOnboardingShell
-        listingCategoryId="property"
+        listingCategoryId={listingCategoryId}
         heroSpeechText={DESKTOP_VENDOR_HERO_SPEECH.photos}
         footer={
           <DesktopVendorOnboardingFooter

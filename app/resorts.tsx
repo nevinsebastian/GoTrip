@@ -319,6 +319,10 @@ export default function ResortsScreen() {
           mode={webAuthModal.mode}
           onClose={() => setWebAuthModal((s) => ({ ...s, visible: false }))}
           onSwitchMode={(m) => setWebAuthModal({ visible: true, mode: m })}
+          onVendorLoginPress={() => {
+            setWebAuthModal((s) => ({ ...s, visible: false }));
+            router.push('/vendor-login');
+          }}
           onAuthenticated={() =>
             queryClient.invalidateQueries({ queryKey: USER_PROFILE_QUERY_KEY })
           }

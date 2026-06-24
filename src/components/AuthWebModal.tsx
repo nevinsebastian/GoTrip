@@ -3,29 +3,29 @@
  * Send OTP + verify OTP stay in this modal on web (no /otp navigation).
  */
 
-import { Button, Divider, Input, Text } from '@/components/ui';
-import { borderRadius, colors, spacing } from '@/constants/DesignTokens';
 import AppleIcon from '@/assets/images/apple.svg';
 import FacebookIcon from '@/assets/images/facebook.svg';
 import GoogleIcon from '@/assets/images/google.svg';
 import MailIcon from '@/assets/images/mail.svg';
 import MobileIcon from '@/assets/images/mobile.svg';
+import { Button, Divider, Input, Text } from '@/components/ui';
+import { borderRadius, colors, spacing } from '@/constants/DesignTokens';
 import { useSendOtp } from '@/src/hooks/useSendOtp';
 import { useVerifyOtp } from '@/src/hooks/useVerifyOtp';
 import { getErrorMessage } from '@/src/utils/errorHandler';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  Image,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  TextInput,
-  useWindowDimensions,
-  View,
+    Image,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    TextInput,
+    useWindowDimensions,
+    View,
 } from 'react-native';
 
 import { DESKTOP_WEB_IMAGES } from '@/src/constants/desktopHomeConstants';
@@ -60,6 +60,8 @@ export type AuthWebModalProps = {
   onSwitchMode: (mode: AuthWebModalMode) => void;
   /** After OTP verification stores tokens (e.g. invalidate `useUserProfile`). */
   onAuthenticated?: () => void | Promise<void>;
+  /** Desktop-only: navigate to vendor login screen. */
+  onVendorLoginPress?: () => void;
 };
 
 export function AuthWebModal({
@@ -68,6 +70,7 @@ export function AuthWebModal({
   onClose,
   onSwitchMode,
   onAuthenticated,
+  onVendorLoginPress,
 }: AuthWebModalProps) {
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const compactWeb =
@@ -518,6 +521,18 @@ export function AuthWebModal({
                             Continue with Facebook
                           </Button>
                         </View>
+                        {onVendorLoginPress ? (
+                          <Button
+                            variant="outlineSoft"
+                            size="compact"
+                            leftAdornment={
+                              <Ionicons name="briefcase-outline" size={20} color={colors.primary} />
+                            }
+                            onPress={onVendorLoginPress}
+                          >
+                            Login as vendor
+                          </Button>
+                        ) : null}
                         <Pressable
                           onPress={() => onSwitchMode('signup')}
                           style={styles.switchLink}

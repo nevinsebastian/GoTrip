@@ -15,6 +15,7 @@ import {
   type VendorFoodOptionId,
   type VendorRoomConfig,
 } from '@/src/constants/vendorListingConstants';
+import { useVendorListingCategory } from '@/src/hooks/useVendorListingCategory';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import { Platform, Pressable, StyleSheet, View } from 'react-native';
@@ -179,6 +180,7 @@ function RoomCard({
 }
 
 export function DesktopVendorGuestRoomDetailsScreen() {
+  const listingCategoryId = useVendorListingCategory();
   const [roomCount, setRoomCount] = useState(1);
   const [rooms, setRooms] = useState<VendorRoomConfig[]>(createDefaultRooms(1));
 
@@ -199,7 +201,7 @@ export function DesktopVendorGuestRoomDetailsScreen() {
   return (
     <DesktopVendorOnboardingShell
       heroSpeechText={DESKTOP_VENDOR_HERO_SPEECH.guestRooms}
-      listingCategoryId="property"
+      listingCategoryId={listingCategoryId}
       footer={
         <DesktopVendorOnboardingFooter
           onBack={() => router.back()}

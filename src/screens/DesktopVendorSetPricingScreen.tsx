@@ -10,6 +10,9 @@ import {
   VENDOR_PRICING_ROOMS,
   type VendorRoomPricing,
 } from '@/src/constants/vendorListingConstants';
+import { VENDOR_GLAMPING_PRICING_COPY } from '@/src/constants/vendorGlampingConstants';
+import { VENDOR_PACKAGE_PRICING_COPY } from '@/src/constants/vendorPackageConstants';
+import { VENDOR_ACTIVITY_PRICING_COPY } from '@/src/constants/vendorActivityConstants';
 import { useVendorListingCategory } from '@/src/hooks/useVendorListingCategory';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -89,6 +92,14 @@ function EditableRupeeField({
 
 export function DesktopVendorSetPricingScreen() {
   const listingCategoryId = useVendorListingCategory();
+  const isGlamping = listingCategoryId === 'glamping';
+  const isPackage = listingCategoryId === 'packages';
+  const isActivity = listingCategoryId === 'activities';
+  const isSimplePricing = isGlamping || isPackage || isActivity;
+
+  const [glampingPrice, setGlampingPrice] = useState(DEFAULT_VENDOR_ROOM_PRICING.basePrice);
+  const [glampingDiscountEnabled, setGlampingDiscountEnabled] = useState(true);
+  const [editingGlampingPrice, setEditingGlampingPrice] = useState(false);
 
   const [activeRoomId, setActiveRoomId] = useState<string>(VENDOR_PRICING_ROOMS[0].id);
   const [applyToAllRooms, setApplyToAllRooms] = useState(true);
@@ -121,6 +132,39 @@ export function DesktopVendorSetPricingScreen() {
     });
   };
 
+  const adjustGlampingPrice = (delta: number) => {
+    setEditingGlampingPrice(false);
+    setGlampingPrice((prev) => Math.max(0, prev + delta));
+  };
+
+  const handleNext = () => {
+    if (isGlamping) {
+      router.push('/vendor/camping-insights');
+      return;
+    }
+    if (isPackage) {
+      router.push('/vendor/package-itinerary');
+      return;
+    }
+    router.push('/vendor/terms');
+  };
+
+  const pricingSubtitle = isPackage
+    ? VENDOR_PACKAGE_PRICING_COPY.subtitle
+    : isActivity
+      ? VENDOR_ACTIVITY_PRICING_COPY.subtitle
+      : VENDOR_GLAMPING_PRICING_COPY.subtitle;
+  const simpleBasePriceLabel = isPackage
+    ? VENDOR_PACKAGE_PRICING_COPY.basePriceLabel
+    : isActivity
+      ? VENDOR_ACTIVITY_PRICING_COPY.basePriceLabel
+      : VENDOR_GLAMPING_PRICING_COPY.basePriceLabel;
+  const simpleNextSuffix = isPackage
+    ? VENDOR_PACKAGE_PRICING_COPY.nextSuffix
+    : isActivity
+      ? VENDOR_ACTIVITY_PRICING_COPY.nextSuffix
+      : VENDOR_GLAMPING_PRICING_COPY.nextSuffix;
+
   const roomOptions = VENDOR_PRICING_ROOMS.map((room) => ({
     value: room.id,
     label: `${room.roomIndex}/${room.roomTotal} ${room.label}`,
@@ -134,14 +178,77 @@ export function DesktopVendorSetPricingScreen() {
       footer={
         <DesktopVendorOnboardingFooter
           onBack={() => router.back()}
-          onNext={() => router.push('/vendor/terms')}
-          nextSuffix={VENDOR_PRICING_COPY.nextSuffix}
+          onNext={handleNext}
+          nextSuffix={isSimplePricing ? simpleNextSuffix : VENDOR_PRICING_COPY.nextSuffix}
         />
       }
     >
       <View style={styles.content}>
         <Text style={styles.title}>{VENDOR_PRICING_COPY.title}</Text>
+        {isSimplePricing ? <Text style={styles.subtitle}>{pricingSubtitle}</Text> : null}
 
+        {isSimplePricing ? (
+          <View style={styles.pricingCard}>
+            <Text style={styles.basePriceLabel}>{simpleBasePriceLabel}</Text>
+
+            <View style={styles.basePriceRow}>
+              <Pressable
+                style={({ pressed }) => [styles.stepButton, pressed && styles.pressed]}
+                onPress={() => adjustGlampingPrice(-VENDOR_PRICING_COPY.priceStep)}
+                accessibilityRole="button"
+              >
+                <Ionicons name="remove" size={18} color={colors.text.primary} />
+              </Pressable>
+
+              <EditableRupeeField
+                value={glampingPrice}
+                editing={editingGlampingPrice}
+                onStartEdit={() => setEditingGlampingPrice(true)}
+                onEndEdit={() => setEditingGlampingPrice(false)}
+                onChange={setGlampingPrice}
+                containerStyle={styles.basePriceValue}
+                textStyle={styles.basePriceText}
+                inputStyle={styles.basePriceInput}
+              />
+
+              <Pressable
+                style={({ pressed }) => [styles.stepButton, pressed && styles.pressed]}
+                onPress={() => adjustGlampingPrice(VENDOR_PRICING_COPY.priceStep)}
+                accessibilityRole="button"
+              >
+                <Ionicons name="add" size={18} color={colors.text.primary} />
+              </Pressable>
+            </View>
+
+            <View style={styles.orDividerRow}>
+              <View style={styles.orLineAccent} />
+              <View style={styles.orLineMuted} />
+            </View>
+
+            <Text style={styles.rangeHint}>
+              {VENDOR_PRICING_COPY.rangeHintPrefix}{' '}
+              <Text style={styles.rangeHintBold}>
+                ₹{VENDOR_PRICING_COPY.rangeMin.toLocaleString('en-IN')} - ₹
+                {VENDOR_PRICING_COPY.rangeMax.toLocaleString('en-IN')}
+              </Text>
+            </Text>
+
+            <Pressable
+              style={({ pressed }) => [styles.discountRow, pressed && styles.pressed]}
+              onPress={() => setGlampingDiscountEnabled((v) => !v)}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: glampingDiscountEnabled }}
+            >
+              <Text style={styles.discountText}>{VENDOR_PRICING_COPY.discountLabel}</Text>
+              <View style={[styles.checkbox, glampingDiscountEnabled && styles.checkboxChecked]}>
+                {glampingDiscountEnabled ? (
+                  <Ionicons name="checkmark" size={14} color={colors.surface.white} />
+                ) : null}
+              </View>
+            </Pressable>
+          </View>
+        ) : (
+          <>
         <View style={styles.toolbar}>
           <DesktopInlineSelect
             value={activeRoom.id}
@@ -253,6 +360,8 @@ export function DesktopVendorSetPricingScreen() {
             </View>
           </Pressable>
         </View>
+          </>
+        )}
       </View>
     </DesktopVendorOnboardingShell>
   );
@@ -268,6 +377,11 @@ const styles = StyleSheet.create({
     fontSize: 26,
     fontWeight: typography.fontWeight.semibold,
     color: colors.accent.main,
+  },
+  subtitle: {
+    fontFamily: typography.fontFamily.text,
+    fontSize: 13,
+    color: 'rgba(28, 32, 36, 0.55)',
   },
   toolbar: {
     gap: 10,
@@ -458,6 +572,12 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: 'rgba(28, 32, 36, 0.08)',
   },
+  orDividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  orLineAccent: { flex: 1, height: 1, backgroundColor: colors.accent.main },
+  orLineMuted: { flex: 1, height: 1, backgroundColor: 'rgba(28, 32, 36, 0.12)' },
   rangeHint: {
     fontFamily: typography.fontFamily.text,
     fontSize: 12,

@@ -193,7 +193,7 @@ export function DesktopVendorSelectLocationScreen() {
   return (
     <DesktopVendorOnboardingShell
       layout="split"
-      listingCategoryId="property"
+      listingCategoryId={categoryId}
       leftPanelContent={mapPanel}
       footer={
         <DesktopVendorOnboardingFooter

@@ -30,6 +30,7 @@ export default function LoginWeb() {
         onSwitchMode={(mode) =>
           router.replace(mode === 'signup' ? '/signup' : '/login')
         }
+        onVendorLoginPress={() => router.replace('/vendor-login')}
         onAuthenticated={() =>
           queryClient.invalidateQueries({ queryKey: USER_PROFILE_QUERY_KEY })
         }

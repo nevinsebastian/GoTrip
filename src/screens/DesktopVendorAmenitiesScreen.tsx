@@ -8,6 +8,7 @@ import {
   VENDOR_AMENITIES_COPY,
   VENDOR_PRICING_ROOMS,
 } from '@/src/constants/vendorListingConstants';
+import { useVendorListingCategory } from '@/src/hooks/useVendorListingCategory';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useMemo, useState } from 'react';
@@ -21,6 +22,7 @@ const ROOM_OPTIONS = VENDOR_PRICING_ROOMS.map((room) => ({
 }));
 
 export function DesktopVendorAmenitiesScreen() {
+  const listingCategoryId = useVendorListingCategory();
   const [selectedIds, setSelectedIds] = useState<string[]>(DEFAULT_SELECTED);
   const [searchQuery, setSearchQuery] = useState('');
   const [applyToAllRooms, setApplyToAllRooms] = useState(true);
@@ -44,7 +46,7 @@ export function DesktopVendorAmenitiesScreen() {
   return (
     <DesktopVendorOnboardingShell
       layout="single"
-      listingCategoryId="property"
+      listingCategoryId={listingCategoryId}
       footer={
         <DesktopVendorOnboardingFooter
           onBack={() => router.back()}
