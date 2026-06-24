@@ -11,10 +11,11 @@ export const desktopContentShellStyle = {
   paddingHorizontal: DESKTOP_LAYOUT.gutter,
 };
 
-/** Figma “Become a vendor - Web” card frame */
+/** Figma “Become a vendor - Web” card frame (compact for typical laptop viewports). */
 export const DESKTOP_VENDOR_LANDING_CARD = {
-  width: 1280,
-  height: 750,
-  borderRadius: 24,
+  width: 960,
+  height: 560,
+  borderRadius: 20,
   backgroundColor: '#FFFFFF',
+  viewportHeaderOffset: 100,
 } as const;

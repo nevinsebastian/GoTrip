@@ -10,7 +10,7 @@ import { colors, typography } from '@/constants/DesignTokens';
 import { logout } from '@/src/api/auth.service';
 import { AuthWebModal } from '@/src/components/AuthWebModal';
 import { DESKTOP_WEB_IMAGES } from '@/src/constants/desktopHomeConstants';
-import { DESKTOP_VENDOR_LANDING_CARD, desktopContentShellStyle } from '@/src/constants/desktopLayoutConstants';
+import { DESKTOP_LAYOUT, DESKTOP_VENDOR_LANDING_CARD, desktopContentShellStyle } from '@/src/constants/desktopLayoutConstants';
 import {
     getVendorListingCategory,
     VENDOR_ONBOARDING,
@@ -20,8 +20,8 @@ import { USER_PROFILE_QUERY_KEY, useUserProfile } from '@/src/hooks/useUserProfi
 import { Ionicons } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
-import React, { useState } from 'react';
-import { Image, Modal, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { Image, Modal, Platform, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const HeroLogoWhite = require('@/assets/images/login-figma/logo-hero-white.png');
@@ -33,6 +33,12 @@ type DesktopVendorOnboardingShellProps = {
   rightPanelBlur?: boolean;
   /** Full-bleed right panel for centered modals (OTP, setup done). */
   rightPanelOverlay?: boolean;
+  /** split = hero/map left + form right; single = full-width content card */
+  layout?: 'split' | 'single';
+  /** Custom speech bubble on hero panel (listing flow). */
+  heroSpeechText?: string;
+  /** Replaces default hero image panel (e.g. map). */
+  leftPanelContent?: React.ReactNode;
   children: React.ReactNode;
   footer?: React.ReactNode;
 };
@@ -42,6 +48,9 @@ export function DesktopVendorOnboardingShell({
   listingCategoryId,
   rightPanelBlur = false,
   rightPanelOverlay = false,
+  layout = 'split',
+  heroSpeechText,
+  leftPanelContent,
   children,
   footer,
 }: DesktopVendorOnboardingShellProps) {
@@ -55,6 +64,25 @@ export function DesktopVendorOnboardingShell({
     visible: false,
     mode: 'login',
   });
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+
+  const cardSize = useMemo(() => {
+    const designW = DESKTOP_VENDOR_LANDING_CARD.width;
+    const designH = DESKTOP_VENDOR_LANDING_CARD.height;
+    const aspect = designW / designH;
+    const maxW = windowWidth - DESKTOP_LAYOUT.gutter * 2;
+    const maxH = windowHeight - (DESKTOP_VENDOR_LANDING_CARD.viewportHeaderOffset ?? 100);
+
+    let height = Math.min(designH, maxH);
+    let width = height * aspect;
+
+    if (width > Math.min(designW, maxW)) {
+      width = Math.min(designW, maxW);
+      height = width / aspect;
+    }
+
+    return { width, height };
+  }, [windowWidth, windowHeight]);
 
   const category = listingCategoryId ? getVendorListingCategory(listingCategoryId) : null;
 
@@ -192,51 +220,65 @@ export function DesktopVendorOnboardingShell({
           </Pressable>
         </View>
 
-        <View style={styles.mainCard}>
-          <View style={styles.heroPanel}>
-            <Image source={VendorHeroImage} style={styles.heroImage} resizeMode="cover" />
-            <View style={styles.heroOverlay}>
-              <Image
-                source={HeroLogoWhite}
-                style={[styles.heroLogo, Platform.OS === 'web' ? (styles.heroLogoWeb as object) : null]}
-                resizeMode="contain"
-              />
+        <View style={[styles.mainCard, { width: cardSize.width, height: cardSize.height, maxWidth: cardSize.width }]}>
+          {layout === 'split' ? (
+            <View style={styles.heroPanel}>
+              {leftPanelContent ? (
+                leftPanelContent
+              ) : (
+                <>
+                  <Image source={VendorHeroImage} style={styles.heroImage} resizeMode="cover" />
+                  <View style={styles.heroOverlay}>
+                    <Image
+                      source={HeroLogoWhite}
+                      style={[styles.heroLogo, Platform.OS === 'web' ? (styles.heroLogoWeb as object) : null]}
+                      resizeMode="contain"
+                    />
 
-              <View style={styles.speechBubbleWrap}>
-                <SpeechBubbleIcon width={300} height={40} style={StyleSheet.absoluteFillObject} />
-                <View style={styles.speechBubbleRow}>
-                  <Text style={styles.speechText}>
-                    Join <Text style={styles.speechBold}>{VENDOR_ONBOARDING.listingsCount}</Text> other listings
-                    already in GoTrip
-                  </Text>
-                </View>
-              </View>
+                    <View style={styles.speechBubbleWrap}>
+                      <SpeechBubbleIcon width={280} height={36} style={StyleSheet.absoluteFillObject} />
+                      <View style={styles.speechBubbleRow}>
+                        <Text style={styles.speechText}>
+                          {heroSpeechText ? (
+                            heroSpeechText
+                          ) : (
+                            <>
+                              Join <Text style={styles.speechBold}>{VENDOR_ONBOARDING.listingsCount}</Text> other
+                              listings already in GoTrip
+                            </>
+                          )}
+                        </Text>
+                      </View>
+                    </View>
 
-              <View style={styles.propertyPill}>
-                {category ? (
-                  <Image source={category.thumbnail} style={styles.categoryThumb} resizeMode="cover" />
-                ) : (
-                  <HotelIcon width={18} height={18} />
-                )}
-                <Text style={styles.propertyLead}>{VENDOR_ONBOARDING.listPropertyLead}</Text>
-                <View style={styles.categoryPill}>
-                  <Text style={styles.categoryPillText}>{category?.pillLabel ?? heroPillLabel}</Text>
-                </View>
-              </View>
+                    <View style={styles.propertyPill}>
+                      {category ? (
+                        <Image source={category.thumbnail} style={styles.categoryThumb} resizeMode="cover" />
+                      ) : (
+                        <HotelIcon width={18} height={18} />
+                      )}
+                      <Text style={styles.propertyLead}>{VENDOR_ONBOARDING.listPropertyLead}</Text>
+                      <View style={styles.categoryPill}>
+                        <Text style={styles.categoryPillText}>{category?.pillLabel ?? heroPillLabel}</Text>
+                      </View>
+                    </View>
+                  </View>
+                </>
+              )}
             </View>
-          </View>
+          ) : null}
 
-          <View style={styles.rightPanel}>
+          <View style={[styles.rightPanel, layout === 'single' && styles.rightPanelFull]}>
             {rightPanelBlur ? <View style={styles.rightBlur} /> : null}
             {rightPanelOverlay ? (
               <View style={styles.rightOverlay}>{children}</View>
             ) : (
               <ScrollView
                 style={styles.rightScroll}
-                contentContainerStyle={[
-                  styles.rightScrollContent,
-                  rightPanelBlur ? styles.rightScrollContentCentered : null,
-                ]}
+              contentContainerStyle={[
+                styles.rightScrollContent,
+                rightPanelBlur ? [styles.rightScrollContentCentered, { minHeight: cardSize.height }] : null,
+              ]}
                 showsVerticalScrollIndicator={false}
                 keyboardShouldPersistTaps="handled"
               >
@@ -262,12 +304,13 @@ const styles = StyleSheet.create({
   },
   pageScrollContent: {
     flexGrow: 1,
+    justifyContent: 'center',
   },
   contentShell: {
     ...desktopContentShellStyle,
-    paddingTop: 24,
-    paddingBottom: 32,
-    gap: 32,
+    paddingTop: 16,
+    paddingBottom: 16,
+    gap: 16,
   },
   header: {
     flexDirection: 'row',
@@ -332,9 +375,6 @@ const styles = StyleSheet.create({
   mainCard: {
     position: 'relative',
     flexDirection: 'row',
-    width: '100%',
-    maxWidth: DESKTOP_VENDOR_LANDING_CARD.width,
-    height: DESKTOP_VENDOR_LANDING_CARD.height,
     alignSelf: 'center',
     borderRadius: DESKTOP_VENDOR_LANDING_CARD.borderRadius,
     backgroundColor: DESKTOP_VENDOR_LANDING_CARD.backgroundColor,
@@ -365,20 +405,20 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 40,
-    paddingHorizontal: 24,
+    paddingVertical: 28,
+    paddingHorizontal: 20,
   },
   heroLogo: {
-    width: 120,
-    height: 56,
+    width: 96,
+    height: 44,
     tintColor: colors.surface.white,
   },
   heroLogoWeb: {
     filter: 'brightness(0) invert(1)',
   },
   speechBubbleWrap: {
-    width: 300,
-    height: 40,
+    width: 260,
+    height: 36,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -444,6 +484,9 @@ const styles = StyleSheet.create({
     position: 'relative',
     backgroundColor: colors.surface.white,
   },
+  rightPanelFull: {
+    width: '100%',
+  },
   rightBlur: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(255, 255, 255, 0.55)',
@@ -471,19 +514,18 @@ const styles = StyleSheet.create({
   },
   rightScrollContentCentered: {
     justifyContent: 'center',
-    minHeight: DESKTOP_VENDOR_LANDING_CARD.height,
   },
   rightContent: {
-    paddingHorizontal: 40,
-    paddingTop: 40,
+    paddingHorizontal: 28,
+    paddingTop: 24,
     zIndex: 2,
   },
   rightFooter: {
-    paddingHorizontal: 40,
-    paddingTop: 16,
-    paddingBottom: 32,
+    paddingHorizontal: 28,
+    paddingTop: 12,
+    paddingBottom: 20,
     zIndex: 2,
-    gap: 12,
+    gap: 8,
   },
   menuOverlay: {
     flex: 1,
