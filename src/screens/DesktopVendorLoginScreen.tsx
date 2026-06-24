@@ -11,6 +11,7 @@ import { colors, spacing, typography } from '@/constants/DesignTokens';
 import type { OtpChannel } from '@/src/api/types';
 import { VENDOR_ONBOARDING } from '@/src/constants/vendorOnboardingConstants';
 import { VENDOR_WORKSPACE_COPY } from '@/src/constants/vendorWorkspaceConstants';
+import { goToVendorLogin, enterVendorWorkspace } from '@/src/utils/vendorNavigation';
 import { loginExistingVendor } from '@/src/utils/vendorSession';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -153,7 +154,7 @@ export function DesktopVendorLoginScreen() {
     try {
       // Demo mode — any 4-digit OTP succeeds (matches mobile vendor login).
       await loginExistingVendor();
-      router.replace('/vendor/home');
+      await enterVendorWorkspace();
     } finally {
       setIsVerifyingOtp(false);
     }
@@ -163,7 +164,7 @@ export function DesktopVendorLoginScreen() {
     <SafeAreaView style={styles.page} edges={['top']}>
       <View style={styles.pageShell}>
         <View style={[styles.headerBar, compact && styles.headerBarCompact]}>
-          <Pressable onPress={() => router.replace('/(tabs)')} style={styles.brandRow} accessibilityRole="button">
+          <Pressable onPress={() => goToVendorLogin()} style={styles.brandRow} accessibilityRole="button">
             <Image source={HeaderLogo} style={styles.brandLogo} resizeMode="contain" />
             <Text style={styles.brandVendorSuffix}>-vendor</Text>
           </Pressable>

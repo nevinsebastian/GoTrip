@@ -1,6 +1,6 @@
 import { Redirect } from 'expo-router';
 
-/** Vendor onboarding routes live under /vendor/* — the index is not the app entry. */
+/** Vendor routes live under /vendor/* — never send vendors to the guest app root. */
 export default function VendorIndexRoute() {
-  return <Redirect href="/" />;
+  return <Redirect href="/vendor/home" />;
 }

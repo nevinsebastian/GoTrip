@@ -3,6 +3,8 @@ import { useResponsive } from '@/components/ui/useResponsive';
 import { colors, typography } from '@/constants/DesignTokens';
 import { DesktopVendorDashboardBookingList } from '@/src/components/desktop/DesktopVendorDashboardBookingList';
 import { DesktopVendorDashboardCategoryTabs } from '@/src/components/desktop/DesktopVendorDashboardCategoryTabs';
+import { DesktopVendorFilterModal } from '@/src/components/desktop/DesktopVendorFilterModal';
+import { DesktopVendorMarkUnavailabilityModal } from '@/src/components/desktop/DesktopVendorMarkUnavailabilityModal';
 import { DesktopVendorWebHeader } from '@/src/components/desktop/DesktopVendorWebHeader';
 import { VendorPropertyOptionSheet } from '@/src/components/vendor/VendorPropertyOptionSheet';
 import {
@@ -35,6 +37,8 @@ export function DesktopVendorDashboardScreen() {
   const [sortId, setSortId] = useState('date');
   const [propertyOpen, setPropertyOpen] = useState(false);
   const [sortOpen, setSortOpen] = useState(false);
+  const [markUnavailableOpen, setMarkUnavailableOpen] = useState(false);
+  const [filterOpen, setFilterOpen] = useState(false);
 
   useEffect(() => {
     getStoredVendorListingCategory().then((stored) => {
@@ -73,14 +77,22 @@ export function DesktopVendorDashboardScreen() {
                   <Ionicons name="chevron-down" size={24} color={colors.surface.white} />
                 </Pressable>
 
-                <Pressable style={styles.markUnavailableBtn} accessibilityRole="button">
+                <Pressable
+                  style={styles.markUnavailableBtn}
+                  onPress={() => setMarkUnavailableOpen(true)}
+                  accessibilityRole="button"
+                >
                   <Text style={styles.markUnavailableText}>
                     {VENDOR_DASHBOARD_COPY.markUnavailability}
                   </Text>
                   <Ionicons name="calendar-outline" size={18} color={colors.surface.white} />
                 </Pressable>
 
-                <Pressable style={styles.filterBtn} accessibilityRole="button">
+                <Pressable
+                  style={styles.filterBtn}
+                  onPress={() => setFilterOpen(true)}
+                  accessibilityRole="button"
+                >
                   <Text style={styles.filterBtnText}>Filter</Text>
                   <Ionicons name="calendar-outline" size={18} color={FIGMA_TITLE} />
                 </Pressable>
@@ -122,6 +134,19 @@ export function DesktopVendorDashboardScreen() {
           setSortId(id);
           setSortOpen(false);
         }}
+      />
+
+      <DesktopVendorMarkUnavailabilityModal
+        visible={markUnavailableOpen}
+        propertyId={propertyId}
+        onPropertyChange={setPropertyId}
+        onClose={() => setMarkUnavailableOpen(false)}
+      />
+
+      <DesktopVendorFilterModal
+        visible={filterOpen}
+        onClose={() => setFilterOpen(false)}
+        onApply={() => {}}
       />
     </SafeAreaView>
   );

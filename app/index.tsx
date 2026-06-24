@@ -1,4 +1,5 @@
 import { getStoredAuthToken } from '@/src/api/client';
+import { isVendorMode } from '@/src/utils/vendorSession';
 import { Redirect } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
@@ -8,20 +9,23 @@ import { colors } from '@/constants/DesignTokens';
 export default function Index() {
   const [ready, setReady] = useState(false);
   const [hasToken, setHasToken] = useState(false);
+  const [vendorMode, setVendorMode] = useState(false);
 
   useEffect(() => {
     let mounted = true;
 
-    getStoredAuthToken()
-      .then((token) => {
+    Promise.all([getStoredAuthToken(), isVendorMode()])
+      .then(([token, vendor]) => {
         if (mounted) {
           setHasToken(Boolean(token));
+          setVendorMode(vendor);
           setReady(true);
         }
       })
       .catch(() => {
         if (mounted) {
           setHasToken(false);
+          setVendorMode(false);
           setReady(true);
         }
       });
@@ -37,6 +41,10 @@ export default function Index() {
         <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
+  }
+
+  if (vendorMode) {
+    return <Redirect href="/vendor/home" />;
   }
 
   if (hasToken) {

@@ -9,6 +9,7 @@ import { Input, Text } from '@/components/ui';
 import { colors, typography } from '@/constants/DesignTokens';
 import { logout } from '@/src/api/auth.service';
 import { AuthWebModal } from '@/src/components/AuthWebModal';
+import { goToVendorHome } from '@/src/utils/vendorNavigation';
 import { DESKTOP_WEB_IMAGES } from '@/src/constants/desktopHomeConstants';
 import { DESKTOP_LAYOUT, DESKTOP_VENDOR_LANDING_CARD, desktopContentShellStyle } from '@/src/constants/desktopLayoutConstants';
 import {
@@ -183,7 +184,7 @@ export function DesktopVendorOnboardingShell({
       >
         <View style={styles.contentShell}>
         <View style={styles.header}>
-          <Pressable onPress={() => router.replace('/(tabs)')} accessibilityLabel="Home">
+          <Pressable onPress={() => goToVendorHome()} accessibilityLabel="Vendor home">
             <Image source={DESKTOP_WEB_IMAGES.logo} style={styles.logoImg} resizeMode="contain" />
           </Pressable>
 

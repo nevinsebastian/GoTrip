@@ -2,6 +2,7 @@ import { Input, Text } from '@/components/ui';
 import { colors, typography } from '@/constants/DesignTokens';
 import { VENDOR_ONBOARDING } from '@/src/constants/vendorOnboardingConstants';
 import { VENDOR_WORKSPACE_COPY } from '@/src/constants/vendorWorkspaceConstants';
+import { goToVendorHome } from '@/src/utils/vendorNavigation';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React from 'react';
@@ -21,7 +22,7 @@ type DesktopVendorWebHeaderProps = {
 export function DesktopVendorWebHeader({ compact = false }: DesktopVendorWebHeaderProps) {
   return (
     <View style={[styles.headerBar, compact && styles.headerBarCompact]}>
-      <Pressable onPress={() => router.replace('/(tabs)')} style={styles.brandRow} accessibilityRole="button">
+      <Pressable onPress={() => goToVendorHome()} style={styles.brandRow} accessibilityRole="button">
         <Image source={HeaderLogo} style={styles.brandLogo} resizeMode="contain" />
         <Text style={styles.brandVendorSuffix}>-vendor</Text>
       </Pressable>

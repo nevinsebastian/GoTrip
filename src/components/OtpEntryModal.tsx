@@ -3,6 +3,7 @@ import { borderRadius, colors, spacing, typography } from '@/constants/DesignTok
 import type { OtpChannel } from '@/src/api/types';
 import { useVerifyOtp } from '@/src/hooks/useVerifyOtp';
 import { getErrorMessage } from '@/src/utils/errorHandler';
+import { enterVendorWorkspace, VENDOR_HOME_PATH } from '@/src/utils/vendorNavigation';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
@@ -83,6 +84,14 @@ export function OtpEntryModal({
     onClose();
   };
 
+  const navigateAfterAuth = async (target: string) => {
+    if (Platform.OS === 'web' && target === VENDOR_HOME_PATH) {
+      await enterVendorWorkspace();
+      return;
+    }
+    router.replace(target as any);
+  };
+
   const handleDigitChange = (index: number, value: string) => {
     const num = value.replace(/\D/g, '');
     if (num.length > 1) {
@@ -122,7 +131,7 @@ export function OtpEntryModal({
           await onAuthenticated?.();
         } finally {
           handleClose();
-          router.replace(redirectTo as any);
+          await navigateAfterAuth(redirectTo);
         }
       })();
       return;
@@ -143,7 +152,7 @@ export function OtpEntryModal({
               await onAuthenticated?.();
             } finally {
               handleClose();
-              router.replace(redirectTo as any);
+              await navigateAfterAuth(redirectTo);
             }
             return;
           }

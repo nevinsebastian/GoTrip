@@ -16,6 +16,7 @@ import 'react-native-reanimated';
 
 import { useColorScheme } from '@/components/useColorScheme';
 import { HomeSearchProvider } from '@/src/components/home/HomeSearchContext';
+import { VendorModeRouteGuard } from '@/src/components/vendor/VendorModeRouteGuard';
 
 export {
     // Catch any errors thrown in the navigation tree.
@@ -80,6 +81,7 @@ function RootLayoutNav() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
         <HomeSearchProvider>
+          <VendorModeRouteGuard />
           <Stack>
           <Stack.Screen name="index" options={{ headerShown: false }} />
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
