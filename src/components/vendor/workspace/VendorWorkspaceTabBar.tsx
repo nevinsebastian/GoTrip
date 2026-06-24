@@ -1,4 +1,5 @@
 import { Text } from '@/components/ui';
+import { useResponsive } from '@/components/ui/useResponsive';
 import { colors, typography } from '@/constants/DesignTokens';
 import { VENDOR_DASHBOARD_NAV_BLUE } from '@/src/constants/vendorDashboardConstants';
 import {
@@ -109,6 +110,10 @@ export function VendorWorkspaceFloatingTabBar({ activeTab }: VendorWorkspaceFloa
 }
 
 export function VendorWorkspaceTabBar({ state, navigation }: BottomTabBarProps) {
+  const { isDesktop } = useResponsive();
+  const isDesktopWeb = Platform.OS === 'web' && isDesktop;
+  if (isDesktopWeb) return null;
+
   const activeRoute = state.routes[state.index]?.name ?? 'home';
   const activeTab = TAB_ROUTE_MAP[activeRoute] ?? 'home';
 

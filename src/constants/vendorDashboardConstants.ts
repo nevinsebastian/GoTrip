@@ -34,6 +34,30 @@ export const VENDOR_DASHBOARD_PROPERTIES = [
   { id: 'property-2', label: 'Property 2 - Beach View Cottage' },
 ];
 
+/** Figma desktop dashboard category chip styles (Frame 5094). */
+export const DESKTOP_VENDOR_DASHBOARD_CATEGORY_STYLES: Record<
+  VendorListingCategoryId,
+  { background: string; borderColor?: string; icon: string }
+> = {
+  property: {
+    background: 'rgba(30, 160, 123, 0.1)',
+    borderColor: '#1EA07B',
+    icon: 'business-outline',
+  },
+  packages: {
+    background: 'rgba(76, 26, 87, 0.1)',
+    icon: 'airplane-outline',
+  },
+  glamping: {
+    background: 'rgba(4, 57, 94, 0.1)',
+    icon: 'partly-sunny-outline',
+  },
+  activities: {
+    background: 'rgba(103, 60, 79, 0.1)',
+    icon: 'boat-outline',
+  },
+};
+
 export const VENDOR_DASHBOARD_SORT_OPTIONS = [
   { id: 'date', label: 'Date' },
   { id: 'name', label: 'Guest name' },

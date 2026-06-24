@@ -2,27 +2,17 @@ import AppleIcon from '@/assets/images/apple.svg';
 import FacebookIcon from '@/assets/images/facebook.svg';
 import GoogleIcon from '@/assets/images/google.svg';
 import MailIcon from '@/assets/images/mail.svg';
+import MobileIcon from '@/assets/images/mobile.svg';
 import HotelIcon from '@/assets/images/login-figma/hotel-icon.svg';
 import SpeechBubbleIcon from '@/assets/images/login-figma/speech-bubble.svg';
 import { Button, Divider, Input, Text } from '@/components/ui';
 import { useResponsive } from '@/components/ui/useResponsive';
-import { borderRadius, colors, spacing, typography } from '@/constants/DesignTokens';
-import { useSendOtp } from '@/src/hooks/useSendOtp';
-import { useVerifyOtp } from '@/src/hooks/useVerifyOtp';
-import {
-  DESKTOP_VENDOR_LANDING_CARD,
-  desktopContentShellStyle,
-} from '@/src/constants/desktopLayoutConstants';
-import { VENDOR_DASHBOARD_COPY } from '@/src/constants/vendorDashboardConstants';
+import { colors, spacing, typography } from '@/constants/DesignTokens';
+import type { OtpChannel } from '@/src/api/types';
 import { VENDOR_ONBOARDING } from '@/src/constants/vendorOnboardingConstants';
-import {
-  VENDOR_WORKSPACE_BLUE,
-  VENDOR_WORKSPACE_COPY,
-} from '@/src/constants/vendorWorkspaceConstants';
-import { getErrorMessage } from '@/src/utils/errorHandler';
+import { VENDOR_WORKSPACE_COPY } from '@/src/constants/vendorWorkspaceConstants';
 import { loginExistingVendor } from '@/src/utils/vendorSession';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -38,47 +28,59 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+const HeaderLogo = require('@/assets/images/login-figma/logo-header.png');
 const HeroLogoWhite = require('@/assets/images/login-figma/logo-hero-white.png');
 const VendorHeroImage = require('@/assets/images/desktop-web/vendor-hero.jpg');
 
-const FIELD_BORDER = 'rgba(28, 32, 36, 0.12)';
-const VENDOR_BTN_PINK = '#C2185B';
+/** Figma "Login - Web" frame */
+const FIGMA_PAGE_WIDTH = 1280;
+const FIGMA_CARD_WIDTH = 1196;
+const FIGMA_CARD_HEIGHT = 585;
+const FIGMA_HEADER_HEIGHT = 90;
+const FIGMA_BLUE = '#2C6F9C';
+const FIGMA_PINK = '#AA1155';
+const FIGMA_VENDOR_SUFFIX = '#E54D2E';
+const FIGMA_TITLE = '#0F1A20';
+
 const OTP_LENGTH = 4;
 const SOCIAL_ICON_SIZE = 20;
+/** Figma / demo vendor login — no API calls. */
+const DEMO_VENDOR_EMAIL = 'vendor@gotrip.com';
+
+type LoginMode = 'phone' | 'email';
+
+type PendingVerify = {
+  contact: string;
+  channel: OtpChannel;
+};
 
 export function DesktopVendorLoginScreen() {
   const { width } = useResponsive();
-  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
-  const [phone, setPhone] = useState('');
+  const { width: windowWidth } = useWindowDimensions();
+  const [loginMode, setLoginMode] = useState<LoginMode>('phone');
+  const [contactValue, setContactValue] = useState('');
+  const [pendingVerify, setPendingVerify] = useState<PendingVerify | null>(null);
   const [step, setStep] = useState<'credentials' | 'otp'>('credentials');
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
   const [otpDigits, setOtpDigits] = useState<string[]>(() =>
     Array.from({ length: OTP_LENGTH }, () => ''),
   );
   const otpRefs = useRef<(TextInput | null)[]>([]);
 
-  const { mutate: sendOtp, isPending: isSendingOtp } = useSendOtp();
-  const { mutate: verifyOtp, isPending: isVerifyingOtp } = useVerifyOtp();
+  const isEmailMode = loginMode === 'email';
 
   const compact = useMemo(() => width > 0 && width < 980, [width]);
 
   const cardSize = useMemo(() => {
-    const designW = DESKTOP_VENDOR_LANDING_CARD.width;
-    const designH = DESKTOP_VENDOR_LANDING_CARD.height;
-    const aspect = designW / designH;
-    const maxW = windowWidth - 64;
-    const maxH = windowHeight - (DESKTOP_VENDOR_LANDING_CARD.viewportHeaderOffset ?? 100);
-
-    let height = Math.min(designH, maxH);
-    let width = height * aspect;
-
-    if (width > Math.min(designW, maxW)) {
-      width = Math.min(designW, maxW);
-      height = width / aspect;
-    }
-
-    return { width, height };
-  }, [windowWidth, windowHeight]);
+    const shellWidth = Math.min(FIGMA_PAGE_WIDTH, windowWidth);
+    const maxCardWidth = Math.min(FIGMA_CARD_WIDTH, shellWidth);
+    const scale = maxCardWidth / FIGMA_CARD_WIDTH;
+    return {
+      width: maxCardWidth,
+      height: Math.round(FIGMA_CARD_HEIGHT * scale),
+    };
+  }, [windowWidth]);
 
   useEffect(() => {
     if (step === 'otp') {
@@ -87,35 +89,33 @@ export function DesktopVendorLoginScreen() {
     }
   }, [step]);
 
-  const goBackToPhone = () => {
+  const goBackToCredentials = () => {
     setSubmitError(null);
     setOtpDigits(Array.from({ length: OTP_LENGTH }, () => ''));
+    setPendingVerify(null);
     setStep('credentials');
   };
 
-  const handleGetOtpPress = () => {
-    if (isSendingOtp) return;
+  const switchLoginMode = () => {
+    setContactValue('');
     setSubmitError(null);
-    const trimmed = phone.trim();
+    setLoginMode((prev) => (prev === 'phone' ? 'email' : 'phone'));
+  };
+
+  const handleGetOtpPress = () => {
+    setSubmitError(null);
+    const trimmed = contactValue.trim();
     if (!trimmed) {
-      setSubmitError('Please enter your phone number.');
+      setSubmitError(
+        isEmailMode ? 'Please enter your email.' : 'Please enter your phone number.',
+      );
       return;
     }
 
-    sendOtp(
-      { channel: 'phone', phone: trimmed },
-      {
-        onSuccess: (res) => {
-          if (res?.success) {
-            setOtpDigits(Array.from({ length: OTP_LENGTH }, () => ''));
-            setStep('otp');
-            return;
-          }
-          setSubmitError(res?.message ?? 'Failed to send OTP. Please try again.');
-        },
-        onError: (err) => setSubmitError(getErrorMessage(err)),
-      },
-    );
+    const channel: OtpChannel = isEmailMode ? 'email' : 'phone';
+    setPendingVerify({ contact: trimmed, channel });
+    setOtpDigits(Array.from({ length: OTP_LENGTH }, () => ''));
+    setStep('otp');
   };
 
   const handleOtpDigitChange = (index: number, value: string) => {
@@ -143,107 +143,81 @@ export function DesktopVendorLoginScreen() {
     }
   };
 
-  const handleConfirmOtpPress = () => {
-    if (isVerifyingOtp) return;
+  const handleConfirmOtpPress = async () => {
+    if (isVerifyingOtp || !pendingVerify) return;
     setSubmitError(null);
-    const trimmed = phone.trim();
     const code = otpDigits.join('');
-    if (!trimmed) {
-      setSubmitError('Please enter your phone number.');
-      setStep('credentials');
-      return;
-    }
     if (code.length !== OTP_LENGTH) return;
 
-    verifyOtp(
-      { channel: 'phone', phone: trimmed, otp: code },
-      {
-        onSuccess: async (res) => {
-          if (res?.success && res?.data?.access_token) {
-            try {
-              await loginExistingVendor();
-            } finally {
-              router.replace('/vendor/home');
-            }
-            return;
-          }
-          setSubmitError(res?.message ?? 'Invalid or expired OTP.');
-        },
-        onError: (err) => setSubmitError(getErrorMessage(err)),
-      },
-    );
+    setIsVerifyingOtp(true);
+    try {
+      // Demo mode — any 4-digit OTP succeeds (matches mobile vendor login).
+      await loginExistingVendor();
+      router.replace('/vendor/home');
+    } finally {
+      setIsVerifyingOtp(false);
+    }
   };
 
   return (
     <SafeAreaView style={styles.page} edges={['top']}>
-      <ScrollView
-        style={styles.pageScroll}
-        contentContainerStyle={styles.pageScrollContent}
-        showsVerticalScrollIndicator={Platform.OS === 'web'}
-        keyboardShouldPersistTaps="handled"
-      >
-        <View style={styles.contentShell}>
-          <View style={styles.header}>
-            <Pressable onPress={() => router.replace('/(tabs)')} accessibilityRole="button">
-              <Text style={styles.brand}>{VENDOR_DASHBOARD_COPY.brand}</Text>
-            </Pressable>
+      <View style={styles.pageShell}>
+        <View style={[styles.headerBar, compact && styles.headerBarCompact]}>
+          <Pressable onPress={() => router.replace('/(tabs)')} style={styles.brandRow} accessibilityRole="button">
+            <Image source={HeaderLogo} style={styles.brandLogo} resizeMode="contain" />
+            <Text style={styles.brandVendorSuffix}>-vendor</Text>
+          </Pressable>
 
+          <View style={[styles.searchSection, compact && styles.searchSectionCompact]}>
             <View style={styles.searchWrap}>
               <Input
                 placeholder={VENDOR_ONBOARDING.searchPlaceholder}
-                placeholderTextColor="rgba(28,32,36,0.5)"
+                placeholderTextColor="#1C2024"
                 style={styles.searchInput}
                 editable={false}
               />
               <View style={styles.searchIcon}>
-                <Ionicons name="search" size={18} color={VENDOR_WORKSPACE_BLUE} />
-              </View>
-            </View>
-
-            <View style={styles.headerActions}>
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => router.push('/become-vendor')}
-                style={({ pressed }) => [pressed && styles.pressed]}
-              >
-                <LinearGradient
-                  colors={['#4A9FD4', VENDOR_WORKSPACE_BLUE]}
-                  start={{ x: 0, y: 0.5 }}
-                  end={{ x: 1, y: 0.5 }}
-                  style={styles.actionBtn}
-                >
-                  <Text style={styles.actionBtnText}>{VENDOR_WORKSPACE_COPY.addListing}</Text>
-                  <Ionicons name="home" size={16} color={colors.surface.white} />
-                </LinearGradient>
-              </Pressable>
-
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => router.push('/vendor/(workspace)/listings')}
-                style={({ pressed }) => [pressed && styles.pressed]}
-              >
-                <LinearGradient
-                  colors={['#E91E8C', VENDOR_BTN_PINK]}
-                  start={{ x: 0, y: 0.5 }}
-                  end={{ x: 1, y: 0.5 }}
-                  style={styles.actionBtn}
-                >
-                  <Text style={styles.actionBtnText}>{VENDOR_WORKSPACE_COPY.allListings}</Text>
-                  <Ionicons name="business" size={16} color={colors.surface.white} />
-                </LinearGradient>
-              </Pressable>
-
-              <View style={styles.profileBtn} accessibilityLabel="Profile">
-                <Ionicons name="person-outline" size={20} color={VENDOR_WORKSPACE_BLUE} />
+                <Ionicons name="search" size={16} color="#1C2024" />
               </View>
             </View>
           </View>
 
+          <View style={styles.headerActions}>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => router.push('/become-vendor')}
+              style={({ pressed }) => [styles.actionBtn, styles.actionBtnBlue, pressed && styles.pressed]}
+            >
+              <Text style={styles.actionBtnText}>{VENDOR_WORKSPACE_COPY.addListing}</Text>
+              <Ionicons name="home" size={24} color={colors.surface.white} />
+            </Pressable>
+
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => router.push('/vendor/(workspace)/listings')}
+              style={({ pressed }) => [styles.actionBtn, styles.actionBtnPink, pressed && styles.pressed]}
+            >
+              <Text style={styles.actionBtnText}>{VENDOR_WORKSPACE_COPY.allListings}</Text>
+              <Ionicons name="business" size={24} color={colors.surface.white} />
+            </Pressable>
+
+            <View style={styles.profileBtn} accessibilityLabel="Profile">
+              <Ionicons name="person-outline" size={20} color={FIGMA_BLUE} />
+            </View>
+          </View>
+        </View>
+
+        <ScrollView
+          style={styles.bodyScroll}
+          contentContainerStyle={styles.bodyScrollContent}
+          showsVerticalScrollIndicator={Platform.OS === 'web'}
+          keyboardShouldPersistTaps="handled"
+        >
           <View
             style={[
               styles.mainCard,
               compact && styles.mainCardCompact,
-              { width: cardSize.width, height: cardSize.height, maxWidth: cardSize.width },
+              { width: cardSize.width, height: compact ? undefined : cardSize.height },
             ]}
           >
             {!compact ? (
@@ -267,7 +241,7 @@ export function DesktopVendorLoginScreen() {
 
                   <View style={styles.propertyPill}>
                     <HotelIcon width={18} height={18} />
-                    <Text style={styles.propertyLead}>Manage your Property.</Text>
+                    <Text style={styles.propertyLead}>List your Property.</Text>
                     <View style={styles.categoryPill}>
                       <Text style={styles.categoryPillText}>Vacation Rentals</Text>
                     </View>
@@ -289,23 +263,34 @@ export function DesktopVendorLoginScreen() {
                       Welcome Back!
                     </Text>
                     <Text variant="caption" style={styles.subtitle}>
-                      Enter your Phone to continue.
+                      {isEmailMode
+                        ? 'Enter your Email to continue.'
+                        : 'Enter your Phone to continue.'}
                     </Text>
 
                     <View style={styles.formStack}>
                       <Input
-                        value={phone}
+                        value={contactValue}
                         onChangeText={(v) => {
-                          setPhone(v);
+                          setContactValue(v);
                           if (submitError) setSubmitError(null);
                         }}
-                        placeholder={VENDOR_ONBOARDING.defaultPhone}
-                        keyboardType="phone-pad"
+                        placeholder={
+                          isEmailMode ? DEMO_VENDOR_EMAIL : VENDOR_ONBOARDING.defaultPhone
+                        }
+                        keyboardType={isEmailMode ? 'email-address' : 'phone-pad'}
+                        autoCapitalize="none"
+                        autoCorrect={false}
                         placeholderTextColor={colors.text.placeholder}
                         style={styles.input}
                       />
                       <Text variant="caption" style={styles.helper}>
-                        You&apos;ll get OTP to this number.
+                        {isEmailMode
+                          ? "You'll get OTP to this email."
+                          : "You'll get OTP to this number."}
+                      </Text>
+                      <Text variant="caption" style={styles.demoHelper}>
+                        Demo mode — enter any contact, then use any 4-digit OTP.
                       </Text>
 
                       {submitError ? (
@@ -319,16 +304,26 @@ export function DesktopVendorLoginScreen() {
                         size="default"
                         style={styles.primaryCta}
                         onPress={handleGetOtpPress}
-                        disabled={isSendingOtp}
                       >
-                        {isSendingOtp ? 'Sending OTP…' : 'Get OTP'}
+                        Get OTP
                       </Button>
 
                       <Divider style={styles.divider} />
 
                       <View style={styles.socialStack}>
-                        <Button variant="outlineSoft" size="compact" leftAdornment={<MailIcon width={SOCIAL_ICON_SIZE} height={SOCIAL_ICON_SIZE} />} onPress={() => {}}>
-                          Log in with mail
+                        <Button
+                          variant="outlineSoft"
+                          size="compact"
+                          leftAdornment={
+                            isEmailMode ? (
+                              <MobileIcon width={SOCIAL_ICON_SIZE} height={SOCIAL_ICON_SIZE} />
+                            ) : (
+                              <MailIcon width={SOCIAL_ICON_SIZE} height={SOCIAL_ICON_SIZE} />
+                            )
+                          }
+                          onPress={switchLoginMode}
+                        >
+                          {isEmailMode ? 'Login with phone' : 'Log in with mail'}
                         </Button>
                         <Button variant="outlineSoft" size="compact" leftAdornment={<GoogleIcon width={SOCIAL_ICON_SIZE} height={SOCIAL_ICON_SIZE} />} onPress={() => {}}>
                           Continue with Google
@@ -355,12 +350,12 @@ export function DesktopVendorLoginScreen() {
                 ) : (
                   <>
                     <Pressable
-                      onPress={goBackToPhone}
+                      onPress={goBackToCredentials}
                       style={({ pressed }) => [styles.changeContactRow, pressed && styles.pressed]}
                       accessibilityRole="button"
                     >
                       <Text variant="caption" style={styles.changeContactText}>
-                        Change phone
+                        Change {pendingVerify?.channel === 'email' ? 'email' : 'phone'}
                       </Text>
                     </Pressable>
 
@@ -368,7 +363,8 @@ export function DesktopVendorLoginScreen() {
                       Enter OTP
                     </Text>
                     <Text variant="caption" style={styles.subtitle} numberOfLines={2} ellipsizeMode="tail">
-                      OTP sent to {phone.trim() || 'your phone'} via SMS.
+                      OTP sent to {pendingVerify?.contact.trim() || 'your contact'}{' '}
+                      {pendingVerify?.channel === 'email' ? 'via email' : 'via SMS'}.
                     </Text>
 
                     <View style={styles.otpRow}>
@@ -418,8 +414,8 @@ export function DesktopVendorLoginScreen() {
               </ScrollView>
             </View>
           </View>
-        </View>
-      </ScrollView>
+        </ScrollView>
+      </View>
     </SafeAreaView>
   );
 }
@@ -429,47 +425,92 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.surface.white,
   },
-  pageScroll: { flex: 1 },
-  pageScrollContent: {
+  pageShell: {
+    flex: 1,
+    width: '100%',
+    maxWidth: FIGMA_PAGE_WIDTH,
+    alignSelf: 'center',
+    gap: 32,
+  },
+  headerBar: {
+    width: '100%',
+    height: FIGMA_HEADER_HEIGHT,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 24,
+    paddingHorizontal: 42,
+    gap: 100,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0, 7, 20, 0.25)',
+    backgroundColor: colors.surface.white,
+    zIndex: 10,
+  },
+  headerBarCompact: {
+    gap: 16,
+    paddingHorizontal: 16,
+    height: 'auto' as unknown as number,
+    minHeight: FIGMA_HEADER_HEIGHT,
+    flexWrap: 'wrap',
+  },
+  bodyScroll: {
+    flex: 1,
+  },
+  bodyScrollContent: {
     flexGrow: 1,
     justifyContent: 'center',
-  },
-  contentShell: {
-    ...desktopContentShellStyle,
-    paddingTop: 16,
-    paddingBottom: 16,
-    gap: 16,
-  },
-  header: {
-    flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    paddingBottom: 48,
   },
-  brand: {
-    fontFamily: typography.fontFamily.text,
-    fontSize: 22,
-    fontWeight: typography.fontWeight.bold,
-    color: VENDOR_WORKSPACE_BLUE,
+  brandRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    width: 189,
+    height: 34,
     flexShrink: 0,
+    ...Platform.select({ web: { cursor: 'pointer' as const } }),
+  },
+  brandLogo: {
+    width: 87,
+    height: 40,
+  },
+  brandVendorSuffix: {
+    fontFamily: typography.fontFamily.text,
+    fontSize: 24,
+    fontWeight: typography.fontWeight.bold,
+    lineHeight: 24,
+    color: FIGMA_VENDOR_SUFFIX,
+    marginBottom: 2,
+  },
+  searchSection: {
+    flex: 1,
+    minWidth: 0,
+    paddingHorizontal: 80,
+    justifyContent: 'center',
+  },
+  searchSectionCompact: {
+    paddingHorizontal: 0,
+    flexBasis: '100%',
   },
   searchWrap: {
-    flex: 1,
     position: 'relative',
-    minWidth: 0,
-    maxWidth: 520,
+    width: '100%',
+    height: 40,
   },
   searchInput: {
-    height: 44,
-    borderRadius: 100,
-    backgroundColor: 'rgba(28, 32, 36, 0.05)',
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: colors.surface.white,
     borderWidth: 1,
-    borderColor: FIELD_BORDER,
-    paddingLeft: 16,
-    paddingRight: 44,
+    borderColor: 'rgba(28, 32, 36, 0.8)',
+    paddingLeft: 8,
+    paddingRight: 40,
+    fontSize: 16,
+    lineHeight: 24,
   },
   searchIcon: {
     position: 'absolute',
-    right: 12,
+    right: 8,
     top: 0,
     bottom: 0,
     justifyContent: 'center',
@@ -479,41 +520,57 @@ const styles = StyleSheet.create({
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 24,
     flexShrink: 0,
   },
   actionBtn: {
-    height: 40,
-    paddingHorizontal: 14,
-    borderRadius: borderRadius.lg,
+    height: 42,
+    paddingHorizontal: 18,
+    borderRadius: 8,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    ...Platform.select({ web: { cursor: 'pointer' as const } }),
+    ...Platform.select({
+      web: {
+        cursor: 'pointer' as const,
+        boxShadow: '0px 4px 20px rgba(0, 0, 0, 0.03)',
+      },
+    }),
+  },
+  actionBtnBlue: {
+    backgroundColor: FIGMA_BLUE,
+  },
+  actionBtnPink: {
+    backgroundColor: FIGMA_PINK,
   },
   actionBtnText: {
     fontFamily: typography.fontFamily.text,
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: typography.fontWeight.semibold,
+    lineHeight: 21,
+    letterSpacing: 0.56,
     color: colors.surface.white,
   },
   profileBtn: {
     width: 40,
     height: 40,
     borderRadius: 8,
-    borderWidth: 1,
-    borderColor: VENDOR_WORKSPACE_BLUE,
+    borderWidth: 2,
+    borderColor: 'rgba(44, 111, 156, 0.8)',
     backgroundColor: colors.surface.white,
     alignItems: 'center',
     justifyContent: 'center',
-    ...Platform.select({ web: { cursor: 'pointer' as const } }),
   },
   mainCard: {
-    alignSelf: 'center',
     flexDirection: 'row',
-    borderRadius: DESKTOP_VENDOR_LANDING_CARD.borderRadius,
-    backgroundColor: DESKTOP_VENDOR_LANDING_CARD.backgroundColor,
+    alignItems: 'stretch',
+    padding: 24,
+    gap: 32,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(15, 26, 32, 0.2)',
+    backgroundColor: colors.surface.white,
     overflow: 'hidden',
     ...Platform.select({
       web: { boxShadow: '0 8px 32px rgba(0, 0, 0, 0.08)' },
@@ -531,10 +588,14 @@ const styles = StyleSheet.create({
     height: 'auto' as unknown as number,
   },
   heroPanel: {
-    width: '50%',
-    height: '100%',
+    flex: 615,
+    minHeight: 0,
     position: 'relative',
-    backgroundColor: colors.gray['2'],
+    backgroundColor: FIGMA_BLUE,
+    borderWidth: 4,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 12,
+    overflow: 'hidden',
   },
   heroImage: {
     ...StyleSheet.absoluteFillObject,
@@ -600,8 +661,8 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   categoryPill: {
-    backgroundColor: VENDOR_WORKSPACE_BLUE,
-    borderRadius: 100,
+    backgroundColor: FIGMA_BLUE,
+    borderRadius: 24,
     paddingHorizontal: 14,
     paddingVertical: 8,
     flexShrink: 0,
@@ -613,9 +674,9 @@ const styles = StyleSheet.create({
     color: colors.surface.white,
   },
   formPanel: {
-    flex: 1,
-    height: '100%',
+    flex: 501,
     minHeight: 0,
+    minWidth: 0,
     backgroundColor: colors.surface.white,
   },
   formPanelCompact: {
@@ -626,11 +687,14 @@ const styles = StyleSheet.create({
   formScrollContent: {
     flexGrow: 1,
     justifyContent: 'center',
-    paddingHorizontal: 32,
-    paddingVertical: 28,
+    paddingHorizontal: 0,
+    paddingVertical: 0,
   },
   title: {
-    color: colors.text.primary,
+    color: FIGMA_TITLE,
+    fontSize: 32,
+    fontWeight: typography.fontWeight.medium,
+    lineHeight: 24,
     marginBottom: spacing['2'],
   },
   subtitle: {
@@ -641,16 +705,21 @@ const styles = StyleSheet.create({
     gap: spacing['3'],
   },
   input: {
-    height: 44,
-    backgroundColor: colors.surface.card,
+    height: 40,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
     borderWidth: 1,
-    borderColor: colors.neutral.alpha['5'],
-    borderRadius: borderRadius['3'],
+    borderColor: 'rgba(15, 26, 32, 0.1)',
+    borderRadius: 6,
     paddingHorizontal: spacing['3'],
   },
   helper: {
     color: colors.neutral.alpha['9'],
     marginTop: -spacing['1'],
+    paddingHorizontal: spacing['1'],
+  },
+  demoHelper: {
+    color: 'rgba(28, 32, 36, 0.45)',
+    fontSize: 11,
     paddingHorizontal: spacing['1'],
   },
   errorText: {
@@ -659,9 +728,10 @@ const styles = StyleSheet.create({
   },
   primaryCta: {
     width: '100%',
-    borderRadius: borderRadius.lg,
+    height: 32,
+    borderRadius: 4,
     marginTop: spacing['1'],
-    backgroundColor: VENDOR_WORKSPACE_BLUE,
+    backgroundColor: FIGMA_BLUE,
   },
   divider: {
     marginVertical: spacing['2'],
@@ -677,7 +747,7 @@ const styles = StyleSheet.create({
     color: colors.text.secondary,
   },
   joinBold: {
-    color: VENDOR_WORKSPACE_BLUE,
+    color: FIGMA_BLUE,
     fontWeight: typography.fontWeight.semibold,
   },
   pressed: { opacity: 0.85 },
@@ -687,7 +757,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing['2'],
   },
   changeContactText: {
-    color: VENDOR_WORKSPACE_BLUE,
+    color: FIGMA_BLUE,
     fontWeight: typography.fontWeight.semibold,
   },
   otpRow: {
@@ -705,7 +775,7 @@ const styles = StyleSheet.create({
     flexShrink: 0,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: FIELD_BORDER,
+    borderColor: 'rgba(15, 26, 32, 0.1)',
     backgroundColor: colors.surface.white,
     textAlign: 'center',
     fontSize: 18,
