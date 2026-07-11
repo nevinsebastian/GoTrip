@@ -34,6 +34,10 @@ export type VendorRoomConfig = {
   bedCount: number;
   bathrooms: number;
   food: VendorFoodOptionId[];
+  totalUnits: number;
+  basePricePerNight: number;
+  extraAdultCharge: number;
+  extraChildCharge: number;
 };
 
 export const DEFAULT_VENDOR_ROOM: VendorRoomConfig = {
@@ -41,12 +45,16 @@ export const DEFAULT_VENDOR_ROOM: VendorRoomConfig = {
   floorArea: '720',
   adultsDefault: 2,
   adultsMax: 2,
-  childrenDefault: 2,
+  childrenDefault: 0,
   childrenMax: 2,
   bedType: 'King Size Bed',
-  bedCount: 4,
-  bathrooms: 2,
+  bedCount: 1,
+  bathrooms: 1,
   food: ['breakfast'],
+  totalUnits: 1,
+  basePricePerNight: 2500,
+  extraAdultCharge: 500,
+  extraChildCharge: 300,
 };
 
 export type VendorAmenity = {
@@ -83,6 +91,10 @@ export const VENDOR_GUEST_ROOM_COPY = {
   bedsLabel: 'Beds',
   bathroomsLabel: 'Bathrooms',
   foodLabel: 'Food',
+  totalUnitsLabel: 'Number of rooms (this type)',
+  basePriceLabel: 'Base price per night (₹)',
+  extraAdultLabel: 'Extra adult charge (₹)',
+  extraChildLabel: 'Extra child charge (₹)',
   nextSuffix: 'Amenities',
 };
 
@@ -117,7 +129,7 @@ export const VENDOR_TITLE_COPY = {
   descriptionLabel: 'Description',
   descriptionDefault: 'Enjoy a stylish experience at this centrally located place',
   descriptionMax: 500,
-  nextSuffix: 'Set Pricing',
+  nextSuffix: 'Select Location',
 };
 
 export const VENDOR_HIGHLIGHTS = [
@@ -248,6 +260,12 @@ export const VENDOR_MOCK_PHOTO_SOURCES: ImageSourcePropType[] = [
   require('../../assets/images/glampingbg.jpg'),
 ];
 
-export function createDefaultRooms(count: number): VendorRoomConfig[] {
-  return Array.from({ length: count }, () => ({ ...DEFAULT_VENDOR_ROOM }));
+export function createDefaultRooms(count: number, startIndex = 0): VendorRoomConfig[] {
+  return Array.from({ length: count }, (_, index) => {
+    const roomNumber = startIndex + index + 1;
+    return {
+      ...DEFAULT_VENDOR_ROOM,
+      roomType: roomNumber === 1 ? DEFAULT_VENDOR_ROOM.roomType : `${DEFAULT_VENDOR_ROOM.roomType} ${roomNumber}`,
+    };
+  });
 }

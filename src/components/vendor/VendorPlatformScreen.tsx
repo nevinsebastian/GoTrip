@@ -4,12 +4,18 @@ import { Platform } from 'react-native';
 
 type VendorPlatformScreenProps = {
   Mobile: React.ComponentType;
-  Desktop: React.ComponentType;
+  Desktop?: React.ComponentType;
+  loadDesktop?: () => React.ComponentType;
 };
 
-export function VendorPlatformScreen({ Mobile, Desktop }: VendorPlatformScreenProps) {
+export function VendorPlatformScreen({ Mobile, Desktop, loadDesktop }: VendorPlatformScreenProps) {
   const { isDesktop } = useResponsive();
   const isDesktopWeb = Platform.OS === 'web' && isDesktop;
-  const Screen = isDesktopWeb ? Desktop : Mobile;
-  return <Screen />;
+
+  if (isDesktopWeb) {
+    const Screen = loadDesktop?.() ?? Desktop;
+    if (Screen) return <Screen />;
+  }
+
+  return <Mobile />;
 }

@@ -11,6 +11,7 @@ import {
   VENDOR_ACTIVITY_TYPES,
   type VendorActivityTypeId,
 } from '@/src/constants/vendorActivityConstants';
+import { saveVendorActivityDraft } from '@/src/utils/vendorActivityDraft';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
@@ -70,7 +71,13 @@ export function MobileVendorDescribeActivityScreen() {
 
         <VendorOnboardingFooter
           onBack={() => router.back()}
-          onNext={() => router.push('/vendor/select-location')}
+          onNext={async () => {
+            await saveVendorActivityDraft({
+              activityKindId: kindId,
+              activityTypeId,
+            });
+            router.push('/vendor/select-location');
+          }}
           nextLabel="Next"
           nextSuffix={VENDOR_ACTIVITY_DESCRIBE_COPY.nextSuffix}
         />

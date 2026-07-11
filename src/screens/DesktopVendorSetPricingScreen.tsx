@@ -14,9 +14,12 @@ import { VENDOR_GLAMPING_PRICING_COPY } from '@/src/constants/vendorGlampingCons
 import { VENDOR_PACKAGE_PRICING_COPY } from '@/src/constants/vendorPackageConstants';
 import { VENDOR_ACTIVITY_PRICING_COPY } from '@/src/constants/vendorActivityConstants';
 import { useVendorListingCategory } from '@/src/hooks/useVendorListingCategory';
+import { getVendorGlampingDraft, saveVendorGlampingDraft } from '@/src/utils/vendorGlampingDraft';
+import { getVendorActivityDraft, saveVendorActivityDraft } from '@/src/utils/vendorActivityDraft';
+import { getVendorPackageDraft, saveVendorPackageDraft } from '@/src/utils/vendorPackageDraft';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Platform,
   Pressable,
@@ -28,7 +31,7 @@ import {
 
 const FIELD_BORDER = 'rgba(28, 32, 36, 0.1)';
 
-type EditingField = 'base' | 'adult' | null;
+type EditingField = 'base' | 'adult' | 'infant' | null;
 
 function formatRupee(value: number) {
   return `₹ ${value.toLocaleString('en-IN')}`;
@@ -97,9 +100,40 @@ export function DesktopVendorSetPricingScreen() {
   const isActivity = listingCategoryId === 'activities';
   const isSimplePricing = isGlamping || isPackage || isActivity;
 
-  const [glampingPrice, setGlampingPrice] = useState(DEFAULT_VENDOR_ROOM_PRICING.basePrice);
+  const [glampingPrice, setGlampingPrice] = useState(0);
+  const [glampingExtraAdult, setGlampingExtraAdult] = useState(0);
+  const [glampingExtraInfant, setGlampingExtraInfant] = useState(0);
   const [glampingDiscountEnabled, setGlampingDiscountEnabled] = useState(true);
   const [editingGlampingPrice, setEditingGlampingPrice] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!isActivity) return;
+    (async () => {
+      const draft = await getVendorActivityDraft();
+      if (draft?.basePriceAdult != null) setGlampingPrice(draft.basePriceAdult);
+      if (draft?.basePriceInfant != null) setGlampingExtraInfant(draft.basePriceInfant);
+    })();
+  }, [isActivity]);
+
+  useEffect(() => {
+    if (!isGlamping) return;
+    (async () => {
+      const draft = await getVendorGlampingDraft();
+      if (draft?.pricePerCampNight != null) setGlampingPrice(draft.pricePerCampNight);
+      if (draft?.extraAdultCharge != null) setGlampingExtraAdult(draft.extraAdultCharge);
+      if (draft?.extraInfantCharge != null) setGlampingExtraInfant(draft.extraInfantCharge);
+    })();
+  }, [isGlamping]);
+
+  useEffect(() => {
+    if (!isPackage) return;
+    (async () => {
+      const draft = await getVendorPackageDraft();
+      if (draft?.pricePerPerson != null) setGlampingPrice(draft.pricePerPerson);
+    })();
+  }, [isPackage]);
 
   const [activeRoomId, setActiveRoomId] = useState<string>(VENDOR_PRICING_ROOMS[0].id);
   const [applyToAllRooms, setApplyToAllRooms] = useState(true);
@@ -137,13 +171,48 @@ export function DesktopVendorSetPricingScreen() {
     setGlampingPrice((prev) => Math.max(0, prev + delta));
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (isGlamping) {
+      if (glampingPrice <= 0) {
+        setSubmitError('Please set a price per camp per night.');
+        return;
+      }
+      setSubmitError(null);
+      const prev = (await getVendorGlampingDraft()) ?? {};
+      await saveVendorGlampingDraft({
+        ...prev,
+        pricePerCampNight: glampingPrice,
+        extraAdultCharge: glampingExtraAdult,
+        extraInfantCharge: glampingExtraInfant,
+      });
       router.push('/vendor/camping-insights');
       return;
     }
     if (isPackage) {
+      if (glampingPrice <= 0) {
+        setSubmitError('Please set a price per person for this package.');
+        return;
+      }
+      setSubmitError(null);
+      const prev = (await getVendorPackageDraft()) ?? {};
+      await saveVendorPackageDraft({
+        ...prev,
+        pricePerPerson: glampingPrice,
+      });
       router.push('/vendor/package-itinerary');
+      return;
+    }
+    if (isActivity) {
+      if (glampingPrice <= 0) {
+        setSubmitError('Please set a price for this activity.');
+        return;
+      }
+      setSubmitError(null);
+      await saveVendorActivityDraft({
+        basePriceAdult: glampingPrice,
+        basePriceInfant: glampingExtraInfant,
+      });
+      router.push('/vendor/camping-insights');
       return;
     }
     router.push('/vendor/terms');
@@ -180,6 +249,8 @@ export function DesktopVendorSetPricingScreen() {
           onBack={() => router.back()}
           onNext={handleNext}
           nextSuffix={isSimplePricing ? simpleNextSuffix : VENDOR_PRICING_COPY.nextSuffix}
+          isNextLoading={isSubmitting}
+          nextDisabled={isSubmitting}
         />
       }
     >
@@ -220,6 +291,75 @@ export function DesktopVendorSetPricingScreen() {
               </Pressable>
             </View>
 
+            {isGlamping ? (
+              <>
+                <View style={styles.orDividerRow}>
+                  <View style={styles.orLineAccent} />
+                  <View style={styles.orLineMuted} />
+                </View>
+
+                <View style={styles.extraChargeBar}>
+                  <Text style={styles.extraChargeLabel}>{VENDOR_PRICING_COPY.extraChargeLabel}</Text>
+                  <View style={styles.extraChargeDivider} />
+                  <View style={styles.extraChargeFields}>
+                    <View style={styles.extraChargeItem}>
+                      <Text style={styles.extraChargeItemLabel}>
+                        {VENDOR_GLAMPING_PRICING_COPY.extraAdultLabel}
+                      </Text>
+                      <EditableRupeeField
+                        value={glampingExtraAdult}
+                        editing={editingField === 'adult'}
+                        onStartEdit={() => setEditingField('adult')}
+                        onEndEdit={() => setEditingField(null)}
+                        onChange={setGlampingExtraAdult}
+                        containerStyle={styles.extraChargeInput}
+                        textStyle={styles.extraChargeInputText}
+                        inputStyle={styles.extraChargeInputField}
+                      />
+                    </View>
+                    <View style={styles.extraChargeItem}>
+                      <Text style={styles.extraChargeItemLabel}>
+                        {VENDOR_GLAMPING_PRICING_COPY.extraInfantLabel}
+                      </Text>
+                      <EditableRupeeField
+                        value={glampingExtraInfant}
+                        editing={editingField === 'infant'}
+                        onStartEdit={() => setEditingField('infant')}
+                        onEndEdit={() => setEditingField(null)}
+                        onChange={setGlampingExtraInfant}
+                        containerStyle={styles.extraChargeInput}
+                        textStyle={styles.extraChargeInputText}
+                        inputStyle={styles.extraChargeInputField}
+                      />
+                    </View>
+                  </View>
+                </View>
+              </>
+            ) : isActivity ? (
+              <>
+                <View style={styles.orDividerRow}>
+                  <View style={styles.orLineAccent} />
+                  <View style={styles.orLineMuted} />
+                </View>
+                <View style={styles.extraChargeBar}>
+                  <Text style={styles.extraChargeLabel}>{VENDOR_ACTIVITY_PRICING_COPY.infantPriceLabel}</Text>
+                  <View style={styles.extraChargeDivider} />
+                  <EditableRupeeField
+                    value={glampingExtraInfant}
+                    editing={editingField === 'infant'}
+                    onStartEdit={() => setEditingField('infant')}
+                    onEndEdit={() => setEditingField(null)}
+                    onChange={setGlampingExtraInfant}
+                    containerStyle={styles.extraChargeInput}
+                    textStyle={styles.extraChargeInputText}
+                    inputStyle={styles.extraChargeInputField}
+                  />
+                </View>
+              </>
+            ) : null}
+
+            {!isActivity ? (
+            <>
             <View style={styles.orDividerRow}>
               <View style={styles.orLineAccent} />
               <View style={styles.orLineMuted} />
@@ -246,6 +386,8 @@ export function DesktopVendorSetPricingScreen() {
                 ) : null}
               </View>
             </Pressable>
+            </>
+            ) : null}
           </View>
         ) : (
           <>
@@ -362,6 +504,7 @@ export function DesktopVendorSetPricingScreen() {
         </View>
           </>
         )}
+        {submitError ? <Text style={styles.errorText}>{submitError}</Text> : null}
       </View>
     </DesktopVendorOnboardingShell>
   );
@@ -625,4 +768,9 @@ const styles = StyleSheet.create({
     borderColor: colors.accent.main,
   },
   pressed: { opacity: 0.85 },
+  errorText: {
+    fontFamily: typography.fontFamily.text,
+    fontSize: 12,
+    color: colors.primaryAlt,
+  },
 });

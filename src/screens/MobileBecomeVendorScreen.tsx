@@ -1,41 +1,50 @@
 import { Input, Text } from '@/components/ui';
 import { borderRadius, colors, spacing, typography } from '@/constants/DesignTokens';
 import {
-  completeVendorAccountSetup,
-  resendVendorRegistrationOtp,
-  sendVendorRegistrationOtp,
-  uploadVendorDocument,
-  verifyVendorRegistrationOtp,
+    createVendorBusinessProfile,
+    resendVendorRegistrationOtp,
+    sendVendorRegistrationOtp,
+    submitVendorKycDocuments,
+    verifyVendorRegistrationOtp,
 } from '@/src/api/vendorOnboarding.service';
 import { VendorDocTypePickerSheet } from '@/src/components/vendor/VendorDocTypePickerSheet';
+import { VendorKycDocumentsStep } from '@/src/components/vendor/VendorKycDocumentsStep';
 import { VendorListingCategorySheet } from '@/src/components/vendor/VendorListingCategorySheet';
 import { VendorOnboardingHero } from '@/src/components/vendor/VendorOnboardingHero';
+import { VendorProfileFormFields } from '@/src/components/vendor/VendorProfileFormFields';
 import { VendorUploadOptionsSheet } from '@/src/components/vendor/VendorUploadOptionsSheet';
 import { authFieldInputStyle } from '@/src/constants/authInputStyles';
 import {
-  EMPTY_VENDOR_FORM,
-  getVendorListingCategory,
-  VENDOR_ONBOARDING,
-  type VendorDocumentField,
-  type VendorListingCategoryId,
-  type VendorRegistrationForm,
+    EMPTY_VENDOR_FORM,
+    EMPTY_VENDOR_PROFILE,
+    getVendorListingCategory,
+    VENDOR_ONBOARDING,
+    type VendorDocumentField,
+    type VendorListingCategoryId,
+    type VendorProfileForm,
+    type VendorRegistrationForm,
+    type VendorSignupMode,
 } from '@/src/constants/vendorOnboardingConstants';
 import { activateVendorSession } from '@/src/utils/vendorSession';
+import { clearVendorOnboardingState } from '@/src/utils/clearVendorOnboardingState';
+import { getErrorMessage } from '@/src/utils/errorHandler';
+import { pickVendorDocument } from '@/src/utils/vendorDocumentPicker';
+import type { VendorLocalDocument } from '@/src/utils/vendorDocumentPicker';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
-  Image,
-  Keyboard,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  TextInput,
-  TouchableWithoutFeedback,
-  View,
+    ActivityIndicator,
+    Image,
+    Keyboard,
+    KeyboardAvoidingView,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    TextInput,
+    TouchableWithoutFeedback,
+    View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -50,7 +59,7 @@ const OTP_LENGTH = VENDOR_ONBOARDING.otpLength;
 const isWeb = Platform.OS === 'web';
 const isIOS = Platform.OS === 'ios';
 
-type VendorStep = 'landing' | 'register' | 'otp' | 'documents' | 'category';
+type VendorStep = 'landing' | 'register' | 'otp' | 'profile' | 'documents' | 'category';
 
 function OrDivider() {
   return (
@@ -85,12 +94,15 @@ function LandingContent() {
 
 type RegisterContentProps = {
   form: VendorRegistrationForm;
+  signupMode: VendorSignupMode;
   onChange: (field: keyof VendorRegistrationForm, value: string) => void;
   onFocusField?: () => void;
   error: string | null;
 };
 
-function RegisterContent({ form, onChange, onFocusField, error }: RegisterContentProps) {
+function RegisterContent({ form, signupMode, onChange, onFocusField, error }: RegisterContentProps) {
+  const isEmailMode = signupMode === 'email';
+
   return (
     <View style={styles.registerContent}>
       <Text style={styles.registerTitle}>{VENDOR_ONBOARDING.registerTitle}</Text>
@@ -106,30 +118,44 @@ function RegisterContent({ form, onChange, onFocusField, error }: RegisterConten
           onFocus={onFocusField}
         />
         <Input
-          placeholder="Email"
-          keyboardType="email-address"
+          placeholder="Password"
+          secureTextEntry
           autoCapitalize="none"
           autoCorrect={false}
           placeholderTextColor={colors.text.placeholder}
           style={authFieldInputStyle.field}
-          value={form.email}
-          onChangeText={(v) => onChange('email', v)}
+          value={form.password}
+          onChangeText={(v) => onChange('password', v)}
           onFocus={onFocusField}
         />
-        <View style={styles.phoneGroup}>
+        {isEmailMode ? (
           <Input
-            placeholder="+91 9744893210"
-            keyboardType="phone-pad"
+            placeholder="Email"
+            keyboardType="email-address"
             autoCapitalize="none"
             autoCorrect={false}
             placeholderTextColor={colors.text.placeholder}
             style={authFieldInputStyle.field}
-            value={form.phone}
-            onChangeText={(v) => onChange('phone', v)}
+            value={form.email}
+            onChangeText={(v) => onChange('email', v)}
             onFocus={onFocusField}
           />
-          <Text style={styles.helper}>You’ll get OTP to this number.</Text>
-        </View>
+        ) : (
+          <View style={styles.phoneGroup}>
+            <Input
+              placeholder={VENDOR_ONBOARDING.defaultPhone}
+              keyboardType="phone-pad"
+              autoCapitalize="none"
+              autoCorrect={false}
+              placeholderTextColor={colors.text.placeholder}
+              style={authFieldInputStyle.field}
+              value={form.phone}
+              onChangeText={(v) => onChange('phone', v)}
+              onFocus={onFocusField}
+            />
+            <Text style={styles.helper}>You’ll get OTP to this number.</Text>
+          </View>
+        )}
       </View>
       {error ? (
         <Text variant="caption" style={styles.errorText}>
@@ -213,107 +239,24 @@ function OtpContent({
   );
 }
 
-type DocumentRowProps = {
-  label: string;
-  value: string;
-  fileName?: string;
-  onOpenPicker: () => void;
-  onUpload: () => void;
-  isUploading?: boolean;
-};
-
-function DocumentRow({
-  label,
-  value,
-  fileName,
-  onOpenPicker,
-  onUpload,
-  isUploading,
-}: DocumentRowProps) {
-  return (
-    <View style={styles.documentRow}>
-      <Text style={styles.documentLabel}>{label}</Text>
-      <View style={styles.documentControls}>
-        <Pressable
-          style={({ pressed }) => [styles.documentSelect, pressed && styles.buttonPressed]}
-          onPress={onOpenPicker}
-          accessibilityRole="button"
-        >
-          <Text style={styles.documentSelectText} numberOfLines={1}>
-            {value}
-          </Text>
-          <Ionicons name="chevron-down" size={16} color="rgba(28, 32, 36, 0.45)" />
-        </Pressable>
-        <Pressable
-          style={({ pressed }) => [
-            styles.uploadButton,
-            pressed && styles.buttonPressed,
-            isUploading && styles.buttonDisabled,
-          ]}
-          onPress={onUpload}
-          disabled={isUploading}
-          accessibilityRole="button"
-        >
-          {isUploading ? (
-            <ActivityIndicator color={colors.surface.white} size="small" />
-          ) : (
-            <>
-              <Ionicons name="cloud-upload-outline" size={14} color={colors.surface.white} />
-              <Text style={styles.uploadButtonText}>Upload</Text>
-            </>
-          )}
-        </Pressable>
-      </View>
-      {fileName ? <Text style={styles.uploadedFileName}>{fileName}</Text> : null}
-    </View>
-  );
-}
-
-type DocumentsContentProps = {
-  idType: string;
-  propertyDocType: string;
-  idFileName?: string;
-  propertyFileName?: string;
-  onOpenIdPicker: () => void;
-  onOpenPropertyPicker: () => void;
-  onUploadId: () => void;
-  onUploadProperty: () => void;
-  uploadingField: VendorDocumentField | null;
+type ProfileContentProps = {
+  profile: VendorProfileForm;
+  onChange: (field: keyof VendorProfileForm, value: string) => void;
+  onFocusField?: () => void;
   error: string | null;
 };
 
-function DocumentsContent({
-  idType,
-  propertyDocType,
-  idFileName,
-  propertyFileName,
-  onOpenIdPicker,
-  onOpenPropertyPicker,
-  onUploadId,
-  onUploadProperty,
-  uploadingField,
-  error,
-}: DocumentsContentProps) {
+function ProfileContent({ profile, onChange, onFocusField, error }: ProfileContentProps) {
   return (
-    <View style={styles.documentsContent}>
-      <Text style={styles.documentsTitle}>{VENDOR_ONBOARDING.documentsTitle}</Text>
-      <DocumentRow
-        label={VENDOR_ONBOARDING.idTypeLabel}
-        value={idType}
-        fileName={idFileName}
-        onOpenPicker={onOpenIdPicker}
-        onUpload={onUploadId}
-        isUploading={uploadingField === 'id'}
+    <View style={styles.profileContent}>
+      <Text style={styles.profileTitle}>{VENDOR_ONBOARDING.profileTitle}</Text>
+      <Text style={styles.profileSubtitle}>{VENDOR_ONBOARDING.profileSubtitle}</Text>
+      <VendorProfileFormFields
+        profile={profile}
+        onChange={onChange}
+        onFocusField={onFocusField}
+        error={error}
       />
-      <DocumentRow
-        label={VENDOR_ONBOARDING.propertyDocLabel}
-        value={propertyDocType}
-        fileName={propertyFileName}
-        onOpenPicker={onOpenPropertyPicker}
-        onUpload={onUploadProperty}
-        isUploading={uploadingField === 'property'}
-      />
-      {error ? <Text style={styles.errorText}>{error}</Text> : null}
     </View>
   );
 }
@@ -355,21 +298,25 @@ export function MobileBecomeVendorScreen({
   const otpInputRefs = useRef<(TextInput | null)[]>([]);
 
   const [step, setStep] = useState<VendorStep>(initialStep);
+  const [signupMode, setSignupMode] = useState<VendorSignupMode>('phone');
+  const [registrationChannel, setRegistrationChannel] = useState<VendorSignupMode>('phone');
   const [form, setForm] = useState<VendorRegistrationForm>(EMPTY_VENDOR_FORM);
+  const [profile, setProfile] = useState<VendorProfileForm>(EMPTY_VENDOR_PROFILE);
   const [digits, setDigits] = useState<string[]>(Array(OTP_LENGTH).fill(''));
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSendingOtp, setIsSendingOtp] = useState(false);
   const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
   const [isResending, setIsResending] = useState(false);
   const [keyboardPadding, setKeyboardPadding] = useState(0);
+  const [isCreatingProfile, setIsCreatingProfile] = useState(false);
   const [idType, setIdType] = useState(VENDOR_ONBOARDING.idTypes[0]);
   const [propertyDocType, setPropertyDocType] = useState(VENDOR_ONBOARDING.propertyDocTypes[0]);
-  const [idFileName, setIdFileName] = useState<string | undefined>();
-  const [propertyFileName, setPropertyFileName] = useState<string | undefined>();
+  const [idDocument, setIdDocument] = useState<VendorLocalDocument | null>(null);
+  const [propertyDocument, setPropertyDocument] = useState<VendorLocalDocument | null>(null);
   const [pickerField, setPickerField] = useState<VendorDocumentField | null>(null);
   const [uploadField, setUploadField] = useState<VendorDocumentField | null>(null);
   const [uploadingField, setUploadingField] = useState<VendorDocumentField | null>(null);
-  const [isCompletingSetup, setIsCompletingSetup] = useState(false);
+  const [isUploadingKyc, setIsUploadingKyc] = useState(false);
   const [listingCategory, setListingCategory] = useState<VendorListingCategoryId>('property');
   const [categoryPickerOpen, setCategoryPickerOpen] = useState(false);
   const [isProceedingCategory, setIsProceedingCategory] = useState(false);
@@ -407,24 +354,39 @@ export function MobileBecomeVendorScreen({
     setSubmitError(null);
   };
 
+  const updateProfile = (field: keyof VendorProfileForm, value: string) => {
+    setProfile((prev) => ({ ...prev, [field]: value }));
+    setSubmitError(null);
+  };
+
   const handleBecomeVendor = () => {
     setSubmitError(null);
     setStep('register');
   };
 
+  const isEmailMode = signupMode === 'email';
+
+  const switchSignupMode = () => {
+    setSubmitError(null);
+    setSignupMode((prev) => (prev === 'phone' ? 'email' : 'phone'));
+  };
+
   const validateForm = (): boolean => {
     const fullName = form.fullName.trim();
-    const email = form.email.trim();
-    const phone = form.phone.trim();
     if (!fullName) {
       setSubmitError('Please enter your full name.');
       return false;
     }
-    if (!email) {
-      setSubmitError('Please enter your email.');
+    if (!form.password.trim()) {
+      setSubmitError('Please enter a password.');
       return false;
     }
-    if (!phone) {
+    if (isEmailMode) {
+      if (!form.email.trim()) {
+        setSubmitError('Please enter your email.');
+        return false;
+      }
+    } else if (!form.phone.trim()) {
       setSubmitError('Please enter your phone number.');
       return false;
     }
@@ -433,11 +395,13 @@ export function MobileBecomeVendorScreen({
 
   const handleGetOtp = async () => {
     if (!validateForm()) return;
+    const channel = isEmailMode ? 'email' : 'phone';
     setIsSendingOtp(true);
     setSubmitError(null);
     try {
-      const res = await sendVendorRegistrationOtp(form);
+      const res = await sendVendorRegistrationOtp({ ...form, channel });
       if (res.success) {
+        setRegistrationChannel(res.channel === 'email' ? 'email' : 'phone');
         Keyboard.dismiss();
         setStep('otp');
         return;
@@ -479,7 +443,13 @@ export function MobileBecomeVendorScreen({
     setIsResending(true);
     setSubmitError(null);
     try {
-      await resendVendorRegistrationOtp(form);
+      const res = await resendVendorRegistrationOtp({
+        ...form,
+        channel: registrationChannel,
+      });
+      if (!res.success) {
+        setSubmitError(res.message ?? 'Failed to resend OTP. Please try again.');
+      }
     } finally {
       setIsResending(false);
     }
@@ -491,10 +461,14 @@ export function MobileBecomeVendorScreen({
     setIsVerifyingOtp(true);
     setSubmitError(null);
     try {
-      const res = await verifyVendorRegistrationOtp({ ...form, otp: code });
+      const res = await verifyVendorRegistrationOtp({
+        ...form,
+        otp: code,
+        channel: registrationChannel,
+      });
       if (res.success) {
         Keyboard.dismiss();
-        setStep('documents');
+        setStep('profile');
         return;
       }
       setSubmitError(res.message ?? 'Invalid or expired OTP.');
@@ -509,6 +483,31 @@ export function MobileBecomeVendorScreen({
     setStep('register');
   };
 
+  const validateProfile = (): boolean => {
+    if (!profile.businessName.trim()) {
+      setSubmitError('Please enter your business name.');
+      return false;
+    }
+    return true;
+  };
+
+  const handleCreateProfile = async () => {
+    if (!validateProfile()) return;
+    setIsCreatingProfile(true);
+    setSubmitError(null);
+    try {
+      const res = await createVendorBusinessProfile(profile);
+      if (res.success) {
+        Keyboard.dismiss();
+        setStep('documents');
+        return;
+      }
+      setSubmitError(res.message ?? 'Could not create vendor profile. Please try again.');
+    } finally {
+      setIsCreatingProfile(false);
+    }
+  };
+
   const handleUploadOption = async (source: 'camera' | 'gallery' | 'files') => {
     if (!uploadField) return;
     const field = uploadField;
@@ -516,48 +515,53 @@ export function MobileBecomeVendorScreen({
     setUploadingField(field);
     setSubmitError(null);
     try {
-      const documentType = field === 'id' ? idType : propertyDocType;
-      const res = await uploadVendorDocument({ field, source, documentType });
-      if (res.success) {
-        if (field === 'id') setIdFileName(res.fileName);
-        else setPropertyFileName(res.fileName);
-        return;
-      }
-      setSubmitError(res.message ?? 'Upload failed. Please try again.');
+      const picked = await pickVendorDocument(source);
+      if (!picked) return;
+      if (field === 'id') setIdDocument(picked);
+      else setPropertyDocument(picked);
+    } catch (error) {
+      setSubmitError(getErrorMessage(error));
     } finally {
       setUploadingField(null);
     }
   };
 
-  const handleCompleteSetup = async () => {
-    setIsCompletingSetup(true);
+  const validateDocuments = (): boolean => {
+    if (!idDocument && !propertyDocument) {
+      setSubmitError('Please upload at least one document.');
+      return false;
+    }
+    return true;
+  };
+
+  const handleSubmitKyc = async () => {
+    if (!validateDocuments()) return;
+    const documents = [idDocument, propertyDocument].filter(
+      (doc): doc is VendorLocalDocument => doc !== null,
+    );
+
+    setIsUploadingKyc(true);
     setSubmitError(null);
     try {
-      const res = await completeVendorAccountSetup({
-        ...form,
-        documents: [
-          ...(idFileName ? [{ field: 'id' as const, source: 'files' as const, documentType: idType, fileName: idFileName }] : []),
-          ...(propertyFileName
-            ? [{ field: 'property' as const, source: 'files' as const, documentType: propertyDocType, fileName: propertyFileName }]
-            : []),
-        ],
-      });
+      const res = await submitVendorKycDocuments(documents);
       if (res.success) {
+        Keyboard.dismiss();
         setStep('category');
         return;
       }
-      setSubmitError(res.message ?? 'Could not complete setup. Please try again.');
+      setSubmitError(res.message ?? 'Could not upload documents. Please try again.');
     } finally {
-      setIsCompletingSetup(false);
+      setIsUploadingKyc(false);
     }
   };
 
   const handleCategoryNext = async () => {
     setIsProceedingCategory(true);
     try {
+      await clearVendorOnboardingState();
       await activateVendorSession(listingCategory);
       if (listingCategory === 'property') {
-        router.replace('/vendor/describe-property');
+        router.replace('/vendor/create-title');
         return;
       }
       if (listingCategory === 'glamping') {
@@ -640,19 +644,44 @@ export function MobileBecomeVendorScreen({
         </Pressable>
       );
     }
+    if (step === 'profile') {
+      return (
+        <Pressable
+          style={({ pressed }) => [
+            styles.landingCta,
+            pressed && styles.buttonPressed,
+            isCreatingProfile && styles.buttonDisabled,
+          ]}
+          onPress={handleCreateProfile}
+          disabled={isCreatingProfile}
+          accessibilityRole="button"
+        >
+          {isCreatingProfile ? (
+            <ActivityIndicator color={colors.surface.white} size="small" style={styles.completeCtaLoader} />
+          ) : (
+            <>
+              <Text style={styles.landingCtaText}>{VENDOR_ONBOARDING.completeProfileCta}</Text>
+              <View style={styles.landingCtaIcon}>
+                <Ionicons name="arrow-forward" size={16} color={colors.text.primary} />
+              </View>
+            </>
+          )}
+        </Pressable>
+      );
+    }
     if (step === 'documents') {
       return (
         <Pressable
           style={({ pressed }) => [
             styles.landingCta,
             pressed && styles.buttonPressed,
-            isCompletingSetup && styles.buttonDisabled,
+            isUploadingKyc && styles.buttonDisabled,
           ]}
-          onPress={handleCompleteSetup}
-          disabled={isCompletingSetup}
+          onPress={handleSubmitKyc}
+          disabled={isUploadingKyc}
           accessibilityRole="button"
         >
-          {isCompletingSetup ? (
+          {isUploadingKyc ? (
             <ActivityIndicator color={colors.surface.white} size="small" style={styles.completeCtaLoader} />
           ) : (
             <>
@@ -721,6 +750,7 @@ export function MobileBecomeVendorScreen({
               {step === 'register' ? (
                 <RegisterContent
                   form={form}
+                  signupMode={signupMode}
                   onChange={updateForm}
                   onFocusField={scrollToForm}
                   error={submitError}
@@ -738,16 +768,26 @@ export function MobileBecomeVendorScreen({
                   error={submitError}
                 />
               ) : null}
+              {step === 'profile' ? (
+                <ProfileContent
+                  profile={profile}
+                  onChange={updateProfile}
+                  onFocusField={scrollToForm}
+                  error={submitError}
+                />
+              ) : null}
               {step === 'documents' ? (
-                <DocumentsContent
+                <VendorKycDocumentsStep
+                  variant="mobile"
                   idType={idType}
                   propertyDocType={propertyDocType}
-                  idFileName={idFileName}
-                  propertyFileName={propertyFileName}
+                  idDocument={idDocument}
+                  propertyDocument={propertyDocument}
+                  onIdTypeChange={setIdType}
+                  onPropertyDocTypeChange={setPropertyDocType}
                   onOpenIdPicker={() => setPickerField('id')}
                   onOpenPropertyPicker={() => setPickerField('property')}
-                  onUploadId={() => setUploadField('id')}
-                  onUploadProperty={() => setUploadField('property')}
+                  onUpload={setUploadField}
                   uploadingField={uploadingField}
                   error={submitError}
                 />
@@ -771,6 +811,11 @@ export function MobileBecomeVendorScreen({
             ]}
           >
             <View style={styles.actionArea}>
+              {step === 'register' && submitError ? (
+                <Text variant="caption" style={styles.footerErrorText}>
+                  {submitError}
+                </Text>
+              ) : null}
               {primaryButton}
               {step === 'landing' ? (
                 <Pressable
@@ -788,11 +833,13 @@ export function MobileBecomeVendorScreen({
                   <View style={styles.socialStack}>
                     <Pressable
                       style={({ pressed }) => [styles.socialButton, pressed && styles.buttonPressed]}
-                      onPress={() => {}}
+                      onPress={switchSignupMode}
                       accessibilityRole="button"
                     >
                       <MailIcon width={16} height={16} />
-                      <Text style={styles.socialButtonText}>Sign up with mail</Text>
+                      <Text style={styles.socialButtonText}>
+                        {isEmailMode ? 'Sign up with phone' : 'Sign up with mail'}
+                      </Text>
                     </Pressable>
                     <Pressable
                       style={({ pressed }) => [styles.socialButton, pressed && styles.buttonPressed]}
@@ -1065,6 +1112,24 @@ const styles = StyleSheet.create({
     color: ACCENT,
     textDecorationLine: 'underline',
   },
+  profileContent: {
+    gap: 12,
+    width: '100%',
+  },
+  profileTitle: {
+    fontFamily: typography.fontFamily.text,
+    fontSize: 20,
+    fontWeight: typography.fontWeight.semibold,
+    lineHeight: 28,
+    color: ACCENT,
+  },
+  profileSubtitle: {
+    fontFamily: typography.fontFamily.text,
+    fontSize: typography.fontSize['1'],
+    lineHeight: 20,
+    color: colors.text.secondary,
+    marginBottom: 4,
+  },
   documentsContent: {
     gap: 18,
     width: '100%',
@@ -1282,6 +1347,11 @@ const styles = StyleSheet.create({
   buttonPressed: { opacity: 0.85 },
   buttonDisabled: { opacity: 0.7 },
   errorText: { color: '#d32f2f' },
+  footerErrorText: {
+    color: '#d32f2f',
+    textAlign: 'center',
+    marginBottom: 4,
+  },
   orDivider: {
     flexDirection: 'row',
     alignItems: 'center',

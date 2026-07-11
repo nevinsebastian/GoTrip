@@ -1,24 +1,26 @@
 import { Input, Text } from '@/components/ui';
 import { borderRadius, colors, spacing, typography } from '@/constants/DesignTokens';
+import { submitVendorHotelListing } from '@/src/api/vendorHotelApproval.service';
+import { createVendorHotelRoomTypes } from '@/src/api/vendorHotelRoom.service';
 import { VendorListingHeader } from '@/src/components/vendor/VendorListingHeader';
 import { VendorOnboardingFooter } from '@/src/components/vendor/VendorOnboardingFooter';
 import { VendorPropertyOptionSheet } from '@/src/components/vendor/VendorPropertyOptionSheet';
 import { VendorStepper } from '@/src/components/vendor/VendorStepper';
 import { authFieldInputStyle } from '@/src/constants/authInputStyles';
 import {
-  createDefaultRooms,
-  DEFAULT_VENDOR_ROOM,
-  VENDOR_BED_TYPES,
-  VENDOR_FOOD_OPTIONS,
-  VENDOR_GUEST_ROOM_COPY,
-  VENDOR_ROOM_TYPES,
-  type VendorFoodOptionId,
-  type VendorRoomConfig,
+    createDefaultRooms,
+    DEFAULT_VENDOR_ROOM,
+    VENDOR_BED_TYPES,
+    VENDOR_FOOD_OPTIONS,
+    VENDOR_GUEST_ROOM_COPY,
+    VENDOR_ROOM_TYPES,
+    type VendorFoodOptionId,
+    type VendorRoomConfig,
 } from '@/src/constants/vendorListingConstants';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
-import { Platform, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const DESIGN_WIDTH = 402;
@@ -187,6 +189,49 @@ function RoomCard({
           })}
         </View>
       </View>
+
+      <View style={styles.rowBetween}>
+        <Text style={styles.rowLabel}>{VENDOR_GUEST_ROOM_COPY.totalUnitsLabel}</Text>
+        <VendorStepper
+          variant="pill"
+          value={room.totalUnits}
+          min={1}
+          max={50}
+          onChange={(v) => onChange({ ...room, totalUnits: v })}
+        />
+      </View>
+
+      <View style={styles.rowBetween}>
+        <Text style={[styles.rowLabel, styles.rowLabelFixed]}>{VENDOR_GUEST_ROOM_COPY.basePriceLabel}</Text>
+        <Input
+          value={String(room.basePricePerNight)}
+          onChangeText={(v) => onChange({ ...room, basePricePerNight: Number(v.replace(/\D/g, '')) || 0 })}
+          keyboardType="number-pad"
+          placeholder="2500"
+          placeholderTextColor={colors.text.placeholder}
+          style={[authFieldInputStyle.field, styles.field, styles.priceInput]}
+        />
+      </View>
+
+      <View style={styles.rowBetween}>
+        <Text style={styles.rowLabel}>{VENDOR_GUEST_ROOM_COPY.extraAdultLabel}</Text>
+        <Input
+          value={String(room.extraAdultCharge)}
+          onChangeText={(v) => onChange({ ...room, extraAdultCharge: Number(v.replace(/\D/g, '')) || 0 })}
+          keyboardType="number-pad"
+          style={[authFieldInputStyle.field, styles.field, styles.priceInput]}
+        />
+      </View>
+
+      <View style={styles.rowBetween}>
+        <Text style={styles.rowLabel}>{VENDOR_GUEST_ROOM_COPY.extraChildLabel}</Text>
+        <Input
+          value={String(room.extraChildCharge)}
+          onChangeText={(v) => onChange({ ...room, extraChildCharge: Number(v.replace(/\D/g, '')) || 0 })}
+          keyboardType="number-pad"
+          style={[authFieldInputStyle.field, styles.field, styles.priceInput]}
+        />
+      </View>
     </View>
   );
 }
@@ -200,12 +245,14 @@ export function MobileVendorGuestRoomDetailsScreen() {
   const [roomCount, setRoomCount] = useState(1);
   const [rooms, setRooms] = useState<VendorRoomConfig[]>(createDefaultRooms(1));
   const [pickerTarget, setPickerTarget] = useState<PickerTarget>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const updateRoomCount = (count: number) => {
     setRoomCount(count);
     setRooms((prev) => {
       if (count > prev.length) {
-        return [...prev, ...createDefaultRooms(count - prev.length)];
+        return [...prev, ...createDefaultRooms(count - prev.length, prev.length)];
       }
       return prev.slice(0, count);
     });
@@ -225,6 +272,26 @@ export function MobileVendorGuestRoomDetailsScreen() {
     id: `bed-${i}`,
     label,
   }));
+
+  const handleNext = async () => {
+    setIsSubmitting(true);
+    setSubmitError(null);
+    try {
+      const res = await createVendorHotelRoomTypes(rooms);
+      if (res.success) {
+        const submitRes = await submitVendorHotelListing();
+        if (submitRes.success) {
+          router.replace('/vendor/thanks');
+          return;
+        }
+        setSubmitError(submitRes.message ?? 'Could not submit listing for approval.');
+        return;
+      }
+      setSubmitError(res.message ?? 'Could not save room types.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
@@ -260,14 +327,17 @@ export function MobileVendorGuestRoomDetailsScreen() {
                 onOpenPicker={(field) => setPickerTarget({ roomIndex: index, field })}
               />
             ))}
+            {submitError ? <Text style={styles.errorText}>{submitError}</Text> : null}
           </View>
         </ScrollView>
 
         <VendorOnboardingFooter
           onBack={() => router.back()}
-          onNext={() => router.push('/vendor/amenities')}
-          nextLabel="Next"
-          nextSuffix={VENDOR_GUEST_ROOM_COPY.nextSuffix}
+          onNext={handleNext}
+          nextLabel="Submit"
+          nextSuffix="for approval"
+          isNextLoading={isSubmitting}
+          nextDisabled={isSubmitting}
         />
       </View>
 
@@ -545,6 +615,15 @@ const styles = StyleSheet.create({
   foodPillTextSelected: {
     color: colors.accent.main,
     fontWeight: typography.fontWeight.medium,
+  },
+  priceInput: {
+    width: 110,
+    textAlign: 'right',
+  },
+  errorText: {
+    fontFamily: typography.fontFamily.text,
+    fontSize: 12,
+    color: colors.primaryAlt,
   },
   pressed: { opacity: 0.85 },
 });

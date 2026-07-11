@@ -6,9 +6,13 @@ import {
   searchVendorLocations,
   type GeocodedLocation,
 } from '@/src/api/vendorGeocoding.service';
+import { createVendorGlampingListing } from '@/src/api/vendorGlampingOnboarding.service';
+import { createVendorHotelListing } from '@/src/api/vendorHotelOnboarding.service';
 import { DesktopInlineSelect } from '@/src/components/desktop/DesktopInlineSelect';
 import { DesktopVendorOnboardingFooter } from '@/src/components/desktop/DesktopVendorOnboardingFooter';
 import { DesktopVendorOnboardingShell } from '@/src/components/desktop/DesktopVendorOnboardingShell';
+import { VendorLocationCoordinatePreview } from '@/src/components/vendor/VendorLocationCoordinatePreview';
+import { VendorMapCenterPin } from '@/src/components/vendor/VendorMapCenterPin';
 import { VendorLocationMap } from '@/src/components/vendor/VendorLocationMap';
 import { authFieldInputStyle } from '@/src/constants/authInputStyles';
 import {
@@ -21,6 +25,12 @@ import {
 } from '@/src/constants/vendorPropertyConstants';
 import type { VendorListingCategoryId } from '@/src/constants/vendorOnboardingConstants';
 import { getStoredVendorListingCategory } from '@/src/utils/vendorSession';
+import { clearVendorHotelDraft } from '@/src/utils/vendorHotelDraft';
+import { formatCoordinatePreview } from '@/src/utils/formatCoordinatePreview';
+import { buildHotelLocationJson } from '@/src/utils/buildHotelLocationJson';
+import { saveVendorGlampingDraft } from '@/src/utils/vendorGlampingDraft';
+import { saveVendorActivityDraft } from '@/src/utils/vendorActivityDraft';
+import { saveVendorPackageDraft } from '@/src/utils/vendorPackageDraft';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -41,8 +51,12 @@ export function DesktopVendorSelectLocationScreen() {
   const [isSearching, setIsSearching] = useState(false);
   const [isGeocoding, setIsGeocoding] = useState(false);
   const [isUsingCurrentLocation, setIsUsingCurrentLocation] = useState(false);
+  const [locationError, setLocationError] = useState<string | null>(null);
   const [address, setAddress] = useState<VendorAddress>(EMPTY_VENDOR_ADDRESS);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const geocodeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     getStoredVendorListingCategory().then((stored) => {
@@ -59,41 +73,63 @@ export function DesktopVendorSelectLocationScreen() {
 
   useEffect(() => {
     let cancelled = false;
-    reverseGeocodeVendorLocation(VENDOR_DEFAULT_COORDINATE).then((location) => {
-      if (!cancelled) applyGeocodedLocation(location);
-    });
+    reverseGeocodeVendorLocation(VENDOR_DEFAULT_COORDINATE)
+      .then((location) => {
+        if (!cancelled) applyGeocodedLocation(location);
+      })
+      .catch(() => {
+        if (!cancelled) setLocationError('Could not load the default map location.');
+      });
     return () => {
       cancelled = true;
     };
   }, [applyGeocodedLocation]);
+
+  useEffect(() => {
+    return () => {
+      if (geocodeTimer.current) clearTimeout(geocodeTimer.current);
+      if (searchTimer.current) clearTimeout(searchTimer.current);
+    };
+  }, []);
 
   const scheduleReverseGeocode = (nextCoordinate: VendorMapCoordinate) => {
     setCoordinate(nextCoordinate);
     if (geocodeTimer.current) clearTimeout(geocodeTimer.current);
     geocodeTimer.current = setTimeout(async () => {
       setIsGeocoding(true);
+      setLocationError(null);
       try {
         const location = await reverseGeocodeVendorLocation(nextCoordinate);
         applyGeocodedLocation(location);
+      } catch {
+        setLocationError('Could not look up this address. You can still edit the fields below.');
       } finally {
         setIsGeocoding(false);
       }
-    }, 350);
+    }, 500);
   };
 
-  const handleSearch = async (query: string) => {
+  const handleSearch = (query: string) => {
     setSearchQuery(query);
+    setLocationError(null);
+    if (searchTimer.current) clearTimeout(searchTimer.current);
     if (!query.trim()) {
       setSearchResults([]);
+      setIsSearching(false);
       return;
     }
     setIsSearching(true);
-    try {
-      const results = await searchVendorLocations(query);
-      setSearchResults(results);
-    } finally {
-      setIsSearching(false);
-    }
+    searchTimer.current = setTimeout(async () => {
+      try {
+        const results = await searchVendorLocations(query);
+        setSearchResults(results);
+      } catch {
+        setLocationError('Location search failed. Please try again.');
+        setSearchResults([]);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 400);
   };
 
   const handleSelectSearchResult = (location: GeocodedLocation) => {
@@ -103,9 +139,12 @@ export function DesktopVendorSelectLocationScreen() {
 
   const handleUseCurrentLocation = async () => {
     setIsUsingCurrentLocation(true);
+    setLocationError(null);
     try {
       const location = await getCurrentVendorLocation();
       applyGeocodedLocation(location);
+    } catch (error) {
+      setLocationError(error instanceof Error ? error.message : 'Could not get your current location.');
     } finally {
       setIsUsingCurrentLocation(false);
     }
@@ -115,17 +154,43 @@ export function DesktopVendorSelectLocationScreen() {
     setAddress((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (categoryId === 'property') {
-      router.push('/vendor/guest-room-details');
+      setIsSubmitting(true);
+      setSubmitError(null);
+      try {
+        const res = await createVendorHotelListing(address, coordinate, searchQuery);
+        if (res.success) {
+          await clearVendorHotelDraft();
+          router.replace('/vendor/guest-room-details');
+          return;
+        }
+        setSubmitError(res.message ?? 'Could not create hotel listing.');
+      } finally {
+        setIsSubmitting(false);
+      }
       return;
     }
     if (categoryId === 'glamping') {
+      // For glamping, we first collect tent counts (totalCamps). Save location for later create call.
+      await saveVendorGlampingDraft({
+        locationJson: buildHotelLocationJson(address, coordinate, searchQuery),
+      });
       router.push('/vendor/guest-tent-details');
       return;
     }
     if (categoryId === 'activities') {
-      router.push('/vendor/guest-activity-details');
+      await saveVendorActivityDraft({
+        locationJson: buildHotelLocationJson(address, coordinate, searchQuery),
+      });
+      router.push('/vendor/create-title');
+      return;
+    }
+    if (categoryId === 'packages') {
+      await saveVendorPackageDraft({
+        locationJson: buildHotelLocationJson(address, coordinate, searchQuery),
+      });
+      router.push('/vendor/create-title');
       return;
     }
     router.replace('/(tabs)');
@@ -138,6 +203,10 @@ export function DesktopVendorSelectLocationScreen() {
         onCoordinateChange={scheduleReverseGeocode}
         style={styles.map}
       />
+
+      <View style={styles.pinOverlay} pointerEvents="none">
+        <VendorMapCenterPin />
+      </View>
 
       <View style={styles.searchOverlay}>
         <View style={styles.searchBar}>
@@ -154,6 +223,8 @@ export function DesktopVendorSelectLocationScreen() {
             <ActivityIndicator size="small" color={colors.accent.main} />
           ) : null}
         </View>
+
+        <VendorLocationCoordinatePreview coordinate={coordinate} />
 
         {searchResults.length > 0 ? (
           <View style={styles.searchResults}>
@@ -187,6 +258,8 @@ export function DesktopVendorSelectLocationScreen() {
       <View style={styles.dragHint}>
         <Text style={styles.dragHintText}>{VENDOR_LOCATION_COPY.dragHint}</Text>
       </View>
+
+      {locationError ? <Text style={styles.mapErrorText}>{locationError}</Text> : null}
     </View>
   );
 
@@ -200,6 +273,8 @@ export function DesktopVendorSelectLocationScreen() {
           onBack={() => router.back()}
           onNext={handleConfirm}
           nextLabel={VENDOR_LOCATION_COPY.confirmCta}
+          isNextLoading={isSubmitting}
+          nextDisabled={isSubmitting}
         />
       }
     >
@@ -213,6 +288,17 @@ export function DesktopVendorSelectLocationScreen() {
           onSelect={(value) => updateAddress('country', value)}
           placeholder={VENDOR_LOCATION_COPY.countryPlaceholder}
         />
+
+        <View style={styles.fieldGroup}>
+          <Text style={styles.label}>{VENDOR_LOCATION_COPY.coordinatesLabel}</Text>
+          <Input
+            value={formatCoordinatePreview(coordinate)}
+            editable={false}
+            placeholder={VENDOR_LOCATION_COPY.coordinatesPlaceholder}
+            placeholderTextColor={colors.text.placeholder}
+            style={styles.coordinateInput}
+          />
+        </View>
 
         <View style={styles.fieldGroup}>
           <Text style={styles.label}>{VENDOR_LOCATION_COPY.addressLabel}</Text>
@@ -259,6 +345,8 @@ export function DesktopVendorSelectLocationScreen() {
             />
           </View>
         </View>
+
+        {submitError ? <Text style={styles.errorText}>{submitError}</Text> : null}
       </View>
     </DesktopVendorOnboardingShell>
   );
@@ -272,13 +360,19 @@ const styles = StyleSheet.create({
   },
   map: {
     ...StyleSheet.absoluteFillObject,
+    zIndex: 0,
+  },
+  pinOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 2,
+    elevation: 12,
   },
   searchOverlay: {
     position: 'absolute',
     top: spacing['4'],
     left: spacing['4'],
     right: spacing['4'],
-    zIndex: 4,
+    zIndex: 5,
     gap: 6,
   },
   searchBar: {
@@ -339,7 +433,7 @@ const styles = StyleSheet.create({
   },
   currentLocationBtn: {
     position: 'absolute',
-    top: 80,
+    top: 124,
     alignSelf: 'center',
     backgroundColor: colors.accent.main,
     borderRadius: borderRadius.pill,
@@ -347,7 +441,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     minHeight: 34,
     justifyContent: 'center',
-    zIndex: 3,
+    zIndex: 6,
     ...Platform.select({
       web: { cursor: 'pointer' as const },
     }),
@@ -366,12 +460,27 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.pill,
     paddingHorizontal: spacing['3'],
     paddingVertical: 8,
-    zIndex: 3,
+    zIndex: 6,
   },
   dragHintText: {
     fontFamily: typography.fontFamily.text,
     fontSize: 11,
     color: colors.surface.white,
+  },
+  mapErrorText: {
+    position: 'absolute',
+    bottom: 56,
+    left: spacing['4'],
+    right: spacing['4'],
+    fontFamily: typography.fontFamily.text,
+    fontSize: 12,
+    color: colors.primaryAlt,
+    textAlign: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.92)',
+    borderRadius: borderRadius.lg,
+    paddingHorizontal: spacing['3'],
+    paddingVertical: 8,
+    zIndex: 3,
   },
   form: {
     gap: 16,
@@ -413,5 +522,15 @@ const styles = StyleSheet.create({
     height: StyleSheet.hairlineWidth,
     backgroundColor: 'rgba(28, 32, 36, 0.12)',
   },
+  coordinateInput: {
+    ...authFieldInputStyle.field,
+    backgroundColor: 'rgba(28, 32, 36, 0.04)',
+    color: colors.text.secondary,
+  },
   pressed: { opacity: 0.85 },
+  errorText: {
+    fontFamily: typography.fontFamily.text,
+    fontSize: 13,
+    color: colors.primaryAlt,
+  },
 });

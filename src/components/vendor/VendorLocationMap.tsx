@@ -1,1 +1,1 @@
-export { VendorLocationMap } from './VendorLocationMap.web';
+export { VendorLocationMap } from './VendorLocationMap.native';

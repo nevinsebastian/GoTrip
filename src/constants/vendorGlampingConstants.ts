@@ -23,22 +23,38 @@ export const VENDOR_GLAMPING_DESCRIBE_COPY = {
   nextSuffix: 'Select Location',
 };
 
+export const GLAMPING_PHOTO_LIMITS = {
+  min: 2,
+  max: 3,
+} as const;
+
+export const VENDOR_GLAMPING_PHOTOS_COPY = {
+  title: 'Add photos',
+  subtitle: 'Upload 2 to 3 photos of your glamping site.',
+  addLabel: 'Add image',
+  countLabel: (count: number) => `${count}/${GLAMPING_PHOTO_LIMITS.max} photos`,
+  nextSuffix: 'Meal Plans',
+};
+
 export const VENDOR_GUEST_TENT_COPY = {
   title: 'Guest & Tent Details',
   subtitle: 'Provide the number of guests and rooms.',
-  guestsLabel: 'Guests',
+  guestsLabel: 'Adults per camp',
   guestsAgeHint: 'Age 13+',
+  infantsLabel: 'Infants per camp',
+  infantsAgeHint: 'Age below 2',
   tentsLabel: 'Tents',
   cottagesLabel: 'Cottages',
   hutsLabel: 'Huts / Tree huts',
   privateBathroomsLabel: 'Private Bathrooms',
   commonBathroomsLabel: 'Common Bathrooms',
   foodLabel: 'Food',
-  nextSuffix: 'Amenities',
+  nextSuffix: 'Set Pricing',
 };
 
 export type VendorGuestTentDetails = {
-  guests: number;
+  adultsPerCamp: number;
+  infantsPerCamp: number;
   tents: number;
   cottages: number;
   huts: number;
@@ -48,18 +64,25 @@ export type VendorGuestTentDetails = {
 };
 
 export const DEFAULT_GUEST_TENT_DETAILS: VendorGuestTentDetails = {
-  guests: 4,
-  tents: 1,
-  cottages: 1,
-  huts: 1,
-  privateBathrooms: 4,
-  commonBathrooms: 4,
-  food: ['breakfast'],
+  adultsPerCamp: 0,
+  infantsPerCamp: 0,
+  tents: 0,
+  cottages: 0,
+  huts: 0,
+  privateBathrooms: 0,
+  commonBathrooms: 0,
+  food: [],
 };
 
+export const GLAMPING_LISTING_DEFAULTS = {
+  cancellationPolicyId: 'fb0537e7-a38e-4153-8fcb-d098ba0a9f77',
+} as const;
+
 export const VENDOR_GLAMPING_PRICING_COPY = {
-  subtitle: 'How much do you charge for a night?',
-  basePriceLabel: 'Enter the price details',
+  subtitle: 'How much do you charge per camp per night?',
+  basePriceLabel: 'Price per camp per night',
+  extraAdultLabel: 'Extra adult charge',
+  extraInfantLabel: 'Extra infant charge',
   nextSuffix: 'Camping Details',
 };
 
@@ -84,6 +107,12 @@ const defaultThingsToCarry = FIGMA_GLAMPING_DETAIL.thingsToCarry.map((item) => `
 
 const defaultHowToReach = FIGMA_GLAMPING_DETAIL.howToReach.join('\n\n');
 
+export const EMPTY_CAMPING_INSIGHTS = {
+  aboutExperience: '',
+  thingsToCarry: '',
+  howToReach: '',
+};
+
 export const DEFAULT_CAMPING_INSIGHTS = {
   aboutExperience: defaultAboutExperience,
   thingsToCarry: defaultThingsToCarry,
@@ -95,15 +124,54 @@ export const VENDOR_INCLUSIONS_EXCLUSIONS_COPY = {
   subtitle: 'What is included in your camping experience.',
   inclusionsTitle: 'Inclusions',
   exclusionsTitle: 'Exclusions',
+  whatsprovidedTitle: "What's provided",
   maxLength: 500,
-  nextSuffix: 'Terms & Conditions',
+  nextSuffix: 'Add Photos',
 };
+
+export const EMPTY_CAMPING_INCLUSIONS = '';
+export const EMPTY_CAMPING_EXCLUSIONS = '';
+export const EMPTY_CAMPING_WHATS_PROVIDED = '';
 
 export const DEFAULT_CAMPING_INCLUSIONS = FIGMA_GLAMPING_DETAIL.inclusions.map((item) => `• ${item}`).join('\n');
 
 export const DEFAULT_CAMPING_EXCLUSIONS = FIGMA_GLAMPING_DETAIL.exclusions.map((item) => `• ${item}`).join('\n');
 
+export const DEFAULT_CAMPING_WHATS_PROVIDED = FIGMA_GLAMPING_DETAIL.provides
+  .map((item) => `• ${item.label}`)
+  .join('\n');
+
 export const VENDOR_GLAMPING_PUBLISH_TITLE = 'Base Camps, Sky Cottage, Rhodo Mansion';
+
+export type VendorGlampingMealInclusions = {
+  includesBreakfast: boolean;
+  includesLunch: boolean;
+  includesDinner: boolean;
+  includesSnacks: boolean;
+};
+
+export const DEFAULT_GLAMPING_MEAL_INCLUSIONS: VendorGlampingMealInclusions = {
+  includesBreakfast: false,
+  includesLunch: false,
+  includesDinner: false,
+  includesSnacks: false,
+};
+
+export const VENDOR_GLAMPING_MEAL_OPTIONS = [
+  { key: 'includesBreakfast', label: 'Breakfast' },
+  { key: 'includesLunch', label: 'Lunch' },
+  { key: 'includesDinner', label: 'Dinner' },
+  { key: 'includesSnacks', label: 'Snacks' },
+] as const satisfies ReadonlyArray<{
+  key: keyof VendorGlampingMealInclusions;
+  label: string;
+}>;
+
+export const VENDOR_GLAMPING_MEAL_PLANS_COPY = {
+  title: 'Meal plans',
+  subtitle: 'Select which meals are included in your glamping package.',
+  nextSuffix: 'Preview',
+};
 
 export function getVendorCampPlaceType(id: string): VendorCampPlaceType {
   return VENDOR_CAMP_PLACE_TYPES.find((item) => item.id === id) ?? VENDOR_CAMP_PLACE_TYPES[0];

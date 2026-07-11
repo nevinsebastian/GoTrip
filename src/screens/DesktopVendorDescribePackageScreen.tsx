@@ -11,6 +11,7 @@ import {
   VENDOR_PACKAGE_DESTINATIONS,
   type VendorPackageCategoryId,
 } from '@/src/constants/vendorPackageConstants';
+import { saveVendorPackageDraft } from '@/src/utils/vendorPackageDraft';
 import { router } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -18,6 +19,7 @@ import { StyleSheet, View } from 'react-native';
 export function DesktopVendorDescribePackageScreen() {
   const [destination, setDestination] = useState('');
   const [categoryId, setCategoryId] = useState<VendorPackageCategoryId>('couple');
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const category = getVendorPackageCategory(categoryId);
   const destinationOptions = useMemo(
@@ -35,7 +37,18 @@ export function DesktopVendorDescribePackageScreen() {
       footer={
         <DesktopVendorOnboardingFooter
           onBack={() => router.back()}
-          onNext={() => router.push('/vendor/guest-package-details')}
+          onNext={async () => {
+            if (!destination.trim()) {
+              setSubmitError('Please select or enter a destination.');
+              return;
+            }
+            setSubmitError(null);
+            await saveVendorPackageDraft({
+              destination: destination.trim(),
+              categoryId,
+            });
+            router.push('/vendor/select-location');
+          }}
           nextLabel="Next"
           nextSuffix={VENDOR_PACKAGE_DESCRIBE_COPY.nextSuffix}
         />
@@ -83,6 +96,7 @@ export function DesktopVendorDescribePackageScreen() {
             startAdornment={<Text style={styles.selectText}>{category.label}</Text>}
           />
         </View>
+        {submitError ? <Text style={styles.errorText}>{submitError}</Text> : null}
       </View>
     </DesktopVendorOnboardingShell>
   );
@@ -121,5 +135,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: typography.fontWeight.medium,
     color: colors.text.primary,
+  },
+  errorText: {
+    fontFamily: typography.fontFamily.text,
+    fontSize: 12,
+    color: colors.primaryAlt,
   },
 });

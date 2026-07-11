@@ -1,7 +1,7 @@
 import { Text } from '@/components/ui';
 import { borderRadius, colors, typography } from '@/constants/DesignTokens';
 import { authFieldInputStyle } from '@/src/constants/authInputStyles';
-import { VENDOR_ONBOARDING, type VendorRegistrationForm } from '@/src/constants/vendorOnboardingConstants';
+import { VENDOR_ONBOARDING, type VendorRegistrationForm, type VendorSignupMode } from '@/src/constants/vendorOnboardingConstants';
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import {
@@ -17,6 +17,7 @@ const ACCENT = colors.accent.main;
 
 type DesktopVendorOtpStepProps = {
   form: VendorRegistrationForm;
+  signupMode: VendorSignupMode;
   digits: string[];
   inputRefs: React.MutableRefObject<(TextInput | null)[]>;
   onDigitChange: (index: number, value: string) => void;
@@ -32,6 +33,7 @@ type DesktopVendorOtpStepProps = {
 
 export function DesktopVendorOtpStep({
   form,
+  signupMode,
   digits,
   inputRefs,
   onDigitChange,
@@ -44,6 +46,8 @@ export function DesktopVendorOtpStep({
   canSubmit,
   error,
 }: DesktopVendorOtpStepProps) {
+  const isEmailMode = signupMode === 'email';
+
   return (
     <View style={styles.root}>
       <View style={styles.backdrop} pointerEvents="none">
@@ -55,16 +59,19 @@ export function DesktopVendorOtpStep({
               {form.fullName || 'Full name'}
             </Text>
           </View>
-          <View style={styles.backdropField}>
-            <Text style={styles.backdropFieldText} numberOfLines={1}>
-              {form.email || 'Email'}
-            </Text>
-          </View>
-          <View style={styles.backdropField}>
-            <Text style={styles.backdropFieldText} numberOfLines={1}>
-              {form.phone || 'Phone number'}
-            </Text>
-          </View>
+          {isEmailMode ? (
+            <View style={styles.backdropField}>
+              <Text style={styles.backdropFieldText} numberOfLines={1}>
+                {form.email || 'Email'}
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.backdropField}>
+              <Text style={styles.backdropFieldText} numberOfLines={1}>
+                {form.phone || 'Phone number'}
+              </Text>
+            </View>
+          )}
         </View>
         <View style={styles.backdropCta} />
       </View>

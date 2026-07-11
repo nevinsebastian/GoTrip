@@ -10,14 +10,17 @@ import {
   type VendorGuestTentDetails,
 } from '@/src/constants/vendorGlampingConstants';
 import { VENDOR_FOOD_OPTIONS, type VendorFoodOptionId } from '@/src/constants/vendorListingConstants';
+import { getVendorGlampingDraft, saveVendorGlampingDraft } from '@/src/utils/vendorGlampingDraft';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import { Platform, Pressable, StyleSheet, View } from 'react-native';
 
 export function DesktopVendorGuestTentDetailsScreen() {
   const [details, setDetails] = useState<VendorGuestTentDetails>(DEFAULT_GUEST_TENT_DETAILS);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const update = (patch: Partial<VendorGuestTentDetails>) => {
+    if (submitError) setSubmitError(null);
     setDetails((prev) => ({ ...prev, ...patch }));
   };
 
@@ -38,6 +41,26 @@ export function DesktopVendorGuestTentDetailsScreen() {
     </View>
   );
 
+  const handleNext = async () => {
+    const totalCamps = (details.tents || 0) + (details.cottages || 0) + (details.huts || 0);
+    if (totalCamps <= 0) {
+      setSubmitError('Please add at least 1 tent/cottage/hut.');
+      return;
+    }
+    if (details.adultsPerCamp <= 0) {
+      setSubmitError('Please set adults per camp.');
+      return;
+    }
+    const prev = (await getVendorGlampingDraft()) ?? {};
+    await saveVendorGlampingDraft({
+      ...prev,
+      totalCamps,
+      adultsPerCamp: details.adultsPerCamp,
+      infantsPerCamp: details.infantsPerCamp,
+    });
+    router.push('/vendor/set-pricing');
+  };
+
   return (
     <DesktopVendorOnboardingShell
       listingCategoryId="glamping"
@@ -45,7 +68,7 @@ export function DesktopVendorGuestTentDetailsScreen() {
       footer={
         <DesktopVendorOnboardingFooter
           onBack={() => router.back()}
-          onNext={() => router.push('/vendor/amenities')}
+          onNext={handleNext}
           nextSuffix={VENDOR_GUEST_TENT_COPY.nextSuffix}
         />
       }
@@ -59,9 +82,15 @@ export function DesktopVendorGuestTentDetailsScreen() {
         <View style={styles.detailsCard}>
           {stepperRow(
             VENDOR_GUEST_TENT_COPY.guestsLabel,
-            details.guests,
-            (guests) => update({ guests }),
+            details.adultsPerCamp,
+            (adultsPerCamp) => update({ adultsPerCamp }),
             VENDOR_GUEST_TENT_COPY.guestsAgeHint,
+          )}
+          {stepperRow(
+            VENDOR_GUEST_TENT_COPY.infantsLabel,
+            details.infantsPerCamp,
+            (infantsPerCamp) => update({ infantsPerCamp }),
+            VENDOR_GUEST_TENT_COPY.infantsAgeHint,
           )}
           {stepperRow(VENDOR_GUEST_TENT_COPY.tentsLabel, details.tents, (tents) => update({ tents }))}
           {stepperRow(VENDOR_GUEST_TENT_COPY.cottagesLabel, details.cottages, (cottages) =>
@@ -109,6 +138,7 @@ export function DesktopVendorGuestTentDetailsScreen() {
             </View>
           </View>
         </View>
+        {submitError ? <Text style={styles.errorText}>{submitError}</Text> : null}
       </View>
     </DesktopVendorOnboardingShell>
   );
@@ -187,4 +217,9 @@ const styles = StyleSheet.create({
     fontWeight: typography.fontWeight.medium,
   },
   pressed: { opacity: 0.85 },
+  errorText: {
+    fontFamily: typography.fontFamily.text,
+    fontSize: 12,
+    color: colors.primaryAlt,
+  },
 });

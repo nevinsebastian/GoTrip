@@ -10,6 +10,7 @@ import {
   VENDOR_PACKAGE_DESTINATIONS,
   type VendorPackageCategoryId,
 } from '@/src/constants/vendorPackageConstants';
+import { saveVendorPackageDraft } from '@/src/utils/vendorPackageDraft';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useMemo, useState } from 'react';
@@ -24,6 +25,7 @@ export function MobileVendorDescribePackageScreen() {
   const [destination, setDestination] = useState('');
   const [categoryId, setCategoryId] = useState<VendorPackageCategoryId>('couple');
   const [pickerField, setPickerField] = useState<PickerField>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const category = getVendorPackageCategory(categoryId);
   const destinationOptions = useMemo(
@@ -77,12 +79,24 @@ export function MobileVendorDescribePackageScreen() {
                 <Ionicons name="chevron-down" size={18} color="rgba(28, 32, 36, 0.45)" />
               </Pressable>
             </View>
+            {submitError ? <Text style={styles.errorText}>{submitError}</Text> : null}
           </View>
         </ScrollView>
 
         <VendorOnboardingFooter
           onBack={() => router.back()}
-          onNext={() => router.push('/vendor/guest-package-details')}
+          onNext={async () => {
+            if (!destination.trim()) {
+              setSubmitError('Please select or enter a destination.');
+              return;
+            }
+            setSubmitError(null);
+            await saveVendorPackageDraft({
+              destination: destination.trim(),
+              categoryId,
+            });
+            router.push('/vendor/select-location');
+          }}
           nextLabel="Next"
           nextSuffix={VENDOR_PACKAGE_DESCRIBE_COPY.nextSuffix}
         />
@@ -173,4 +187,9 @@ const styles = StyleSheet.create({
     color: colors.text.primary,
   },
   pressed: { opacity: 0.85 },
+  errorText: {
+    fontFamily: typography.fontFamily.text,
+    fontSize: 12,
+    color: colors.primaryAlt,
+  },
 });

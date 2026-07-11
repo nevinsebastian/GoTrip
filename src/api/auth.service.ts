@@ -2,18 +2,21 @@
 // Authentication-related API calls.
 
 import apiClient, {
-  setStoredAuthToken,
-  clearStoredAuthToken,
+    clearStoredAuthToken,
+    setStoredAuthToken,
 } from './client';
 import { ENDPOINTS } from './endpoints';
+import { clearVendorOnboardingState } from '@/src/utils/clearVendorOnboardingState';
 import type {
-  LoginRequest,
-  LoginResponse,
-  SendOtpRequest,
-  SendOtpResponse,
-  VerifyOtpRequest,
-  VerifyOtpResponse,
-  User,
+    LoginRequest,
+    LoginResponse,
+    RegisterRequest,
+    RegisterResponse,
+    SendOtpRequest,
+    SendOtpResponse,
+    User,
+    VerifyOtpRequest,
+    VerifyOtpResponse,
 } from './types';
 
 export const login = async (payload: LoginRequest): Promise<LoginResponse> => {
@@ -37,6 +40,7 @@ export const logout = async (): Promise<void> => {
     // Swallow logout API errors; we still clear local auth state.
   } finally {
     await clearStoredAuthToken();
+    await clearVendorOnboardingState();
   }
 };
 
@@ -53,6 +57,14 @@ export const sendOtp = async (payload: SendOtpRequest): Promise<SendOtpResponse>
   return response.data;
 };
 
+export const register = async (payload: RegisterRequest): Promise<RegisterResponse> => {
+  const response = await apiClient.post<RegisterResponse>(
+    ENDPOINTS.auth.register,
+    payload,
+  );
+  return response.data;
+};
+
 export const verifyOtp = async (
   payload: VerifyOtpRequest,
 ): Promise<VerifyOtpResponse> => {
@@ -62,7 +74,7 @@ export const verifyOtp = async (
   );
 
   const data = response.data;
-  const accessToken = data?.data?.access_token;
+  const accessToken = data?.data?.access_token ?? data?.accessToken;
   if (data?.success && accessToken) {
     await setStoredAuthToken(accessToken);
   }

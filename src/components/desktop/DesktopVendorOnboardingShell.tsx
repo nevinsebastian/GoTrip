@@ -17,7 +17,8 @@ import {
     VENDOR_ONBOARDING,
     type VendorListingCategoryId,
 } from '@/src/constants/vendorOnboardingConstants';
-import { USER_PROFILE_QUERY_KEY, useUserProfile } from '@/src/hooks/useUserProfile';
+import { AUTH_SESSION_QUERY_KEY, useIsAuthenticated } from '@/src/hooks/useIsAuthenticated';
+import { USER_PROFILE_QUERY_KEY } from '@/src/hooks/useUserProfile';
 import { Ionicons } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
@@ -56,9 +57,7 @@ export function DesktopVendorOnboardingShell({
   footer,
 }: DesktopVendorOnboardingShellProps) {
   const queryClient = useQueryClient();
-  const { data: user, error: profileError } = useUserProfile();
-  const isUnauthorized = Boolean(profileError?.isUnauthorized);
-  const isLoggedIn = Boolean(user) && !isUnauthorized;
+  const { data: isLoggedIn = false } = useIsAuthenticated();
 
   const [webMenuOpen, setWebMenuOpen] = useState(false);
   const [webAuthModal, setWebAuthModal] = useState<{ visible: boolean; mode: 'login' | 'signup' }>({
@@ -94,6 +93,7 @@ export function DesktopVendorOnboardingShell({
     } catch {
       // ignore
     } finally {
+      queryClient.removeQueries({ queryKey: AUTH_SESSION_QUERY_KEY });
       queryClient.removeQueries({ queryKey: USER_PROFILE_QUERY_KEY });
       queryClient.clear();
       router.replace('/(tabs)');
@@ -173,7 +173,10 @@ export function DesktopVendorOnboardingShell({
         mode={webAuthModal.mode}
         onClose={() => setWebAuthModal((s) => ({ ...s, visible: false }))}
         onSwitchMode={(m) => setWebAuthModal({ visible: true, mode: m })}
-        onAuthenticated={() => queryClient.invalidateQueries({ queryKey: USER_PROFILE_QUERY_KEY })}
+        onAuthenticated={() => {
+          queryClient.invalidateQueries({ queryKey: AUTH_SESSION_QUERY_KEY });
+          queryClient.invalidateQueries({ queryKey: USER_PROFILE_QUERY_KEY });
+        }}
       />
 
       <ScrollView

@@ -8,9 +8,9 @@ import {
   VENDOR_GUEST_PACKAGE_COPY,
   type VendorGuestPackageDetails,
 } from '@/src/constants/vendorPackageConstants';
-import { VENDOR_FOOD_OPTIONS, type VendorFoodOptionId } from '@/src/constants/vendorListingConstants';
+import { getVendorPackageDraft, saveVendorPackageDraft } from '@/src/utils/vendorPackageDraft';
 import { router } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -24,27 +24,67 @@ export function MobileVendorGuestPackageDetailsScreen() {
   const horizontalPadding = Math.max(0, (width - contentWidth) / 2);
 
   const [details, setDetails] = useState<VendorGuestPackageDetails>(DEFAULT_GUEST_PACKAGE_DETAILS);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      const draft = await getVendorPackageDraft();
+      if (!draft) return;
+      setDetails({
+        days: draft.totalDays ?? DEFAULT_GUEST_PACKAGE_DETAILS.days,
+        nights: draft.totalNights ?? DEFAULT_GUEST_PACKAGE_DETAILS.nights,
+        minGroupSize: draft.minGroupSize ?? DEFAULT_GUEST_PACKAGE_DETAILS.minGroupSize,
+        maxGroupSize: draft.maxGroupSize ?? DEFAULT_GUEST_PACKAGE_DETAILS.maxGroupSize,
+        bookingMode: draft.bookingMode ?? DEFAULT_GUEST_PACKAGE_DETAILS.bookingMode,
+      });
+    })();
+  }, []);
 
   const update = (patch: Partial<VendorGuestPackageDetails>) => {
     setDetails((prev) => ({ ...prev, ...patch }));
   };
 
-  const toggleFood = (id: VendorFoodOptionId) => {
-    const has = details.food.includes(id);
-    update({
-      food: has ? details.food.filter((item) => item !== id) : [...details.food, id],
-    });
-  };
-
-  const stepperRow = (label: string, value: number, onChange: (v: number) => void, hint?: string) => (
+  const stepperRow = (
+    label: string,
+    value: number,
+    onChange: (v: number) => void,
+    min = 0,
+  ) => (
     <View style={styles.rowBetween}>
-      <View style={styles.labelCol}>
-        <Text style={styles.rowLabel}>{label}</Text>
-        {hint ? <Text style={styles.rowHint}>{hint}</Text> : null}
-      </View>
-      <VendorStepper variant="pill" value={value} min={0} onChange={onChange} />
+      <Text style={styles.rowLabel}>{label}</Text>
+      <VendorStepper variant="pill" value={value} min={min} onChange={onChange} />
     </View>
   );
+
+  const handleNext = async () => {
+    if (details.days < 1) {
+      setSubmitError('Days must be at least 1.');
+      return;
+    }
+    if (details.nights < 0) {
+      setSubmitError('Nights cannot be negative.');
+      return;
+    }
+    if (details.minGroupSize < 1) {
+      setSubmitError('Minimum group size must be at least 1.');
+      return;
+    }
+    if (details.maxGroupSize < details.minGroupSize) {
+      setSubmitError('Maximum group size must be at least the minimum.');
+      return;
+    }
+    setSubmitError(null);
+    const prev = (await getVendorPackageDraft()) ?? {};
+    await saveVendorPackageDraft({
+      ...prev,
+      totalDays: details.days,
+      totalNights: details.nights,
+      minGroupSize: details.minGroupSize,
+      maxGroupSize: details.maxGroupSize,
+      bookingMode: details.bookingMode,
+    });
+    router.push('/vendor/set-pricing');
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
@@ -62,15 +102,21 @@ export function MobileVendorGuestPackageDetailsScreen() {
             </View>
 
             <View style={styles.detailsCard}>
-              {stepperRow(
-                VENDOR_GUEST_PACKAGE_COPY.guestsLabel,
-                details.guests,
-                (guests) => update({ guests }),
-                VENDOR_GUEST_PACKAGE_COPY.guestsAgeHint,
-              )}
-              {stepperRow(VENDOR_GUEST_PACKAGE_COPY.daysLabel, details.days, (days) => update({ days }))}
+              {stepperRow(VENDOR_GUEST_PACKAGE_COPY.daysLabel, details.days, (days) => update({ days }), 1)}
               {stepperRow(VENDOR_GUEST_PACKAGE_COPY.nightsLabel, details.nights, (nights) =>
                 update({ nights }),
+              )}
+              {stepperRow(
+                VENDOR_GUEST_PACKAGE_COPY.minGroupLabel,
+                details.minGroupSize,
+                (minGroupSize) => update({ minGroupSize }),
+                1,
+              )}
+              {stepperRow(
+                VENDOR_GUEST_PACKAGE_COPY.maxGroupLabel,
+                details.maxGroupSize,
+                (maxGroupSize) => update({ maxGroupSize }),
+                1,
               )}
 
               <View style={styles.orRow}>
@@ -78,22 +124,22 @@ export function MobileVendorGuestPackageDetailsScreen() {
                 <View style={styles.orLineMuted} />
               </View>
 
-              <View style={styles.foodRow}>
-                <Text style={styles.rowLabel}>{VENDOR_GUEST_PACKAGE_COPY.foodLabel}</Text>
-                <View style={styles.foodPills}>
-                  {VENDOR_FOOD_OPTIONS.map((option) => {
-                    const selected = details.food.includes(option.id);
+              <View style={styles.bookingRow}>
+                <Text style={styles.rowLabel}>{VENDOR_GUEST_PACKAGE_COPY.bookingModeLabel}</Text>
+                <View style={styles.bookingPills}>
+                  {VENDOR_GUEST_PACKAGE_COPY.bookingModes.map((option) => {
+                    const selected = details.bookingMode === option.id;
                     return (
                       <Pressable
                         key={option.id}
                         style={({ pressed }) => [
-                          styles.foodPill,
-                          selected && styles.foodPillSelected,
+                          styles.bookingPill,
+                          selected && styles.bookingPillSelected,
                           pressed && styles.pressed,
                         ]}
-                        onPress={() => toggleFood(option.id)}
+                        onPress={() => update({ bookingMode: option.id })}
                       >
-                        <Text style={[styles.foodPillText, selected && styles.foodPillTextSelected]}>
+                        <Text style={[styles.bookingPillText, selected && styles.bookingPillTextSelected]}>
                           {option.label}
                         </Text>
                       </Pressable>
@@ -102,12 +148,13 @@ export function MobileVendorGuestPackageDetailsScreen() {
                 </View>
               </View>
             </View>
+            {submitError ? <Text style={styles.errorText}>{submitError}</Text> : null}
           </View>
         </ScrollView>
 
         <VendorOnboardingFooter
           onBack={() => router.back()}
-          onNext={() => router.push('/vendor/amenities')}
+          onNext={handleNext}
           nextLabel="Next"
           nextSuffix={VENDOR_GUEST_PACKAGE_COPY.nextSuffix}
         />
@@ -119,24 +166,21 @@ export function MobileVendorGuestPackageDetailsScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.surface.white },
   page: { flex: 1, width: '100%', maxWidth: DESIGN_WIDTH, alignSelf: 'center' },
-  scrollContent: { paddingTop: 10, paddingBottom: spacing['4'], alignItems: 'center' },
-  contentColumn: { alignSelf: 'stretch', gap: 8 },
+  scrollContent: { paddingTop: 10, paddingBottom: spacing['4'], gap: 18 },
+  contentColumn: { alignSelf: 'center', gap: 12 },
   intro: { gap: 4 },
   title: {
     fontFamily: typography.fontFamily.text,
     fontSize: 20,
     fontWeight: typography.fontWeight.semibold,
-    lineHeight: 28,
     color: colors.accent.main,
   },
   subtitle: {
     fontFamily: typography.fontFamily.text,
     fontSize: typography.fontSize['1'],
-    lineHeight: typography.lineHeight['2'],
     color: 'rgba(28, 32, 36, 0.55)',
   },
   detailsCard: {
-    width: '100%',
     borderWidth: 1,
     borderColor: 'rgba(28, 32, 36, 0.1)',
     borderRadius: borderRadius.xl,
@@ -150,56 +194,44 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 8,
   },
-  labelCol: { flex: 1, gap: 2 },
   rowLabel: {
+    flex: 1,
     fontFamily: typography.fontFamily.text,
     fontSize: typography.fontSize['1'],
     fontWeight: typography.fontWeight.medium,
     color: colors.text.primary,
   },
-  rowHint: {
-    fontFamily: typography.fontFamily.text,
-    fontSize: 10,
-    color: 'rgba(28, 32, 36, 0.45)',
-  },
-  orRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    width: '100%',
-  },
+  orRow: { flexDirection: 'row', alignItems: 'center' },
   orLineAccent: { flex: 1, height: 1, backgroundColor: colors.accent.main },
   orLineMuted: { flex: 1, height: 1, backgroundColor: 'rgba(28, 32, 36, 0.12)' },
-  foodRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  foodPills: {
-    flex: 1,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'flex-end',
-    gap: 8,
-  },
-  foodPill: {
+  bookingRow: { gap: 8 },
+  bookingPills: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  bookingPill: {
     borderWidth: 1,
-    borderColor: 'rgba(28, 32, 36, 0.2)',
-    borderRadius: borderRadius.pill,
+    borderColor: 'rgba(28, 32, 36, 0.15)',
+    borderRadius: 999,
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: 8,
+    backgroundColor: colors.surface.white,
+    ...Platform.select({ web: { cursor: 'pointer' as const } }),
   },
-  foodPillSelected: {
+  bookingPillSelected: {
     borderColor: colors.accent.main,
-    backgroundColor: 'rgba(232, 84, 51, 0.06)',
+    backgroundColor: 'rgba(255, 107, 53, 0.08)',
   },
-  foodPillText: {
+  bookingPillText: {
     fontFamily: typography.fontFamily.text,
-    fontSize: 11,
-    color: 'rgba(28, 32, 36, 0.5)',
+    fontSize: 12,
+    color: colors.text.primary,
   },
-  foodPillTextSelected: {
+  bookingPillTextSelected: {
     color: colors.accent.main,
-    fontWeight: typography.fontWeight.medium,
+    fontWeight: typography.fontWeight.semibold,
   },
   pressed: { opacity: 0.85 },
+  errorText: {
+    fontFamily: typography.fontFamily.text,
+    fontSize: 12,
+    color: colors.primaryAlt,
+  },
 });

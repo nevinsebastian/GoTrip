@@ -17,7 +17,8 @@ import {
 } from '@/src/constants/vendorDashboardConstants';
 import type { VendorListingCategoryId } from '@/src/constants/vendorOnboardingConstants';
 import { useVendorListingCategory } from '@/src/hooks/useVendorListingCategory';
-import { clearVendorSession, getStoredVendorListingCategory } from '@/src/utils/vendorSession';
+import { logout } from '@/src/api/auth.service';
+import { getStoredVendorListingCategory } from '@/src/utils/vendorSession';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
@@ -95,7 +96,7 @@ export function MobileVendorDashboardScreen() {
 
   const handleLogout = async () => {
     setMenuOpen(false);
-    await clearVendorSession();
+    await logout();
     router.replace('/');
   };
 

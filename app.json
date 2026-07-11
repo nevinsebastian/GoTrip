@@ -35,7 +35,20 @@
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Allow GoTrip to access your location to pin your property on the map."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow GoTrip to access your photos to upload vendor documents.",
+          "cameraPermission": "Allow GoTrip to access your camera to upload vendor documents."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

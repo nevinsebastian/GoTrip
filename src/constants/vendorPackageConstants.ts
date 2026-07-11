@@ -1,10 +1,4 @@
-import type { VendorFoodOptionId } from '@/src/constants/vendorListingConstants';
-import {
-  PACKAGE_DAY_ONE,
-  PACKAGE_EXCLUSIONS,
-  PACKAGE_TRIP_HIGHLIGHTS,
-  FIGMA_PACKAGE_DETAIL,
-} from '@/src/constants/packageDetailConstants';
+import { FIGMA_PACKAGE_DETAIL } from '@/src/constants/packageDetailConstants';
 import { PACKAGE_POPULAR_DESTINATIONS } from '@/src/constants/homePackageConfig';
 
 export const VENDOR_PACKAGE_DESTINATIONS = [
@@ -30,36 +24,51 @@ export const VENDOR_PACKAGE_CATEGORIES = [
 export type VendorPackageCategoryId = (typeof VENDOR_PACKAGE_CATEGORIES)[number]['id'];
 
 export const VENDOR_PACKAGE_DESCRIBE_COPY = {
-  title: 'Describe your property',
+  title: 'Describe your package',
   destinationLabel: 'Select your destination',
   destinationPlaceholder: 'Country/Region',
   categoryLabel: 'Category',
+  nextSuffix: 'Select Location',
+};
+
+export const VENDOR_PACKAGE_TITLE_COPY = {
+  title: 'Create a title for your package',
+  subtitle: 'Give your package a catchy name and description.',
+  titleLabel: 'Package title',
+  descriptionLabel: 'Package description',
+  descriptionMax: 500,
   nextSuffix: 'Guest Details',
 };
 
 export const VENDOR_GUEST_PACKAGE_COPY = {
-  title: 'Guest & Tent Details',
-  subtitle: 'Provide the number of guests and days.',
-  guestsLabel: 'Guests',
-  guestsAgeHint: 'Age 13+',
+  title: 'Guest & trip details',
+  subtitle: 'Set duration, group size, and how guests can book.',
   daysLabel: 'Days',
   nightsLabel: 'Nights',
-  foodLabel: 'Food',
-  nextSuffix: 'Amenities',
+  minGroupLabel: 'Minimum group size',
+  maxGroupLabel: 'Maximum group size',
+  bookingModeLabel: 'Booking mode',
+  bookingModes: [
+    { id: 'enquiry_only' as const, label: 'Enquiry only' },
+    { id: 'direct' as const, label: 'Direct booking' },
+  ],
+  nextSuffix: 'Set Pricing',
 };
 
 export type VendorGuestPackageDetails = {
-  guests: number;
   days: number;
   nights: number;
-  food: VendorFoodOptionId[];
+  minGroupSize: number;
+  maxGroupSize: number;
+  bookingMode: 'direct' | 'enquiry_only';
 };
 
 export const DEFAULT_GUEST_PACKAGE_DETAILS: VendorGuestPackageDetails = {
-  guests: 4,
-  days: 1,
-  nights: 1,
-  food: ['breakfast'],
+  days: 4,
+  nights: 3,
+  minGroupSize: 2,
+  maxGroupSize: 12,
+  bookingMode: 'enquiry_only',
 };
 
 export const VENDOR_PACKAGE_ITINERARY_COPY = {
@@ -93,17 +102,6 @@ export type VendorPackageDayItinerary = {
   activitySecondary: string;
 };
 
-const defaultDayOne: VendorPackageDayItinerary = {
-  id: 'day-1',
-  label: 'Day 1',
-  title: 'Arrival: Flight from New Delhi to Singapore | Night Safari in the Evening',
-  aboutExperience: PACKAGE_DAY_ONE.body,
-  hotelPrimary: 'The Clan Hotel Singapore',
-  hotelSecondary: 'The Clan Hotel Singapore by Far East Hospitality / or similar',
-  activityPrimary: 'Singapore Night Safari',
-  activitySecondary: '[Open Dated] Singapore Night Safari Admission with Tram Ride',
-};
-
 const emptyDay = (index: number): VendorPackageDayItinerary => ({
   id: `day-${index}`,
   label: `Day ${index}`,
@@ -116,7 +114,7 @@ const emptyDay = (index: number): VendorPackageDayItinerary => ({
 });
 
 export const DEFAULT_PACKAGE_ITINERARY_DAYS: VendorPackageDayItinerary[] = [
-  defaultDayOne,
+  emptyDay(1),
   emptyDay(2),
   emptyDay(3),
   emptyDay(4),
@@ -127,19 +125,40 @@ export const VENDOR_PACKAGE_INCLUSIONS_COPY = {
   subtitle: 'What is included in your package experience.',
   inclusionsTitle: 'Inclusions',
   exclusionsTitle: 'Exclusions',
+  whatsprovidedTitle: 'What we provide',
   maxLength: 500,
-  nextSuffix: 'Terms & Conditions',
+  nextSuffix: 'Upload Photos',
 };
 
-export const DEFAULT_PACKAGE_INCLUSIONS = PACKAGE_TRIP_HIGHLIGHTS.map((item) => `• ${item}`).join('\n');
+export const EMPTY_PACKAGE_INCLUSIONS = '• Hotel stay\n• Breakfast\n• Airport pickup';
+export const EMPTY_PACKAGE_EXCLUSIONS = '• Flights\n• Personal expenses';
+export const EMPTY_PACKAGE_WHATS_PROVIDED = '• Travel guide\n• AC transport';
 
-export const DEFAULT_PACKAGE_EXCLUSIONS = PACKAGE_EXCLUSIONS.map((item) => `• ${item}`).join('\n');
+export const DEFAULT_PACKAGE_INCLUSIONS = EMPTY_PACKAGE_INCLUSIONS;
+export const DEFAULT_PACKAGE_EXCLUSIONS = EMPTY_PACKAGE_EXCLUSIONS;
 
 export const VENDOR_PACKAGE_PUBLISH_TITLE = FIGMA_PACKAGE_DETAIL.title;
 
+export const VENDOR_PACKAGE_PUBLISH_COPY = {
+  description: 'Review your package listing before submitting for admin approval.',
+  priceLabel: 'Price per person',
+  taxLabel: 'Taxes and fees may apply',
+};
+
+export const PACKAGE_PHOTO_LIMITS = {
+  min: 1,
+  max: 10,
+} as const;
+
+export const VENDOR_PACKAGE_PHOTOS_COPY = {
+  title: 'Add photos of your package',
+  subtitle: 'Upload up to 10 images that showcase the experience.',
+  nextSuffix: 'Submit for Approval',
+};
+
 export const VENDOR_PACKAGE_PRICING_COPY = {
-  subtitle: 'How much do you charge for this package?',
-  basePriceLabel: 'Enter the price details',
+  subtitle: 'How much do you charge per person for this package?',
+  basePriceLabel: 'Price per person',
   nextSuffix: 'Itinerary Details',
 };
 

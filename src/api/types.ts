@@ -52,22 +52,332 @@ export interface SendOtpResponse {
   };
 }
 
+export interface RegisterRequest {
+  fullName: string;
+  password: string;
+  role?: string;
+  email?: string;
+  phone?: string;
+}
+
+export interface RegisterResponse {
+  success: boolean;
+  message: string;
+  channel?: OtpChannel;
+}
+
 export interface VerifyOtpRequest {
   full_name?: string;
   email?: string;
   phone?: string;
-  channel: OtpChannel;
+  channel?: OtpChannel;
   otp: string;
 }
 
 export interface VerifyOtpResponse {
   success: boolean;
-  message: string;
+  message?: string;
+  accessToken?: string;
+  refreshToken?: string;
+  user?: User;
   data?: {
     user: User;
     access_token: string;
     refresh_token?: string;
   };
+}
+
+export interface CreateVendorProfileRequest {
+  businessName: string;
+  panNumber?: string | null;
+  gstNumber?: string | null;
+}
+
+export interface VendorProfile {
+  id: string;
+  businessName: string;
+  panNumber?: string | null;
+  gstNumber?: string | null;
+  userId?: string;
+}
+
+export interface CreateVendorProfileResponse {
+  success: boolean;
+  message?: string;
+  data?: VendorProfile;
+}
+
+export interface UploadVendorKycResponse {
+  success: boolean;
+  message?: string;
+}
+
+export interface CreateHotelRequest {
+  title: string;
+  description: string;
+  listingType: string;
+  starRating: number;
+  checkInTime: string;
+  checkOutTime: string;
+  locationJson: Record<string, unknown>;
+  cancellationPolicyId?: string;
+}
+
+export interface CreateHotelResponse {
+  success?: boolean;
+  message?: string;
+  id?: string;
+  listing?: {
+    id: string;
+  };
+  data?: {
+    id: string;
+  };
+}
+
+export type MealPlanCode = 'EP' | 'CP' | 'MAP' | 'AP' | 'AI';
+
+export interface MealPlanInput {
+  planCode: MealPlanCode;
+  label?: string;
+  includesBreakfast?: boolean;
+  includesLunch?: boolean;
+  includesDinner?: boolean;
+  includesSnacks?: boolean;
+  isDefault?: boolean;
+}
+
+export interface CreateRoomTypeRequest {
+  name: string;
+  bedType: 'single' | 'double' | 'queen' | 'king' | 'bunk' | 'sofa_bed' | 'twin';
+  numBeds?: number;
+  floorAreaSqft?: number;
+  totalUnits: number;
+  defaultAdultOccupancy?: number;
+  maxAdultOccupancy?: number;
+  defaultChildOccupancy?: number;
+  maxChildOccupancy?: number;
+  defaultInfantOccupancy?: number;
+  maxInfantOccupancy?: number;
+  basePricePerNight: number;
+  extraAdultCharge?: number;
+  extraChildCharge?: number;
+  extraInfantCharge?: number;
+  amenityIds?: string[];
+  mealPlans?: MealPlanInput[];
+}
+
+export interface CreateRoomTypeResponse {
+  success?: boolean;
+  message?: string;
+  id?: string;
+  roomType?: {
+    id: string;
+  };
+  data?: {
+    id: string;
+  };
+}
+
+export interface SubmitHotelListingResponse {
+  success?: boolean;
+  message?: string;
+}
+
+export interface CreateGlampingResponse {
+  id: string;
+}
+
+export interface CreateGlampingRequest {
+  title: string;
+  description: string;
+  locationJson: Record<string, unknown>;
+  cancellationPolicyId?: string;
+  totalCamps: number;
+  adultsPerCamp: number;
+  infantsPerCamp: number;
+  pricePerCampNight: number;
+  extraAdultCharge: number;
+  extraInfantCharge: number;
+  aboutExperience: string;
+  inclusions: string[];
+  exclusions: string[];
+  whatsprovided: string[];
+  thingsToCarry: string[];
+  howToReach: string;
+  totalCampSites?: number;
+}
+
+export interface GlampingMealPlanRequest {
+  planCode: MealPlanCode;
+  label: string;
+  includesBreakfast?: boolean;
+  includesLunch?: boolean;
+  includesDinner?: boolean;
+  breakfastPricePp?: number;
+  lunchPricePp?: number;
+  dinnerPricePp?: number;
+  isDefault?: boolean;
+}
+
+export interface CreateGlampingMealPlanResponse {
+  success?: boolean;
+  message?: string;
+}
+
+/** @deprecated Use GlampingMealPlanRequest (single object POST body). */
+export interface UpsertGlampingMealPlansRequest {
+  mealPlans: MealPlanInput[];
+}
+
+/** @deprecated Use CreateGlampingMealPlanResponse. */
+export interface UpsertGlampingMealPlansResponse {
+  success?: boolean;
+  message?: string;
+}
+
+export interface UploadGlampingImagesResponse {
+  success?: boolean;
+  message?: string;
+}
+
+export interface SubmitGlampingListingResponse {
+  success?: boolean;
+  message?: string;
+}
+
+export type ActivityTypeEnum =
+  | 'trekking'
+  | 'water_sports'
+  | 'adventure'
+  | 'cultural'
+  | 'wildlife'
+  | 'cycling'
+  | 'camping'
+  | 'yoga_wellness'
+  | 'culinary'
+  | 'sightseeing';
+
+export interface CreateActivityRequest {
+  title: string;
+  activityType: ActivityTypeEnum;
+  basePriceAdult: number;
+  locationJson: Record<string, unknown>;
+  description?: string;
+  cancellationPolicyId?: string;
+  basePriceInfant?: number;
+  minAge?: number;
+  totalSlotsPerDay?: number;
+  aboutExperience?: string;
+  inclusions?: string[];
+  exclusions?: string[];
+  whatsprovided?: string[];
+  thingsToCarry?: string[];
+  howToReach?: string;
+  highlightIds?: string[];
+}
+
+export interface CreateActivityResponse {
+  success?: boolean;
+  id?: string;
+  message?: string;
+  listing?: unknown;
+  activity?: unknown;
+}
+
+export interface CreateActivitySlotRequest {
+  label: string;
+  startTime?: string;
+  durationMinutes?: number;
+  maxParticipants?: number;
+}
+
+export interface CreateActivitySlotResponse {
+  success?: boolean;
+  message?: string;
+  slot?: {
+    id: string;
+    label: string;
+    startTime?: string;
+    durationMinutes?: number;
+    maxParticipants?: number;
+  };
+}
+
+export interface UploadActivityImagesResponse {
+  success?: boolean;
+  message?: string;
+}
+
+export interface SubmitActivityListingResponse {
+  success?: boolean;
+  message?: string;
+}
+
+export interface ActivityHighlight {
+  id: string;
+  name: string;
+  description?: string;
+  icon?: string;
+  activityType: ActivityTypeEnum;
+}
+
+export interface ActivityHighlightsResponse {
+  success?: boolean;
+  highlights?: ActivityHighlight[];
+}
+
+export type PackageBookingMode = 'direct' | 'enquiry_only';
+
+export interface CreatePackageRequest {
+  title: string;
+  totalDays: number;
+  totalNights: number;
+  pricePerPerson: number;
+  locationJson: Record<string, unknown>;
+  description?: string;
+  cancellationPolicyId?: string;
+  minGroupSize?: number;
+  maxGroupSize?: number;
+  inclusions?: string[];
+  exclusions?: string[];
+  whatsprovided?: string[];
+  bookingMode?: PackageBookingMode;
+}
+
+export interface CreatePackageResponse {
+  success?: boolean;
+  message?: string;
+  error?: string;
+  id?: string;
+  listing?: { id?: string };
+  package?: { id?: string };
+}
+
+export interface UpsertPackageItineraryRequest {
+  dayNumber: number;
+  title: string;
+  description?: string;
+  hotelName?: string;
+  hotelDescription?: string;
+  activityName?: string;
+  activityDescription?: string;
+}
+
+export interface UpsertPackageItineraryResponse {
+  success?: boolean;
+  message?: string;
+}
+
+export interface UploadPackageImagesResponse {
+  success?: boolean;
+  message?: string;
+  images?: unknown[];
+}
+
+export interface SubmitPackageListingResponse {
+  success?: boolean;
+  message?: string;
 }
 
 export interface Trip {

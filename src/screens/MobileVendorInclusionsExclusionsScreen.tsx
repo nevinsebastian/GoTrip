@@ -3,16 +3,31 @@ import { borderRadius, colors, spacing, typography } from '@/constants/DesignTok
 import { VendorListingHeader } from '@/src/components/vendor/VendorListingHeader';
 import { VendorOnboardingFooter } from '@/src/components/vendor/VendorOnboardingFooter';
 import {
-  DEFAULT_CAMPING_EXCLUSIONS,
-  DEFAULT_CAMPING_INCLUSIONS,
+  EMPTY_CAMPING_EXCLUSIONS,
+  EMPTY_CAMPING_INCLUSIONS,
+  EMPTY_CAMPING_WHATS_PROVIDED,
   VENDOR_INCLUSIONS_EXCLUSIONS_COPY,
 } from '@/src/constants/vendorGlampingConstants';
 import {
+  EMPTY_ACTIVITY_EXCLUSIONS,
+  EMPTY_ACTIVITY_INCLUSIONS,
+  EMPTY_ACTIVITY_WHATS_PROVIDED,
+  VENDOR_ACTIVITY_INCLUSIONS_COPY,
+} from '@/src/constants/vendorActivityConstants';
+import {
   DEFAULT_PACKAGE_EXCLUSIONS,
   DEFAULT_PACKAGE_INCLUSIONS,
+  EMPTY_PACKAGE_WHATS_PROVIDED,
   VENDOR_PACKAGE_INCLUSIONS_COPY,
 } from '@/src/constants/vendorPackageConstants';
 import { useVendorListingCategory } from '@/src/hooks/useVendorListingCategory';
+import { ensureVendorGlampingListingCreated } from '@/src/api/vendorGlampingOnboarding.service';
+import { createVendorActivityListingWithSlots } from '@/src/api/vendorActivityOnboarding.service';
+import { createVendorPackageListingWithItineraries } from '@/src/api/vendorPackageOnboarding.service';
+import { getVendorGlampingDraft, saveVendorGlampingDraft } from '@/src/utils/vendorGlampingDraft';
+import { getVendorActivityDraft, saveVendorActivityDraft } from '@/src/utils/vendorActivityDraft';
+import { getVendorPackageDraft, saveVendorPackageDraft } from '@/src/utils/vendorPackageDraft';
+import { parseGlampingTextList } from '@/src/utils/parseGlampingTextList';
 import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Platform, ScrollView, StyleSheet, TextInput, View, useWindowDimensions } from 'react-native';
@@ -59,27 +74,161 @@ function ListSection({
 export function MobileVendorInclusionsExclusionsScreen() {
   const categoryId = useVendorListingCategory();
   const isPackage = categoryId === 'packages';
-  const copy = isPackage ? VENDOR_PACKAGE_INCLUSIONS_COPY : VENDOR_INCLUSIONS_EXCLUSIONS_COPY;
+  const isActivity = categoryId === 'activities';
+  const copy = isPackage
+    ? VENDOR_PACKAGE_INCLUSIONS_COPY
+    : isActivity
+      ? VENDOR_ACTIVITY_INCLUSIONS_COPY
+      : VENDOR_INCLUSIONS_EXCLUSIONS_COPY;
 
   const { width } = useWindowDimensions();
   const scale = width / DESIGN_WIDTH;
   const contentWidth = Math.round(CONTENT_WIDTH * scale);
   const horizontalPadding = Math.max(0, (width - contentWidth) / 2);
 
-  const [inclusions, setInclusions] = useState(DEFAULT_CAMPING_INCLUSIONS);
-  const [exclusions, setExclusions] = useState(DEFAULT_CAMPING_EXCLUSIONS);
+  const [inclusions, setInclusions] = useState(EMPTY_CAMPING_INCLUSIONS);
+  const [exclusions, setExclusions] = useState(EMPTY_CAMPING_EXCLUSIONS);
+  const [whatsprovided, setWhatsprovided] = useState(EMPTY_CAMPING_WHATS_PROVIDED);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (categoryId === 'packages') {
-      setInclusions(DEFAULT_PACKAGE_INCLUSIONS);
-      setExclusions(DEFAULT_PACKAGE_EXCLUSIONS);
+      (async () => {
+        const draft = await getVendorPackageDraft();
+        setInclusions(draft?.inclusionsText ?? DEFAULT_PACKAGE_INCLUSIONS);
+        setExclusions(draft?.exclusionsText ?? DEFAULT_PACKAGE_EXCLUSIONS);
+        setWhatsprovided(draft?.whatsprovidedText ?? EMPTY_PACKAGE_WHATS_PROVIDED);
+      })();
       return;
     }
     if (categoryId === 'glamping') {
-      setInclusions(DEFAULT_CAMPING_INCLUSIONS);
-      setExclusions(DEFAULT_CAMPING_EXCLUSIONS);
+      (async () => {
+        const draft = await getVendorGlampingDraft();
+        setInclusions(draft?.inclusionsText ?? EMPTY_CAMPING_INCLUSIONS);
+        setExclusions(draft?.exclusionsText ?? EMPTY_CAMPING_EXCLUSIONS);
+        setWhatsprovided(draft?.whatsprovidedText ?? EMPTY_CAMPING_WHATS_PROVIDED);
+      })();
+      return;
     }
-  }, [categoryId]);
+    if (isActivity) {
+      (async () => {
+        const draft = await getVendorActivityDraft();
+        setInclusions(draft?.inclusionsText ?? EMPTY_ACTIVITY_INCLUSIONS);
+        setExclusions(draft?.exclusionsText ?? EMPTY_ACTIVITY_EXCLUSIONS);
+        setWhatsprovided(draft?.whatsprovidedText ?? EMPTY_ACTIVITY_WHATS_PROVIDED);
+      })();
+    }
+  }, [categoryId, isActivity]);
+
+  const handleNext = async () => {
+    if (isActivity) {
+      if (!parseGlampingTextList(inclusions).length) {
+        setSubmitError('Please add at least one inclusion.');
+        return;
+      }
+      if (!parseGlampingTextList(exclusions).length) {
+        setSubmitError('Please add at least one exclusion.');
+        return;
+      }
+      if (!parseGlampingTextList(whatsprovided).length) {
+        setSubmitError('Please add at least one item under what is provided.');
+        return;
+      }
+      setSubmitError(null);
+      const prev = (await getVendorActivityDraft()) ?? {};
+      await saveVendorActivityDraft({
+        ...prev,
+        inclusionsText: inclusions.trim(),
+        exclusionsText: exclusions.trim(),
+        whatsprovidedText: whatsprovided.trim(),
+      });
+
+      setIsSubmitting(true);
+      try {
+        const createRes = await createVendorActivityListingWithSlots();
+        if (!createRes.success) {
+          setSubmitError(createRes.message ?? 'Could not create activity listing.');
+          return;
+        }
+        router.push('/vendor/photos');
+      } finally {
+        setIsSubmitting(false);
+      }
+      return;
+    }
+    if (categoryId === 'glamping') {
+      if (!parseGlampingTextList(inclusions).length) {
+        setSubmitError('Please add at least one inclusion.');
+        return;
+      }
+      if (!parseGlampingTextList(exclusions).length) {
+        setSubmitError('Please add at least one exclusion.');
+        return;
+      }
+      if (!parseGlampingTextList(whatsprovided).length) {
+        setSubmitError('Please add at least one item under what is provided.');
+        return;
+      }
+      setSubmitError(null);
+      const prev = (await getVendorGlampingDraft()) ?? {};
+      await saveVendorGlampingDraft({
+        ...prev,
+        inclusionsText: inclusions.trim(),
+        exclusionsText: exclusions.trim(),
+        whatsprovidedText: whatsprovided.trim(),
+      });
+
+      setIsSubmitting(true);
+      try {
+        const createRes = await ensureVendorGlampingListingCreated();
+        if (!createRes.success) {
+          setSubmitError(createRes.message ?? 'Could not create glamping listing.');
+          return;
+        }
+        router.push('/vendor/glamping/photos');
+      } finally {
+        setIsSubmitting(false);
+      }
+      return;
+    }
+    if (isPackage) {
+      if (!parseGlampingTextList(inclusions).length) {
+        setSubmitError('Please add at least one inclusion.');
+        return;
+      }
+      if (!parseGlampingTextList(exclusions).length) {
+        setSubmitError('Please add at least one exclusion.');
+        return;
+      }
+      if (!parseGlampingTextList(whatsprovided).length) {
+        setSubmitError('Please add at least one item under what is provided.');
+        return;
+      }
+      setSubmitError(null);
+      const prev = (await getVendorPackageDraft()) ?? {};
+      await saveVendorPackageDraft({
+        ...prev,
+        inclusionsText: inclusions.trim(),
+        exclusionsText: exclusions.trim(),
+        whatsprovidedText: whatsprovided.trim(),
+      });
+
+      setIsSubmitting(true);
+      try {
+        const createRes = await createVendorPackageListingWithItineraries();
+        if (!createRes.success) {
+          setSubmitError(createRes.message ?? 'Could not create package listing.');
+          return;
+        }
+        router.push('/vendor/photos');
+      } finally {
+        setIsSubmitting(false);
+      }
+      return;
+    }
+    router.push('/vendor/terms');
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
@@ -113,14 +262,33 @@ export function MobileVendorInclusionsExclusionsScreen() {
               headerStyle={styles.exclusionsHeader}
               headerTextStyle={styles.exclusionsHeaderText}
             />
+            {categoryId === 'glamping' || isActivity || isPackage ? (
+              <ListSection
+                title={
+                  isActivity
+                    ? VENDOR_ACTIVITY_INCLUSIONS_COPY.whatsprovidedTitle
+                    : isPackage
+                      ? VENDOR_PACKAGE_INCLUSIONS_COPY.whatsprovidedTitle
+                      : VENDOR_INCLUSIONS_EXCLUSIONS_COPY.whatsprovidedTitle
+                }
+                value={whatsprovided}
+                onChange={setWhatsprovided}
+                maxLength={copy.maxLength}
+                headerStyle={styles.inclusionsHeader}
+                headerTextStyle={styles.inclusionsHeaderText}
+              />
+            ) : null}
+            {submitError ? <Text style={styles.errorText}>{submitError}</Text> : null}
           </View>
         </ScrollView>
 
         <VendorOnboardingFooter
           onBack={() => router.back()}
-          onNext={() => router.push('/vendor/terms')}
+          onNext={handleNext}
           nextLabel="Next"
           nextSuffix={copy.nextSuffix}
+          isNextLoading={isSubmitting}
+          nextDisabled={isSubmitting}
         />
       </View>
     </SafeAreaView>
@@ -196,5 +364,10 @@ const styles = StyleSheet.create({
     color: 'rgba(28, 32, 36, 0.45)',
     paddingHorizontal: 12,
     paddingBottom: 10,
+  },
+  errorText: {
+    fontFamily: typography.fontFamily.text,
+    fontSize: 12,
+    color: colors.primaryAlt,
   },
 });

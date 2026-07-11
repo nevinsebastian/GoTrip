@@ -10,7 +10,19 @@ export const VENDOR_ONBOARDING = {
   earningsAmount: '₹2,420 a week.',
   registerTitle: 'Create your partner account',
   otpTitle: 'Join the Tribe!',
+  profileTitle: 'Create your vendor profile',
+  profileSubtitle: 'Tell us about your business to get started.',
+  businessNameLabel: 'Business name',
+  panNumberLabel: 'PAN',
+  gstNumberLabel: 'GST',
+  businessNamePlaceholder: 'Business name',
+  panNumberPlaceholder: 'PAN',
+  gstNumberPlaceholder: 'GST',
+  profileOptionalTaxHint: "If you don't have PAN or GST, leave those fields empty.",
+  completeProfileCta: 'Create Profile',
+  completeProfileCtaDesktop: 'Next  >  Create Profile',
   documentsTitle: 'Upload documents',
+  documentsSubtitle: 'Upload your ID and property documents for verification.',
   completeSetupCta: 'Complete Account Setup',
   completeSetupCtaDesktop: 'Next  >  Complete Account Setup',
   setupDoneTitle: 'Account setup done!',
@@ -99,10 +111,13 @@ export function getVendorListingCategory(id: VendorListingCategoryId): VendorLis
   return VENDOR_LISTING_CATEGORIES.find((item) => item.id === id) ?? VENDOR_LISTING_CATEGORIES[0];
 }
 
+export type VendorSignupMode = 'phone' | 'email';
+
 export type VendorRegistrationForm = {
   fullName: string;
   email: string;
   phone: string;
+  password: string;
 };
 
 export type VendorDocumentField = 'id' | 'property';
@@ -117,5 +132,18 @@ export type VendorDocumentUpload = {
 export const EMPTY_VENDOR_FORM: VendorRegistrationForm = {
   fullName: '',
   email: '',
-  phone: VENDOR_ONBOARDING.defaultPhone,
+  phone: '',
+  password: '',
+};
+
+export type VendorProfileForm = {
+  businessName: string;
+  panNumber: string;
+  gstNumber: string;
+};
+
+export const EMPTY_VENDOR_PROFILE: VendorProfileForm = {
+  businessName: '',
+  panNumber: '',
+  gstNumber: '',
 };

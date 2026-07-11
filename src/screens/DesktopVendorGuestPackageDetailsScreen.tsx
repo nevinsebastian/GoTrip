@@ -4,39 +4,83 @@ import { DesktopVendorOnboardingFooter } from '@/src/components/desktop/DesktopV
 import { DesktopVendorOnboardingShell } from '@/src/components/desktop/DesktopVendorOnboardingShell';
 import { VendorStepper } from '@/src/components/vendor/VendorStepper';
 import { DESKTOP_VENDOR_HERO_SPEECH } from '@/src/constants/desktopVendorListingConstants';
-import { VENDOR_FOOD_OPTIONS, type VendorFoodOptionId } from '@/src/constants/vendorListingConstants';
 import {
   DEFAULT_GUEST_PACKAGE_DETAILS,
   VENDOR_GUEST_PACKAGE_COPY,
   type VendorGuestPackageDetails,
 } from '@/src/constants/vendorPackageConstants';
+import { getVendorPackageDraft, saveVendorPackageDraft } from '@/src/utils/vendorPackageDraft';
 import { router } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Platform, Pressable, StyleSheet, View } from 'react-native';
 
 export function DesktopVendorGuestPackageDetailsScreen() {
   const [details, setDetails] = useState<VendorGuestPackageDetails>(DEFAULT_GUEST_PACKAGE_DETAILS);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      const draft = await getVendorPackageDraft();
+      if (!draft) return;
+      setDetails({
+        days: draft.totalDays ?? DEFAULT_GUEST_PACKAGE_DETAILS.days,
+        nights: draft.totalNights ?? DEFAULT_GUEST_PACKAGE_DETAILS.nights,
+        minGroupSize: draft.minGroupSize ?? DEFAULT_GUEST_PACKAGE_DETAILS.minGroupSize,
+        maxGroupSize: draft.maxGroupSize ?? DEFAULT_GUEST_PACKAGE_DETAILS.maxGroupSize,
+        bookingMode: draft.bookingMode ?? DEFAULT_GUEST_PACKAGE_DETAILS.bookingMode,
+      });
+    })();
+  }, []);
 
   const update = (patch: Partial<VendorGuestPackageDetails>) => {
     setDetails((prev) => ({ ...prev, ...patch }));
   };
 
-  const toggleFood = (id: VendorFoodOptionId) => {
-    const has = details.food.includes(id);
-    update({
-      food: has ? details.food.filter((item) => item !== id) : [...details.food, id],
-    });
-  };
-
-  const stepperRow = (label: string, value: number, onChange: (v: number) => void, hint?: string) => (
+  const stepperRow = (
+    label: string,
+    value: number,
+    onChange: (v: number) => void,
+    min = 0,
+    hint?: string,
+  ) => (
     <View style={styles.rowBetween}>
       <View style={styles.labelCol}>
         <Text style={styles.rowLabel}>{label}</Text>
         {hint ? <Text style={styles.rowHint}>{hint}</Text> : null}
       </View>
-      <VendorStepper variant="pill" value={value} min={0} onChange={onChange} />
+      <VendorStepper variant="pill" value={value} min={min} onChange={onChange} />
     </View>
   );
+
+  const handleNext = async () => {
+    if (details.days < 1) {
+      setSubmitError('Days must be at least 1.');
+      return;
+    }
+    if (details.nights < 0) {
+      setSubmitError('Nights cannot be negative.');
+      return;
+    }
+    if (details.minGroupSize < 1) {
+      setSubmitError('Minimum group size must be at least 1.');
+      return;
+    }
+    if (details.maxGroupSize < details.minGroupSize) {
+      setSubmitError('Maximum group size must be at least the minimum.');
+      return;
+    }
+    setSubmitError(null);
+    const prev = (await getVendorPackageDraft()) ?? {};
+    await saveVendorPackageDraft({
+      ...prev,
+      totalDays: details.days,
+      totalNights: details.nights,
+      minGroupSize: details.minGroupSize,
+      maxGroupSize: details.maxGroupSize,
+      bookingMode: details.bookingMode,
+    });
+    router.push('/vendor/set-pricing');
+  };
 
   return (
     <DesktopVendorOnboardingShell
@@ -45,7 +89,7 @@ export function DesktopVendorGuestPackageDetailsScreen() {
       footer={
         <DesktopVendorOnboardingFooter
           onBack={() => router.back()}
-          onNext={() => router.push('/vendor/amenities')}
+          onNext={handleNext}
           nextSuffix={VENDOR_GUEST_PACKAGE_COPY.nextSuffix}
         />
       }
@@ -57,15 +101,21 @@ export function DesktopVendorGuestPackageDetailsScreen() {
         </View>
 
         <View style={styles.detailsCard}>
-          {stepperRow(
-            VENDOR_GUEST_PACKAGE_COPY.guestsLabel,
-            details.guests,
-            (guests) => update({ guests }),
-            VENDOR_GUEST_PACKAGE_COPY.guestsAgeHint,
-          )}
-          {stepperRow(VENDOR_GUEST_PACKAGE_COPY.daysLabel, details.days, (days) => update({ days }))}
+          {stepperRow(VENDOR_GUEST_PACKAGE_COPY.daysLabel, details.days, (days) => update({ days }), 1)}
           {stepperRow(VENDOR_GUEST_PACKAGE_COPY.nightsLabel, details.nights, (nights) =>
             update({ nights }),
+          )}
+          {stepperRow(
+            VENDOR_GUEST_PACKAGE_COPY.minGroupLabel,
+            details.minGroupSize,
+            (minGroupSize) => update({ minGroupSize }),
+            1,
+          )}
+          {stepperRow(
+            VENDOR_GUEST_PACKAGE_COPY.maxGroupLabel,
+            details.maxGroupSize,
+            (maxGroupSize) => update({ maxGroupSize }),
+            1,
           )}
 
           <View style={styles.orRow}>
@@ -73,22 +123,22 @@ export function DesktopVendorGuestPackageDetailsScreen() {
             <View style={styles.orLineMuted} />
           </View>
 
-          <View style={styles.foodRow}>
-            <Text style={styles.rowLabel}>{VENDOR_GUEST_PACKAGE_COPY.foodLabel}</Text>
-            <View style={styles.foodPills}>
-              {VENDOR_FOOD_OPTIONS.map((option) => {
-                const selected = details.food.includes(option.id);
+          <View style={styles.bookingRow}>
+            <Text style={styles.rowLabel}>{VENDOR_GUEST_PACKAGE_COPY.bookingModeLabel}</Text>
+            <View style={styles.bookingPills}>
+              {VENDOR_GUEST_PACKAGE_COPY.bookingModes.map((option) => {
+                const selected = details.bookingMode === option.id;
                 return (
                   <Pressable
                     key={option.id}
                     style={({ pressed }) => [
-                      styles.foodPill,
-                      selected && styles.foodPillSelected,
+                      styles.bookingPill,
+                      selected && styles.bookingPillSelected,
                       pressed && styles.pressed,
                     ]}
-                    onPress={() => toggleFood(option.id)}
+                    onPress={() => update({ bookingMode: option.id })}
                   >
-                    <Text style={[styles.foodPillText, selected && styles.foodPillTextSelected]}>
+                    <Text style={[styles.bookingPillText, selected && styles.bookingPillTextSelected]}>
                       {option.label}
                     </Text>
                   </Pressable>
@@ -97,6 +147,7 @@ export function DesktopVendorGuestPackageDetailsScreen() {
             </View>
           </View>
         </View>
+        {submitError ? <Text style={styles.errorText}>{submitError}</Text> : null}
       </View>
     </DesktopVendorOnboardingShell>
   );
@@ -145,34 +196,34 @@ const styles = StyleSheet.create({
   orRow: { flexDirection: 'row', alignItems: 'center' },
   orLineAccent: { flex: 1, height: 1, backgroundColor: colors.accent.main },
   orLineMuted: { flex: 1, height: 1, backgroundColor: 'rgba(28, 32, 36, 0.12)' },
-  foodRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  foodPills: {
-    flex: 1,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'flex-end',
-    gap: 6,
-  },
-  foodPill: {
+  bookingRow: { gap: 8 },
+  bookingPills: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  bookingPill: {
     borderWidth: 1,
-    borderColor: 'rgba(28, 32, 36, 0.2)',
-    borderRadius: borderRadius.pill,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    borderColor: 'rgba(28, 32, 36, 0.15)',
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: colors.surface.white,
     ...Platform.select({ web: { cursor: 'pointer' as const } }),
   },
-  foodPillSelected: {
+  bookingPillSelected: {
     borderColor: colors.accent.main,
-    backgroundColor: 'rgba(232, 84, 51, 0.06)',
+    backgroundColor: 'rgba(255, 107, 53, 0.08)',
   },
-  foodPillText: {
+  bookingPillText: {
     fontFamily: typography.fontFamily.text,
-    fontSize: 11,
-    color: 'rgba(28, 32, 36, 0.5)',
+    fontSize: 12,
+    color: colors.text.primary,
   },
-  foodPillTextSelected: {
+  bookingPillTextSelected: {
     color: colors.accent.main,
-    fontWeight: typography.fontWeight.medium,
+    fontWeight: typography.fontWeight.semibold,
   },
   pressed: { opacity: 0.85 },
+  errorText: {
+    fontFamily: typography.fontFamily.text,
+    fontSize: 12,
+    color: colors.primaryAlt,
+  },
 });

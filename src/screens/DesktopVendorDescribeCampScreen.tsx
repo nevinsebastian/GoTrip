@@ -30,7 +30,7 @@ export function DesktopVendorDescribeCampScreen() {
       footer={
         <DesktopVendorOnboardingFooter
           onBack={() => router.back()}
-          onNext={() => router.push('/vendor/select-location')}
+          onNext={() => router.push('/vendor/glamping/title')}
           nextLabel="Next"
           nextSuffix={VENDOR_GLAMPING_DESCRIBE_COPY.nextSuffix}
         />

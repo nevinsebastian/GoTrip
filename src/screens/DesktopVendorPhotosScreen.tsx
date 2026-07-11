@@ -10,6 +10,18 @@ import {
   type VendorListingPhoto,
 } from '@/src/constants/vendorListingConstants';
 import { useVendorListingCategory } from '@/src/hooks/useVendorListingCategory';
+import { uploadVendorActivityImagesStep } from '@/src/api/vendorActivityOnboarding.service';
+import { uploadVendorPackageImagesStep } from '@/src/api/vendorPackageOnboarding.service';
+import { ACTIVITY_PHOTO_LIMITS, VENDOR_ACTIVITY_PHOTOS_COPY } from '@/src/constants/vendorActivityConstants';
+import {
+  PACKAGE_PHOTO_LIMITS,
+  VENDOR_PACKAGE_PHOTOS_COPY,
+} from '@/src/constants/vendorPackageConstants';
+import { documentToDataUrl, documentsToDataUrls } from '@/src/utils/documentToDataUrl';
+import { getVendorActivityDraft, saveVendorActivityDraft } from '@/src/utils/vendorActivityDraft';
+import { getVendorPackageDraft, saveVendorPackageDraft } from '@/src/utils/vendorPackageDraft';
+import { pickVendorDocument, type VendorDocumentPickSource, type VendorLocalDocument } from '@/src/utils/vendorDocumentPicker';
+import { persistVendorGlampingImages } from '@/src/utils/vendorGlampingImageStore';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
@@ -35,19 +47,76 @@ function createPhotoFromSource(
 
 export function DesktopVendorPhotosScreen() {
   const listingCategoryId = useVendorListingCategory();
+  const isActivity = listingCategoryId === 'activities';
+  const isPackage = listingCategoryId === 'packages';
   const [photos, setPhotos] = useState<VendorListingPhoto[]>([]);
+  const [glampingPhotos, setGlampingPhotos] = useState<VendorLocalDocument[]>([]);
+  const [activityPhotos, setActivityPhotos] = useState<VendorLocalDocument[]>([]);
+  const [packagePhotos, setPackagePhotos] = useState<VendorLocalDocument[]>([]);
   const [coverPhotoId, setCoverPhotoId] = useState<string | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [mockUploadIndex, setMockUploadIndex] = useState(0);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const hasPhotos = photos.length > 0;
-  const activePhoto = photos[activeIndex] ?? photos[0] ?? null;
-  const coverId = coverPhotoId ?? photos[0]?.id ?? null;
+  const localPhotos =
+    listingCategoryId === 'glamping'
+      ? glampingPhotos
+      : isActivity
+        ? activityPhotos
+        : isPackage
+          ? packagePhotos
+          : null;
+  const hasPhotos = localPhotos ? localPhotos.length > 0 : photos.length > 0;
+  const activePhoto = localPhotos
+    ? localPhotos[activeIndex] ?? localPhotos[0] ?? null
+    : photos[activeIndex] ?? photos[0] ?? null;
+  const usesLocalPhotos = Boolean(localPhotos);
+  const photoList = localPhotos ?? photos;
+  const coverId = coverPhotoId ?? photoList[0]?.id ?? null;
 
-  const handleUpload = () => {
-    const source = VENDOR_MOCK_PHOTO_SOURCES[mockUploadIndex % VENDOR_MOCK_PHOTO_SOURCES.length];
-    const nextPhoto = createPhotoFromSource(source, mockUploadIndex);
+  const handleUpload = async (source: VendorDocumentPickSource) => {
+    if (listingCategoryId === 'glamping' || isActivity || isPackage) {
+      const targetPhotos =
+        listingCategoryId === 'glamping'
+          ? glampingPhotos
+          : isActivity
+            ? activityPhotos
+            : packagePhotos;
+      const maxPhotos = isActivity
+        ? ACTIVITY_PHOTO_LIMITS.max
+        : isPackage
+          ? PACKAGE_PHOTO_LIMITS.max
+          : Number.MAX_SAFE_INTEGER;
+      if (targetPhotos.length >= maxPhotos) {
+        setSubmitError(`You can upload up to ${maxPhotos} images.`);
+        setUploadOpen(false);
+        return;
+      }
+      const doc = await pickVendorDocument(source);
+      if (!doc) {
+        setUploadOpen(false);
+        return;
+      }
+      const setter =
+        listingCategoryId === 'glamping'
+          ? setGlampingPhotos
+          : isActivity
+            ? setActivityPhotos
+            : setPackagePhotos;
+      setter((prev) => {
+        const next = [...prev, doc];
+        if (!coverPhotoId) setCoverPhotoId(doc.id);
+        return next;
+      });
+      setActiveIndex(targetPhotos.length);
+      setUploadOpen(false);
+      return;
+    }
+
+    const imgSource = VENDOR_MOCK_PHOTO_SOURCES[mockUploadIndex % VENDOR_MOCK_PHOTO_SOURCES.length];
+    const nextPhoto = createPhotoFromSource(imgSource, mockUploadIndex);
     setPhotos((prev) => {
       const next = [...prev, nextPhoto];
       if (!coverPhotoId) setCoverPhotoId(nextPhoto.id);
@@ -60,13 +129,79 @@ export function DesktopVendorPhotosScreen() {
 
   const setAsCover = (id: string) => {
     setCoverPhotoId(id);
-    const index = photos.findIndex((p) => p.id === id);
+    const list = localPhotos ?? photos;
+    const index = list.findIndex((p) => p.id === id);
     if (index >= 0) setActiveIndex(index);
   };
 
   const showNext = () => {
-    if (!photos.length) return;
-    setActiveIndex((i) => (i + 1) % photos.length);
+    const list = localPhotos ?? photos;
+    if (!list.length) return;
+    setActiveIndex((i) => (i + 1) % list.length);
+  };
+
+  const handleNext = async () => {
+    if (listingCategoryId === 'glamping') {
+      const images = await Promise.all(glampingPhotos.map(documentToDataUrl));
+      await persistVendorGlampingImages(images);
+      router.push('/vendor/create-title');
+      return;
+    }
+    if (isActivity) {
+      if (activityPhotos.length < ACTIVITY_PHOTO_LIMITS.min) {
+        setSubmitError(`Please add at least ${ACTIVITY_PHOTO_LIMITS.min} image.`);
+        return;
+      }
+      setIsSubmitting(true);
+      setSubmitError(null);
+      try {
+        const dataUrls = await documentsToDataUrls(activityPhotos);
+        await saveVendorActivityDraft({
+          ...((await getVendorActivityDraft()) ?? {}),
+          images: dataUrls,
+        });
+        const res = await uploadVendorActivityImagesStep(
+          activityPhotos,
+          dataUrls.length ? dataUrls : undefined,
+        );
+        if (!res.success) {
+          setSubmitError(res.message ?? 'Could not upload images.');
+          return;
+        }
+        router.push('/vendor/terms');
+      } finally {
+        setIsSubmitting(false);
+      }
+      return;
+    }
+    if (isPackage) {
+      if (packagePhotos.length < PACKAGE_PHOTO_LIMITS.min) {
+        setSubmitError(`Please add at least ${PACKAGE_PHOTO_LIMITS.min} image.`);
+        return;
+      }
+      setIsSubmitting(true);
+      setSubmitError(null);
+      try {
+        const dataUrls = await documentsToDataUrls(packagePhotos);
+        await saveVendorPackageDraft({
+          ...((await getVendorPackageDraft()) ?? {}),
+          images: dataUrls,
+        });
+        const res = await uploadVendorPackageImagesStep(
+          packagePhotos,
+          dataUrls.length ? dataUrls : undefined,
+        );
+        if (!res.success) {
+          setSubmitError(res.message ?? 'Could not upload images.');
+          return;
+        }
+        router.push('/vendor/publish-listing');
+      } finally {
+        setIsSubmitting(false);
+      }
+      return;
+    }
+    router.push('/vendor/create-title');
   };
 
   return (
@@ -77,17 +212,38 @@ export function DesktopVendorPhotosScreen() {
         footer={
           <DesktopVendorOnboardingFooter
             onBack={() => router.back()}
-            onNext={() => router.push('/vendor/create-title')}
+            onNext={handleNext}
             nextLabel="Next"
-            nextSuffix={VENDOR_PHOTOS_COPY.nextSuffix}
+            nextSuffix={
+              isActivity
+                ? VENDOR_ACTIVITY_PHOTOS_COPY.nextSuffix
+                : isPackage
+                  ? VENDOR_PACKAGE_PHOTOS_COPY.nextSuffix
+                  : VENDOR_PHOTOS_COPY.nextSuffix
+            }
+            isNextLoading={isSubmitting}
+            nextDisabled={isSubmitting}
           />
         }
       >
         <View style={styles.content}>
-          <Text style={styles.title}>{VENDOR_PHOTOS_COPY.title}</Text>
-          <Text style={styles.subtitle}>
-            {hasPhotos ? VENDOR_PHOTOS_COPY.subtitleFilled : VENDOR_PHOTOS_COPY.subtitleEmpty}
+          <Text style={styles.title}>
+            {isActivity
+              ? VENDOR_ACTIVITY_PHOTOS_COPY.title
+              : isPackage
+                ? VENDOR_PACKAGE_PHOTOS_COPY.title
+                : VENDOR_PHOTOS_COPY.title}
           </Text>
+          <Text style={styles.subtitle}>
+            {isActivity
+              ? VENDOR_ACTIVITY_PHOTOS_COPY.subtitle
+              : isPackage
+                ? VENDOR_PACKAGE_PHOTOS_COPY.subtitle
+                : hasPhotos
+                  ? VENDOR_PHOTOS_COPY.subtitleFilled
+                  : VENDOR_PHOTOS_COPY.subtitleEmpty}
+          </Text>
+          {submitError ? <Text style={styles.errorText}>{submitError}</Text> : null}
 
           {!hasPhotos ? (
             <Pressable
@@ -108,7 +264,15 @@ export function DesktopVendorPhotosScreen() {
             <>
               <View style={styles.previewWrap}>
                 {activePhoto ? (
-                  <Image source={activePhoto.source} style={styles.previewImage} resizeMode="cover" />
+                  <Image
+                    source={
+                      usesLocalPhotos
+                        ? { uri: (activePhoto as VendorLocalDocument).uri }
+                        : (activePhoto as unknown as VendorListingPhoto).source
+                    }
+                    style={styles.previewImage}
+                    resizeMode="cover"
+                  />
                 ) : null}
                 {activePhoto && activePhoto.id === coverId ? (
                   <View style={styles.coverBadge}>
@@ -123,7 +287,7 @@ export function DesktopVendorPhotosScreen() {
                     <Text style={styles.makeCoverOverlayText}>{VENDOR_PHOTOS_COPY.makeCover}</Text>
                   </Pressable>
                 ) : null}
-                {photos.length > 1 ? (
+                {photoList.length > 1 ? (
                   <Pressable style={styles.carouselNext} onPress={showNext} accessibilityRole="button">
                     <Ionicons name="chevron-forward" size={18} color={colors.text.primary} />
                   </Pressable>
@@ -131,7 +295,7 @@ export function DesktopVendorPhotosScreen() {
               </View>
 
               <FlatList
-                data={photos}
+                data={photoList as VendorLocalDocument[]}
                 keyExtractor={(item) => item.id}
                 horizontal
                 showsHorizontalScrollIndicator={false}
@@ -141,7 +305,15 @@ export function DesktopVendorPhotosScreen() {
                   return (
                     <View style={styles.thumbCard}>
                       <Pressable onPress={() => setActiveIndex(index)} style={styles.thumbPressable}>
-                        <Image source={item.source} style={styles.thumbImage} resizeMode="cover" />
+                        <Image
+                          source={
+                            usesLocalPhotos
+                              ? { uri: (item as VendorLocalDocument).uri }
+                              : (item as unknown as VendorListingPhoto).source
+                          }
+                          style={styles.thumbImage}
+                          resizeMode="cover"
+                        />
                         {isCover ? (
                           <View style={styles.thumbCoverBadge}>
                             <Text style={styles.thumbCoverText}>Cover</Text>
@@ -359,6 +531,11 @@ const styles = StyleSheet.create({
     fontFamily: typography.fontFamily.text,
     fontSize: typography.fontSize['1'],
     fontWeight: typography.fontWeight.medium,
+    color: colors.accent.main,
+  },
+  errorText: {
+    fontFamily: typography.fontFamily.text,
+    fontSize: 13,
     color: colors.accent.main,
   },
   pressed: { opacity: 0.85 },

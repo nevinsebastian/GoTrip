@@ -9,13 +9,14 @@ import {
   VENDOR_PACKAGE_ITINERARY_COPY,
   type VendorPackageDayItinerary,
 } from '@/src/constants/vendorPackageConstants';
+import { getVendorPackageDraft, saveVendorPackageDraft } from '@/src/utils/vendorPackageDraft';
 import {
   VENDOR_MOCK_PHOTO_SOURCES,
   type VendorListingPhoto,
 } from '@/src/constants/vendorListingConstants';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Image,
   ImageSourcePropType,
@@ -145,10 +146,34 @@ export function MobileVendorPackageItineraryScreen() {
 
   const [days, setDays] = useState<VendorPackageDayItinerary[]>(DEFAULT_PACKAGE_ITINERARY_DAYS);
   const [activeDayIndex, setActiveDayIndex] = useState(0);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [dayPickerOpen, setDayPickerOpen] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [photosByDay, setPhotosByDay] = useState<Record<string, VendorListingPhoto[]>>({});
   const [mockUploadIndex, setMockUploadIndex] = useState(0);
+
+  useEffect(() => {
+    (async () => {
+      const draft = await getVendorPackageDraft();
+      const totalDays = Math.max(1, Number(draft?.totalDays ?? DEFAULT_PACKAGE_ITINERARY_DAYS.length));
+      const existingDays = draft?.itineraryDays?.length ? draft.itineraryDays : DEFAULT_PACKAGE_ITINERARY_DAYS;
+      const normalizedDays = Array.from({ length: totalDays }, (_, index) => {
+        const existing = existingDays[index];
+        if (existing) return { ...existing, id: `day-${index + 1}`, label: `Day ${index + 1}` };
+        return {
+          id: `day-${index + 1}`,
+          label: `Day ${index + 1}`,
+          title: '',
+          aboutExperience: '',
+          hotelPrimary: '',
+          hotelSecondary: '',
+          activityPrimary: '',
+          activitySecondary: '',
+        };
+      });
+      setDays(normalizedDays);
+    })();
+  }, []);
 
   const activeDay = days[activeDayIndex] ?? days[0];
   const dayPhotos = photosByDay[activeDay.id] ?? [];
@@ -190,6 +215,7 @@ export function MobileVendorPackageItineraryScreen() {
               <Text style={styles.title}>{VENDOR_PACKAGE_ITINERARY_COPY.title}</Text>
               <Text style={styles.subtitle}>{VENDOR_PACKAGE_ITINERARY_COPY.subtitle}</Text>
             </View>
+            {submitError ? <Text style={styles.errorText}>{submitError}</Text> : null}
 
             <DayNavigator
               activeIndex={activeDayIndex}
@@ -278,7 +304,20 @@ export function MobileVendorPackageItineraryScreen() {
 
         <VendorOnboardingFooter
           onBack={() => router.back()}
-          onNext={() => router.push('/vendor/inclusions-exclusions')}
+          onNext={async () => {
+            const hasAtLeastOneDay = days.some((day) => day.title.trim());
+            if (!hasAtLeastOneDay) {
+              setSubmitError('Please add a title for at least one itinerary day.');
+              return;
+            }
+            setSubmitError(null);
+            const prev = (await getVendorPackageDraft()) ?? {};
+            await saveVendorPackageDraft({
+              ...prev,
+              itineraryDays: days,
+            });
+            router.push('/vendor/inclusions-exclusions');
+          }}
           nextLabel="Next"
           nextSuffix={VENDOR_PACKAGE_ITINERARY_COPY.nextSuffix}
         />
@@ -489,4 +528,9 @@ const styles = StyleSheet.create({
     borderColor: FIELD_BORDER,
   },
   pressed: { opacity: 0.85 },
+  errorText: {
+    fontFamily: typography.fontFamily.text,
+    fontSize: 12,
+    color: colors.primaryAlt,
+  },
 });

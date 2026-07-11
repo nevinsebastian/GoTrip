@@ -8,14 +8,15 @@ import {
   VENDOR_GUEST_ACTIVITY_COPY,
   type VendorGuestActivityDetails,
 } from '@/src/constants/vendorActivityConstants';
-import { VENDOR_FOOD_OPTIONS, type VendorFoodOptionId } from '@/src/constants/vendorListingConstants';
+import { getVendorActivityDraft, saveVendorActivityDraft } from '@/src/utils/vendorActivityDraft';
 import { router } from 'expo-router';
-import React, { useState } from 'react';
-import { Platform, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { Platform, ScrollView, StyleSheet, TextInput, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const DESIGN_WIDTH = 402;
 const CONTENT_WIDTH = 370;
+const FIELD_BORDER = 'rgba(28, 32, 36, 0.1)';
 
 export function MobileVendorGuestActivityDetailsScreen() {
   const { width } = useWindowDimensions();
@@ -25,15 +26,23 @@ export function MobileVendorGuestActivityDetailsScreen() {
 
   const [details, setDetails] = useState<VendorGuestActivityDetails>(DEFAULT_GUEST_ACTIVITY_DETAILS);
 
+  useEffect(() => {
+    (async () => {
+      const draft = await getVendorActivityDraft();
+      if (!draft) return;
+      setDetails({
+        guests: draft.guests ?? DEFAULT_GUEST_ACTIVITY_DETAILS.guests,
+        hours: draft.hours ?? DEFAULT_GUEST_ACTIVITY_DETAILS.hours,
+        minAge: draft.minAge ?? DEFAULT_GUEST_ACTIVITY_DETAILS.minAge,
+        totalSlotsPerDay: draft.totalSlotsPerDay ?? DEFAULT_GUEST_ACTIVITY_DETAILS.totalSlotsPerDay,
+        slotLabel: draft.slotLabel ?? DEFAULT_GUEST_ACTIVITY_DETAILS.slotLabel,
+        slotStartTime: draft.slotStartTime ?? DEFAULT_GUEST_ACTIVITY_DETAILS.slotStartTime,
+      });
+    })();
+  }, []);
+
   const update = (patch: Partial<VendorGuestActivityDetails>) => {
     setDetails((prev) => ({ ...prev, ...patch }));
-  };
-
-  const toggleFood = (id: VendorFoodOptionId) => {
-    const has = details.food.includes(id);
-    update({
-      food: has ? details.food.filter((item) => item !== id) : [...details.food, id],
-    });
   };
 
   const stepperRow = (label: string, value: number, onChange: (v: number) => void, hint?: string) => (
@@ -68,42 +77,41 @@ export function MobileVendorGuestActivityDetailsScreen() {
                 (guests) => update({ guests }),
                 VENDOR_GUEST_ACTIVITY_COPY.guestsAgeHint,
               )}
-              {stepperRow(VENDOR_GUEST_ACTIVITY_COPY.hoursLabel, details.hours, (hours) =>
-                update({ hours }),
+              {stepperRow(VENDOR_GUEST_ACTIVITY_COPY.hoursLabel, details.hours, (hours) => update({ hours }))}
+              {stepperRow(
+                VENDOR_GUEST_ACTIVITY_COPY.minAgeLabel,
+                details.minAge,
+                (minAge) => update({ minAge }),
+                VENDOR_GUEST_ACTIVITY_COPY.minAgeHint,
               )}
               {stepperRow(
-                VENDOR_GUEST_ACTIVITY_COPY.commonBathroomsLabel,
-                details.commonBathrooms,
-                (commonBathrooms) => update({ commonBathrooms }),
+                VENDOR_GUEST_ACTIVITY_COPY.totalSlotsLabel,
+                details.totalSlotsPerDay,
+                (totalSlotsPerDay) => update({ totalSlotsPerDay }),
+                VENDOR_GUEST_ACTIVITY_COPY.totalSlotsHint,
               )}
 
-              <View style={styles.orRow}>
-                <View style={styles.orLineAccent} />
-                <View style={styles.orLineMuted} />
+              <View style={styles.fieldGroup}>
+                <Text style={styles.rowLabel}>{VENDOR_GUEST_ACTIVITY_COPY.slotLabel}</Text>
+                <TextInput
+                  value={details.slotLabel}
+                  onChangeText={(slotLabel) => update({ slotLabel })}
+                  placeholder={VENDOR_GUEST_ACTIVITY_COPY.slotLabelPlaceholder}
+                  placeholderTextColor={colors.text.placeholder}
+                  style={styles.textInput}
+                />
               </View>
 
-              <View style={styles.foodRow}>
-                <Text style={styles.rowLabel}>{VENDOR_GUEST_ACTIVITY_COPY.foodLabel}</Text>
-                <View style={styles.foodPills}>
-                  {VENDOR_FOOD_OPTIONS.map((option) => {
-                    const selected = details.food.includes(option.id);
-                    return (
-                      <Pressable
-                        key={option.id}
-                        style={({ pressed }) => [
-                          styles.foodPill,
-                          selected && styles.foodPillSelected,
-                          pressed && styles.pressed,
-                        ]}
-                        onPress={() => toggleFood(option.id)}
-                      >
-                        <Text style={[styles.foodPillText, selected && styles.foodPillTextSelected]}>
-                          {option.label}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
-                </View>
+              <View style={styles.fieldGroup}>
+                <Text style={styles.rowLabel}>{VENDOR_GUEST_ACTIVITY_COPY.startTimeLabel}</Text>
+                <TextInput
+                  value={details.slotStartTime}
+                  onChangeText={(slotStartTime) => update({ slotStartTime })}
+                  placeholder={VENDOR_GUEST_ACTIVITY_COPY.startTimePlaceholder}
+                  placeholderTextColor={colors.text.placeholder}
+                  style={styles.textInput}
+                  autoCapitalize="none"
+                />
               </View>
             </View>
           </View>
@@ -111,7 +119,17 @@ export function MobileVendorGuestActivityDetailsScreen() {
 
         <VendorOnboardingFooter
           onBack={() => router.back()}
-          onNext={() => router.push('/vendor/amenities')}
+          onNext={async () => {
+            await saveVendorActivityDraft({
+              guests: details.guests,
+              hours: details.hours,
+              minAge: details.minAge,
+              totalSlotsPerDay: details.totalSlotsPerDay,
+              slotLabel: details.slotLabel.trim(),
+              slotStartTime: details.slotStartTime.trim(),
+            });
+            router.push('/vendor/set-pricing');
+          }}
           nextLabel="Next"
           nextSuffix={VENDOR_GUEST_ACTIVITY_COPY.nextSuffix}
         />
@@ -122,27 +140,24 @@ export function MobileVendorGuestActivityDetailsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.surface.white },
-  page: { flex: 1, width: '100%', maxWidth: DESIGN_WIDTH, alignSelf: 'center' },
-  scrollContent: { paddingTop: 10, paddingBottom: spacing['4'], alignItems: 'center' },
-  contentColumn: { alignSelf: 'stretch', gap: 8 },
+  page: { flex: 1 },
+  scrollContent: { paddingBottom: spacing['4'] },
+  contentColumn: { alignSelf: 'center', gap: 12 },
   intro: { gap: 4 },
   title: {
     fontFamily: typography.fontFamily.text,
     fontSize: 20,
     fontWeight: typography.fontWeight.semibold,
-    lineHeight: 28,
     color: colors.accent.main,
   },
   subtitle: {
     fontFamily: typography.fontFamily.text,
-    fontSize: typography.fontSize['1'],
-    lineHeight: typography.lineHeight['2'],
+    fontSize: 13,
     color: 'rgba(28, 32, 36, 0.55)',
   },
   detailsCard: {
-    width: '100%',
     borderWidth: 1,
-    borderColor: 'rgba(28, 32, 36, 0.1)',
+    borderColor: FIELD_BORDER,
     borderRadius: borderRadius.xl,
     padding: 12,
     gap: 12,
@@ -157,7 +172,7 @@ const styles = StyleSheet.create({
   labelCol: { flex: 1, gap: 2 },
   rowLabel: {
     fontFamily: typography.fontFamily.text,
-    fontSize: typography.fontSize['1'],
+    fontSize: 13,
     fontWeight: typography.fontWeight.medium,
     color: colors.text.primary,
   },
@@ -166,44 +181,19 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: 'rgba(28, 32, 36, 0.45)',
   },
-  orRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    width: '100%',
-  },
-  orLineAccent: { flex: 1, height: 1, backgroundColor: colors.accent.main },
-  orLineMuted: { flex: 1, height: 1, backgroundColor: 'rgba(28, 32, 36, 0.12)' },
-  foodRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  foodPills: {
-    flex: 1,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'flex-end',
-    gap: 8,
-  },
-  foodPill: {
+  fieldGroup: { gap: 6 },
+  textInput: {
     borderWidth: 1,
-    borderColor: 'rgba(28, 32, 36, 0.2)',
-    borderRadius: borderRadius.pill,
+    borderColor: FIELD_BORDER,
+    borderRadius: borderRadius.lg,
     paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  foodPillSelected: {
-    borderColor: colors.accent.main,
-    backgroundColor: 'rgba(232, 84, 51, 0.06)',
-  },
-  foodPillText: {
+    paddingVertical: 10,
     fontFamily: typography.fontFamily.text,
-    fontSize: 11,
-    color: 'rgba(28, 32, 36, 0.5)',
+    fontSize: 13,
+    color: colors.text.primary,
+    backgroundColor: colors.surface.white,
+    ...Platform.select({
+      web: { outlineStyle: 'none' } as Record<string, unknown>,
+    }),
   },
-  foodPillTextSelected: {
-    color: colors.accent.main,
-    fontWeight: typography.fontWeight.medium,
-  },
-  pressed: { opacity: 0.85 },
 });

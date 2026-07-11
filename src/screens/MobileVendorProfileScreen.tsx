@@ -11,7 +11,7 @@ import {
   VENDOR_PROFILE_MENU,
   VENDOR_WORKSPACE_PROFILE,
 } from '@/src/constants/vendorWorkspaceConstants';
-import { clearVendorSession } from '@/src/utils/vendorSession';
+import { logout } from '@/src/api/auth.service';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
@@ -81,7 +81,7 @@ export function MobileVendorProfileScreen() {
 
   const handleLogoutConfirm = async () => {
     setLogoutModalVisible(false);
-    await clearVendorSession();
+    await logout();
     router.replace('/');
   };
 

@@ -4,12 +4,19 @@ import { DesktopVendorOnboardingFooter } from '@/src/components/desktop/DesktopV
 import { DesktopVendorOnboardingShell } from '@/src/components/desktop/DesktopVendorOnboardingShell';
 import { DESKTOP_VENDOR_HERO_SPEECH } from '@/src/constants/desktopVendorListingConstants';
 import {
-  DEFAULT_CAMPING_INSIGHTS,
+  EMPTY_CAMPING_INSIGHTS,
   VENDOR_CAMPING_INSIGHTS_COPY,
 } from '@/src/constants/vendorGlampingConstants';
+import {
+  EMPTY_ACTIVITY_INSIGHTS,
+  VENDOR_ACTIVITY_INSIGHTS_COPY,
+} from '@/src/constants/vendorActivityConstants';
+import { useVendorListingCategory } from '@/src/hooks/useVendorListingCategory';
+import { getVendorGlampingDraft, saveVendorGlampingDraft } from '@/src/utils/vendorGlampingDraft';
+import { getVendorActivityDraft, saveVendorActivityDraft } from '@/src/utils/vendorActivityDraft';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Platform, StyleSheet, TextInput, View } from 'react-native';
 
 const FIELD_BORDER = 'rgba(28, 32, 36, 0.1)';
@@ -54,51 +61,109 @@ function InsightSection({
 }
 
 export function DesktopVendorCampingInsightsScreen() {
-  const [aboutExperience, setAboutExperience] = useState(DEFAULT_CAMPING_INSIGHTS.aboutExperience);
-  const [thingsToCarry, setThingsToCarry] = useState(DEFAULT_CAMPING_INSIGHTS.thingsToCarry);
-  const [howToReach, setHowToReach] = useState(DEFAULT_CAMPING_INSIGHTS.howToReach);
+  const categoryId = useVendorListingCategory();
+  const isActivity = categoryId === 'activities';
+  const copy = isActivity ? VENDOR_ACTIVITY_INSIGHTS_COPY : VENDOR_CAMPING_INSIGHTS_COPY;
+  const emptyInsights = isActivity ? EMPTY_ACTIVITY_INSIGHTS : EMPTY_CAMPING_INSIGHTS;
+
+  const [aboutExperience, setAboutExperience] = useState(emptyInsights.aboutExperience);
+  const [thingsToCarry, setThingsToCarry] = useState(emptyInsights.thingsToCarry);
+  const [howToReach, setHowToReach] = useState(emptyInsights.howToReach);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      if (isActivity) {
+        const draft = await getVendorActivityDraft();
+        if (draft?.aboutExperience != null) setAboutExperience(draft.aboutExperience);
+        if (draft?.thingsToCarry != null) setThingsToCarry(draft.thingsToCarry);
+        if (draft?.howToReach != null) setHowToReach(draft.howToReach);
+        return;
+      }
+      const draft = await getVendorGlampingDraft();
+      if (draft?.aboutExperience != null) setAboutExperience(draft.aboutExperience);
+      if (draft?.thingsToCarry != null) setThingsToCarry(draft.thingsToCarry);
+      if (draft?.howToReach != null) setHowToReach(draft.howToReach);
+    })();
+  }, [isActivity]);
+
+  const handleNext = async () => {
+    if (!aboutExperience.trim()) {
+      setSubmitError('Please describe the experience.');
+      return;
+    }
+    if (!thingsToCarry.trim()) {
+      setSubmitError('Please add things to carry.');
+      return;
+    }
+    if (!howToReach.trim()) {
+      setSubmitError('Please add how to reach information.');
+      return;
+    }
+    setSubmitError(null);
+    if (isActivity) {
+      const prev = (await getVendorActivityDraft()) ?? {};
+      await saveVendorActivityDraft({
+        ...prev,
+        aboutExperience: aboutExperience.trim(),
+        thingsToCarry: thingsToCarry.trim(),
+        howToReach: howToReach.trim(),
+      });
+      router.push('/vendor/inclusions-exclusions');
+      return;
+    }
+    const prev = (await getVendorGlampingDraft()) ?? {};
+    await saveVendorGlampingDraft({
+      ...prev,
+      aboutExperience: aboutExperience.trim(),
+      thingsToCarry: thingsToCarry.trim(),
+      howToReach: howToReach.trim(),
+    });
+    router.push('/vendor/inclusions-exclusions');
+  };
 
   return (
     <DesktopVendorOnboardingShell
       layout="split"
-      listingCategoryId="glamping"
+      listingCategoryId={isActivity ? 'activities' : 'glamping'}
       heroSpeechText={DESKTOP_VENDOR_HERO_SPEECH.campingInsights}
       footer={
         <DesktopVendorOnboardingFooter
           onBack={() => router.back()}
-          onNext={() => router.push('/vendor/inclusions-exclusions')}
-          nextSuffix={VENDOR_CAMPING_INSIGHTS_COPY.nextSuffix}
+          onNext={handleNext}
+          nextSuffix={copy.nextSuffix}
         />
       }
     >
       <View style={styles.content}>
         <View style={styles.intro}>
-          <Text style={styles.title}>{VENDOR_CAMPING_INSIGHTS_COPY.title}</Text>
-          <Text style={styles.subtitle}>{VENDOR_CAMPING_INSIGHTS_COPY.subtitle}</Text>
+          <Text style={styles.title}>{copy.title}</Text>
+          <Text style={styles.subtitle}>{copy.subtitle}</Text>
         </View>
 
         <InsightSection
-          title={VENDOR_CAMPING_INSIGHTS_COPY.aboutTitle}
+          title={copy.aboutTitle}
           value={aboutExperience}
           onChange={setAboutExperience}
-          maxLength={VENDOR_CAMPING_INSIGHTS_COPY.aboutMax}
+          maxLength={copy.aboutMax}
         />
         <InsightSection
-          title={VENDOR_CAMPING_INSIGHTS_COPY.carryTitle}
+          title={copy.carryTitle}
           value={thingsToCarry}
           onChange={setThingsToCarry}
-          maxLength={VENDOR_CAMPING_INSIGHTS_COPY.carryMax}
+          maxLength={copy.carryMax}
           headerIcon="bag-outline"
           showPinkHeader
         />
         <InsightSection
-          title={VENDOR_CAMPING_INSIGHTS_COPY.reachTitle}
+          title={copy.reachTitle}
           value={howToReach}
           onChange={setHowToReach}
-          maxLength={VENDOR_CAMPING_INSIGHTS_COPY.reachMax}
+          maxLength={copy.reachMax}
           headerIcon="navigate-outline"
           showPinkHeader
         />
+        {submitError ? <Text style={styles.errorText}>{submitError}</Text> : null}
       </View>
     </DesktopVendorOnboardingShell>
   );
@@ -176,5 +241,10 @@ const styles = StyleSheet.create({
     fontFamily: typography.fontFamily.text,
     fontSize: 11,
     color: 'rgba(28, 32, 36, 0.45)',
+  },
+  errorText: {
+    fontFamily: typography.fontFamily.text,
+    fontSize: 12,
+    color: colors.primaryAlt,
   },
 });

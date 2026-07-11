@@ -18,9 +18,17 @@ export const normalizeApiError = (error: unknown): APIError => {
 
     const { status, data } = axiosError.response;
 
+    const fieldDetails = Array.isArray(data?.details) ? data.details : null;
+    const firstFieldError = fieldDetails?.find(
+      (item) => item && typeof item === 'object' && 'msg' in item,
+    ) as { path?: string; msg?: string } | undefined;
+
     const apiError: APIError = {
       message:
         (data?.message as string) ||
+        (firstFieldError?.path && firstFieldError?.msg
+          ? `${firstFieldError.path}: ${firstFieldError.msg}`
+          : undefined) ||
         (data?.error as string) ||
         `Request failed with status ${status}`,
       statusCode: status,
@@ -52,6 +60,12 @@ export const normalizeApiError = (error: unknown): APIError => {
 };
 
 export const getErrorMessage = (error: unknown): string => {
+  if (error && typeof error === 'object' && 'message' in error) {
+    const message = (error as APIError).message;
+    if (typeof message === 'string' && message.trim()) {
+      return message;
+    }
+  }
   const normalized = normalizeApiError(error);
   return normalized.message;
 };

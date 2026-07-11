@@ -38,8 +38,10 @@ export const VENDOR_PROPERTY_COPY = {
 export const VENDOR_LOCATION_COPY = {
   title: 'Select your location',
   searchPlaceholder: 'Search location',
+  coordinatesLabel: 'Coordinates (Lat, Lng)',
+  coordinatesPlaceholder: 'Drag the map to set coordinates',
   useCurrentLocation: 'Use current location',
-  dragHint: 'Drag the map to reposition the pin',
+  dragHint: 'Drag the map to place the pin on your property',
   countryLabel: 'Where’s your place located?',
   countryPlaceholder: 'Country/Region',
   addressLabel: 'Enter your Address',

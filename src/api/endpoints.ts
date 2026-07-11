@@ -39,5 +39,36 @@ export const ENDPOINTS = {
     mine: '/api/v1/wishlists',
     item: (wishlistId: string) => `/api/v1/wishlists/${wishlistId}`,
   },
+  vendors: {
+    profile: '/api/v1/vendors/profile',
+    kyc: '/api/v1/vendors/profile/me/kyc',
+  },
+  hotels: {
+    create: '/api/v1/hotels',
+    roomTypes: (hotelId: string) => `/api/v1/hotels/${hotelId}/room-types`,
+    submit: (hotelId: string) => `/api/v1/hotels/${hotelId}/submit`,
+  },
+  glamping: {
+    create: '/api/v1/glamping',
+    mealPlans: (id: string) => `/api/v1/glamping/${id}/meal-plans`,
+    images: (id: string) => `/api/v1/glamping/${id}/images`,
+    submit: (id: string) => `/api/v1/glamping/${id}/submit`,
+  },
+  activities: {
+    create: '/api/v1/activities',
+    slots: (id: string) => `/api/v1/activities/${id}/slots`,
+    images: (id: string) => `/api/v1/activities/${id}/images`,
+    highlights: (id: string) => `/api/v1/activities/${id}/highlights`,
+    submit: (id: string) => `/api/v1/activities/${id}/submit`,
+  },
+  packages: {
+    create: '/api/v1/packages',
+    images: (id: string) => `/api/v1/packages/${id}/images`,
+    itineraries: (id: string) => `/api/v1/packages/${id}/itineraries`,
+    submit: (id: string) => `/api/v1/packages/${id}/submit`,
+  },
+  admin: {
+    activityHighlights: '/api/v1/admin/activity-highlights',
+  },
 } as const;
 
