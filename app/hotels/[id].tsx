@@ -132,7 +132,7 @@ export default function HotelDetailScreen() {
 
   const city = hotel ? getHotelLocationLabel(hotel).split(',')[0]?.trim() : undefined;
   const { listings: relatedListings } = useHotelSearch(
-    { city, limit: 8 },
+    { q: city, limit: 8 },
     Boolean(city && hotelId),
   );
   const related = relatedListings.filter((l) => l.id !== hotelId).slice(0, 4);

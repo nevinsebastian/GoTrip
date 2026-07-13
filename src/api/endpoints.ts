@@ -11,6 +11,10 @@ export const ENDPOINTS = {
     me: '/api/v1/auth/me',
     logout: '/api/v1/auth/logout',
   },
+  search: {
+    browse: '/api/v1/search',
+    suggestions: '/api/v1/search/suggestions',
+  },
   trips: {
     list: '/api/v1/trips',
     details: (id: string) => `/api/v1/trips/${id}`,

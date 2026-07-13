@@ -4,20 +4,21 @@ import { DesktopSearchDateRangePicker } from '@/src/components/desktop/DesktopSe
 import {
   formatSearchDate,
   HOME_SEARCH_BY_TAB,
-  LOCATION_SUGGESTIONS,
   POPULAR_DESTINATIONS,
   totalGuests,
   type ExpandedSection,
   type GuestCounts,
 } from '@/src/components/home/homeSearchConfig';
+import { SearchSuggestionsPanel } from '@/src/components/search/SearchSuggestionsPanel';
 import { useHomeSearch } from '@/src/components/home/HomeSearchContext';
+import { homeTabToSearchType, suggestionListingPath } from '@/src/utils/searchNavigation';
 import {
   DESKTOP_HERO_SPECS,
   DESKTOP_WEB_ICONS,
 } from '@/src/constants/desktopHomeConstants';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Modal, Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
 
 const SEARCH_ROOT_ID = 'desktop-home-search-bar';
@@ -107,16 +108,7 @@ export function DesktopHomeSearchBar({ variant = 'hero' }: DesktopHomeSearchBarP
 
   const closeSection = () => setExpanded(null);
 
-  const filteredSuggestions = useMemo(() => {
-    const q = location.trim().toLowerCase();
-    if (!q) return LOCATION_SUGGESTIONS;
-    return LOCATION_SUGGESTIONS.filter(
-      (item) =>
-        item.title.toLowerCase().includes(q) ||
-        item.short.toLowerCase().includes(q) ||
-        (item.subtitle?.toLowerCase().includes(q) ?? false),
-    );
-  }, [location]);
+  const searchType = homeTabToSearchType(activeCategoryTab);
 
   const checkInDisplay = formatSearchDate(checkIn);
   const checkOutDisplay = formatSearchDate(checkOut);
@@ -162,35 +154,40 @@ export function DesktopHomeSearchBar({ variant = 'hero' }: DesktopHomeSearchBarP
 
   const locationPanelContent = (
     <View style={styles.locationPanel}>
-      {filteredSuggestions.map((item) => (
-        <Pressable
-          key={item.title}
-          style={styles.suggestionRow}
-          onPress={() => {
-            setLocation(item.short);
+      {location.trim().length < 2 ? (
+        <>
+          <Text style={styles.popularLabel}>Popular destintions</Text>
+          <View style={styles.chipRow}>
+            {POPULAR_DESTINATIONS.slice(0, 5).map((city, index) => (
+              <Pressable
+                key={`${city}-${index}`}
+                style={styles.destChip}
+                onPress={() => {
+                  setLocation(city);
+                  closeLocationSection();
+                }}
+              >
+                <Text style={styles.destChipText}>{city}</Text>
+              </Pressable>
+            ))}
+          </View>
+        </>
+      ) : (
+        <SearchSuggestionsPanel
+          query={location}
+          searchType={searchType}
+          enabled={expanded === 'location'}
+          maxSuggestions={3}
+          onSelectLocation={(city) => {
+            setLocation(city);
             closeLocationSection();
           }}
-        >
-          <Text style={styles.suggestionTitle}>{item.title}</Text>
-          {item.subtitle ? <Text style={styles.suggestionSub}>{item.subtitle}</Text> : null}
-        </Pressable>
-      ))}
-
-      <Text style={styles.popularLabel}>Popular destintions</Text>
-      <View style={styles.chipRow}>
-        {POPULAR_DESTINATIONS.slice(0, 5).map((city, index) => (
-          <Pressable
-            key={`${city}-${index}`}
-            style={styles.destChip}
-            onPress={() => {
-              setLocation(city);
-              closeLocationSection();
-            }}
-          >
-            <Text style={styles.destChipText}>{city}</Text>
-          </Pressable>
-        ))}
-      </View>
+          onSelectListing={(listing) => {
+            closeLocationSection();
+            router.push(suggestionListingPath(listing));
+          }}
+        />
+      )}
     </View>
   );
 
@@ -774,8 +771,9 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: '100%',
     left: 0,
+    right: 0,
     marginTop: 8,
-    width: 350,
+    maxWidth: 350,
     zIndex: 100001,
   },
   locationPanel: {
@@ -785,6 +783,8 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 12,
     gap: 8,
+    overflow: 'hidden',
+    maxHeight: 280,
     ...Platform.select({
       web: { boxShadow: '0 4px 12.5px rgba(0, 0, 0, 0.15)' },
       default: {

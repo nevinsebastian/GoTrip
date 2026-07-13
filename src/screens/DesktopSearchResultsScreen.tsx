@@ -14,7 +14,8 @@ import {
 } from '@/src/constants/desktopSearchConstants';
 import { useHotelListings } from '@/src/hooks/useHotelListings';
 import { useCategoryListings } from '@/src/hooks/useCategoryListing';
-import { cityQueryFromLocation, formatStayDateLabel } from '@/src/utils/hotelSearchFilters';
+import { formatStayDateLabel } from '@/src/utils/hotelSearchFilters';
+import { totalGuests } from '@/src/components/home/homeSearchConfig';
 import { DesktopSearchListingDetail } from '@/src/screens/DesktopSearchListingDetail';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useMemo, useState } from 'react';
@@ -184,7 +185,8 @@ export function DesktopSearchResultsScreen({
   const locationQuery = searchParams?.location?.trim() ?? '';
   const checkIn = searchParams?.checkIn;
   const checkOut = searchParams?.checkOut;
-  const cityQuery = cityQueryFromLocation(locationQuery);
+  const guestCounts = searchParams?.guests;
+  const searchText = locationQuery || undefined;
   const [selectedChip, setSelectedChip] = useState(
     searchParams?.packageMood ?? searchParams?.activityMood ?? 'budget',
   );
@@ -199,10 +201,11 @@ export function DesktopSearchResultsScreen({
     useHotelListings({
       page: 1,
       limit: 20,
-      city: cityQuery,
-      locationQuery: cityQuery ?? locationQuery,
+      q: searchText,
       checkIn,
       checkOut,
+      rooms: guestCounts?.rooms,
+      guests: guestCounts ? totalGuests(guestCounts) : undefined,
       ...starFilter,
       enabled: tab === 'hotels',
     });
@@ -211,7 +214,7 @@ export function DesktopSearchResultsScreen({
     useCategoryListings('packages', {
       page: 1,
       limit: 20,
-      city: cityQuery,
+      q: searchText,
       enabled: tab === 'packages',
     });
 
@@ -219,7 +222,9 @@ export function DesktopSearchResultsScreen({
     useCategoryListings('glamping', {
       page: 1,
       limit: 20,
-      city: cityQuery,
+      q: searchText,
+      checkIn,
+      checkOut,
       enabled: tab === 'glamping',
     });
 
@@ -227,7 +232,8 @@ export function DesktopSearchResultsScreen({
     useCategoryListings('activities', {
       page: 1,
       limit: 20,
-      city: cityQuery,
+      q: searchText,
+      category: searchParams?.activityMood,
       enabled: tab === 'activities',
     });
 

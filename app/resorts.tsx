@@ -17,9 +17,9 @@ import type { Category, Listing } from '@/src/api/types';
 import { AuthWebModal } from '@/src/components/AuthWebModal';
 import { useCategoriesByType } from '@/src/hooks/useCategoriesByType';
 import { useHotelSearch } from '@/src/hooks/useHotelSearch';
+import { SearchSuggestionsPanel } from '@/src/components/search/SearchSuggestionsPanel';
+import { suggestionListingPath } from '@/src/utils/searchNavigation';
 import { USER_PROFILE_QUERY_KEY, useUserProfile } from '@/src/hooks/useUserProfile';
-import { cityQueryFromLocation, filterHotelsForSearch } from '@/src/utils/hotelSearchFilters';
-import { mapHotelsToListings } from '@/src/utils/mapHotelToListing';
 import { getPrimaryImage } from '@/src/utils/getPrimaryImage';
 import { Ionicons } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
@@ -121,7 +121,7 @@ export default function ResortsScreen() {
   }, [selectedChild, children]);
 
   const {
-    hotels,
+    listings,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
@@ -129,29 +129,13 @@ export default function ResortsScreen() {
     isError: hotelsError,
     refetch: refetchHotels,
   } = useHotelSearch({
-    city: cityQueryFromLocation(query) || undefined,
-    minRating: starFilter.minRating,
+    q: query.trim() || undefined,
+    starRatingMin: starFilter.starRatingMin,
+    starRatingMax: starFilter.starRatingMax,
     limit: 20,
   });
 
-  const listings = useMemo(() => {
-    const filtered = filterHotelsForSearch(hotels, {
-      locationQuery: query.trim() || undefined,
-      starRatingMin: starFilter.starRatingMin,
-      starRatingMax: starFilter.starRatingMax,
-    });
-    return mapHotelsToListings(filtered);
-  }, [hotels, query, starFilter.starRatingMin, starFilter.starRatingMax]);
-
-  const visible = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return listings;
-    return listings.filter(
-      (l) =>
-        l.title.toLowerCase().includes(q) ||
-        (l.location?.toLowerCase().includes(q) ?? false),
-    );
-  }, [listings, query]);
+  const visible = listings;
 
   const handleWebMenuLogout = async () => {
     setWebMenuOpen(false);
@@ -357,6 +341,16 @@ export default function ResortsScreen() {
                 <View style={dw.searchIcon}>
                   <Ionicons name="search" size={16} color={colors.primary} />
                 </View>
+                {query.trim().length >= 2 ? (
+                  <View style={dw.suggestionsWrap}>
+                    <SearchSuggestionsPanel
+                      query={query}
+                      searchType="hotel"
+                      onSelectLocation={(city) => setQuery(city)}
+                      onSelectListing={(listing) => router.push(suggestionListingPath(listing))}
+                    />
+                  </View>
+                ) : null}
               </View>
               {isLoggedIn ? (
                 <View style={dw.headerActions}>
@@ -521,6 +515,16 @@ export default function ResortsScreen() {
           value={query}
           onChangeText={setQuery}
         />
+        {query.trim().length >= 2 ? (
+          <View style={styles.suggestionsWrap}>
+            <SearchSuggestionsPanel
+              query={query}
+              searchType="hotel"
+              onSelectLocation={(city) => setQuery(city)}
+              onSelectListing={(listing) => router.push(suggestionListingPath(listing))}
+            />
+          </View>
+        ) : null}
       </View>
 
       <ScrollView
@@ -666,6 +670,24 @@ const dw = StyleSheet.create({
   },
   logoImg: { width: 110, height: 50 },
   searchWrap: { flex: 1, maxWidth: 720, position: 'relative' },
+  suggestionsWrap: {
+    position: 'absolute',
+    top: '100%',
+    left: 0,
+    right: 0,
+    marginTop: 8,
+    zIndex: 20,
+    backgroundColor: colors.surface.white,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(28, 32, 36, 0.12)',
+    paddingVertical: 4,
+    overflow: 'hidden',
+    maxHeight: 140,
+    ...Platform.select({
+      web: { boxShadow: '0 8px 24px rgba(0,0,0,0.12)' },
+    }),
+  },
   searchInput: {
     height: 40,
     borderRadius: borderRadius.pill,
@@ -895,6 +917,17 @@ const styles = StyleSheet.create({
   headerTitle: { flex: 1, marginLeft: spacing['1'] },
   headerEndSpacer: { width: 40, height: 40 },
   searchWrap: { marginBottom: spacing['2'] },
+  suggestionsWrap: {
+    marginTop: spacing['2'],
+    backgroundColor: colors.surface.white,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(28, 32, 36, 0.12)',
+    paddingVertical: spacing['1'],
+    overflow: 'hidden',
+    maxHeight: 140,
+    width: '100%',
+  },
   chipsRow: { gap: spacing['2'], paddingBottom: 0, marginBottom: spacing['2'], paddingRight: spacing['4'] },
   chip: {
     height: 32,

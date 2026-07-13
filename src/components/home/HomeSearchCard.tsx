@@ -7,7 +7,6 @@ import { Calendar, type DateData } from 'react-native-calendars';
 
 import {
   HOME_SEARCH_BY_TAB,
-  LOCATION_SUGGESTIONS,
   POPULAR_DESTINATIONS,
   formatSearchDate,
   getDatesInRange,
@@ -16,8 +15,11 @@ import {
   type GuestCounts,
   type HomeCategoryTab,
 } from '@/src/components/home/homeSearchConfig';
+import { SearchSuggestionsPanel } from '@/src/components/search/SearchSuggestionsPanel';
 import { useHomeSearch } from '@/src/components/home/HomeSearchContext';
 import { useHomeScale } from '@/src/components/home/useHomeScale';
+import { homeTabToSearchType, suggestionListingPath } from '@/src/utils/searchNavigation';
+import { router } from 'expo-router';
 
 function clamp(n: number, min: number, max: number) {
   return Math.min(max, Math.max(min, n));
@@ -93,16 +95,7 @@ export function HomeSearchCard({ activeTab }: { activeTab: HomeCategoryTab }) {
     }
   };
 
-  const filteredSuggestions = useMemo(() => {
-    const q = location.trim().toLowerCase();
-    if (!q) return LOCATION_SUGGESTIONS;
-    return LOCATION_SUGGESTIONS.filter(
-      (item) =>
-        item.title.toLowerCase().includes(q) ||
-        item.short.toLowerCase().includes(q) ||
-        (item.subtitle?.toLowerCase().includes(q) ?? false),
-    );
-  }, [location]);
+  const searchType = homeTabToSearchType(activeTab);
 
   const markedDates = useMemo(() => {
     const lightFill = 'rgba(229, 77, 46, 0.12)';
@@ -198,48 +191,50 @@ export function HomeSearchCard({ activeTab }: { activeTab: HomeCategoryTab }) {
 
         {expanded === 'location' ? (
           <View style={{ gap: s(8), marginTop: s(18) }}>
-            {filteredSuggestions.map((item) => (
-              <Pressable
-                key={item.title}
-                style={[styles.suggestionRow, { paddingVertical: s(8), paddingHorizontal: s(12) }]}
-                onPress={() => {
-                  setLocation(item.short);
+            {location.trim().length < 2 ? (
+              <>
+                <Text style={[styles.popularLabel, { fontSize: s(12), lineHeight: s(16) }]}>
+                  Popular destintions
+                </Text>
+                <View style={[styles.chipRow, { gap: s(12) }]}>
+                  {POPULAR_DESTINATIONS.map((city) => (
+                    <Pressable
+                      key={city}
+                      style={[styles.destChip, { paddingVertical: s(8), paddingHorizontal: s(12) }]}
+                      onPress={() => {
+                        setLocation(city);
+                        setExpanded(null);
+                        locationInputRef.current?.blur();
+                      }}
+                    >
+                      <Text style={[styles.destChipText, { fontSize: s(12), lineHeight: s(16) }]}>
+                        {city}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </>
+            ) : (
+              <View style={{ overflow: 'hidden', maxHeight: s(120) }}>
+              <SearchSuggestionsPanel
+                query={location}
+                searchType={searchType}
+                enabled={expanded === 'location'}
+                compact
+                maxSuggestions={3}
+                onSelectLocation={(city) => {
+                  setLocation(city);
                   setExpanded(null);
                   locationInputRef.current?.blur();
                 }}
-              >
-                <Text style={[styles.suggestionTitle, { fontSize: s(12), lineHeight: s(16) }]}>
-                  {item.title}
-                </Text>
-                {item.subtitle ? (
-                  <Text style={[styles.suggestionSub, { fontSize: s(10), lineHeight: s(14) }]}>
-                    {item.subtitle}
-                  </Text>
-                ) : null}
-              </Pressable>
-            ))}
-
-            <Text style={[styles.popularLabel, { fontSize: s(12), lineHeight: s(16) }]}>
-              Popular destintions
-            </Text>
-
-            <View style={[styles.chipRow, { gap: s(12) }]}>
-              {POPULAR_DESTINATIONS.map((city) => (
-                <Pressable
-                  key={city}
-                  style={[styles.destChip, { paddingVertical: s(8), paddingHorizontal: s(12) }]}
-                  onPress={() => {
-                    setLocation(city);
-                    setExpanded(null);
-                    locationInputRef.current?.blur();
-                  }}
-                >
-                  <Text style={[styles.destChipText, { fontSize: s(12), lineHeight: s(16) }]}>
-                    {city}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
+                onSelectListing={(listing) => {
+                  setExpanded(null);
+                  locationInputRef.current?.blur();
+                  router.push(suggestionListingPath(listing));
+                }}
+              />
+              </View>
+            )}
           </View>
         ) : null}
       </View>

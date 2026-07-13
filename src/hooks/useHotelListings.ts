@@ -1,57 +1,81 @@
-import { browseHotels } from '@/src/api/hotel.service';
-import type { APIError, BrowseHotelsParams, Listing } from '@/src/api/types';
-import {
-  filterHotelsForSearch,
-  type HotelSearchCriteria,
-} from '@/src/utils/hotelSearchFilters';
-import { mapHotelsToListings } from '@/src/utils/mapHotelToListing';
-import { useQuery, type UseQueryResult } from '@tanstack/react-query';
+import type { APIError, Listing } from '@/src/api/types';
+import { cityQueryFromLocation } from '@/src/utils/hotelSearchFilters';
+import { useUnifiedSearchPage, type UnifiedSearchFilters } from '@/src/hooks/useUnifiedSearch';
 import { useMemo } from 'react';
 
-export type UseHotelListingsParams = BrowseHotelsParams &
-  HotelSearchCriteria & {
-    enabled?: boolean;
-  };
+export type HotelSearchCriteria = {
+  checkIn?: string;
+  checkOut?: string;
+  locationQuery?: string;
+  starRatingMin?: number;
+  starRatingMax?: number;
+};
 
-export const hotelsQueryKey = (params: BrowseHotelsParams & HotelSearchCriteria) =>
-  ['hotels', 'browse', params] as const;
+export type UseHotelListingsParams = {
+  q?: string;
+  city?: string;
+  checkIn?: string;
+  checkOut?: string;
+  rooms?: number;
+  guests?: number;
+  locationQuery?: string;
+  starRatingMin?: number;
+  starRatingMax?: number;
+  limit?: number;
+  offset?: number;
+  page?: number;
+  enabled?: boolean;
+};
 
-export function useHotels(
-  params: BrowseHotelsParams,
-  enabled = true,
-): UseQueryResult<Awaited<ReturnType<typeof browseHotels>>, APIError> {
-  return useQuery({
-    queryKey: hotelsQueryKey(params),
-    queryFn: () => browseHotels(params),
-    enabled,
-    staleTime: 60 * 1000,
-  });
-}
+export const hotelsQueryKey = (params: UseHotelListingsParams) =>
+  ['search', 'hotel', 'page', params] as const;
 
 export function useHotelListings(params: UseHotelListingsParams) {
-  const { enabled = true, checkIn, checkOut, locationQuery, starRatingMin, starRatingMax, ...browseParams } =
-    params;
+  const {
+    enabled = true,
+    checkIn,
+    checkOut,
+    locationQuery,
+    city,
+    q,
+    rooms,
+    guests,
+    starRatingMin,
+    starRatingMax,
+    limit,
+    offset,
+    page,
+  } = params;
 
-  const query = useHotels(browseParams, enabled);
+  const textQuery = q ?? city ?? cityQueryFromLocation(locationQuery ?? '') ?? locationQuery;
 
-  const listings = useMemo<Listing[]>(() => {
-    const hotels = filterHotelsForSearch(query.data?.data ?? [], {
-      checkIn,
-      checkOut,
-      locationQuery,
-      starRatingMin,
-      starRatingMax,
-    });
-    return mapHotelsToListings(hotels);
-  }, [query.data?.data, checkIn, checkOut, locationQuery, starRatingMin, starRatingMax]);
+  const searchFilters: UnifiedSearchFilters & { enabled?: boolean } = {
+    type: 'hotel',
+    q: textQuery?.trim() || undefined,
+    checkIn,
+    checkOut,
+    rooms,
+    guests,
+    limit,
+    offset,
+    page,
+    starRatingMin,
+    starRatingMax,
+    enabled,
+  };
+
+  const query = useUnifiedSearchPage(searchFilters);
+
+  const listings = useMemo<Listing[]>(() => query.listings, [query.listings]);
 
   return {
     listings,
-    total: query.data?.total ?? listings.length,
+    total: query.total,
     isLoading: query.isLoading,
     isError: query.isError,
-    error: query.error,
+    error: query.error as APIError | null,
     refetch: query.refetch,
     isFetching: query.isFetching,
+    meta: query.meta,
   };
 }

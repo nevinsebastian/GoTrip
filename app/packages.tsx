@@ -5,10 +5,11 @@ import { borderRadius, colors, spacing } from '@/constants/DesignTokens';
 import type { Category } from '@/src/api/types';
 import { useCategoriesByType } from '@/src/hooks/useCategoriesByType';
 import { usePackageSearch } from '@/src/hooks/useCategoryListing';
-import { cityQueryFromLocation } from '@/src/utils/hotelSearchFilters';
+import { SearchSuggestionsPanel } from '@/src/components/search/SearchSuggestionsPanel';
+import { suggestionListingPath } from '@/src/utils/searchNavigation';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { RESORT_PLACEHOLDER_IMAGE } from '@/src/constants/placeholderImages';
@@ -31,7 +32,7 @@ export default function PackagesScreen() {
   const children: Category[] = packageCategory?.children ?? [];
   const effectiveCategoryId = selectedChild ?? categoryId;
 
-  const cityQuery = cityQueryFromLocation(query) || undefined;
+  const searchQuery = query.trim() || undefined;
 
   const {
     listings,
@@ -40,7 +41,7 @@ export default function PackagesScreen() {
     hasNextPage,
     isFetchingNextPage,
     isError,
-  } = usePackageSearch({ city: cityQuery, limit: 20 }, true);
+  } = usePackageSearch({ q: searchQuery, limit: 20 }, true);
 
   const visible = listings;
 
@@ -89,6 +90,16 @@ export default function PackagesScreen() {
           value={query}
           onChangeText={setQuery}
         />
+        {query.trim().length >= 2 ? (
+          <View style={styles.suggestionsWrap}>
+            <SearchSuggestionsPanel
+              query={query}
+              searchType="package"
+              onSelectLocation={(city) => setQuery(city)}
+              onSelectListing={(listing) => router.push(suggestionListingPath(listing))}
+            />
+          </View>
+        ) : null}
       </View>
 
       {children.length ? (
@@ -152,7 +163,7 @@ export default function PackagesScreen() {
             </Text>
           ) : visible.length === 0 ? (
             <Text variant="body" style={styles.emptyText}>
-              {cityQuery ? `No packages found for ${cityQuery}.` : 'No packages available yet.'}
+              {searchQuery ? `No packages found for ${searchQuery}.` : 'No packages available yet.'}
             </Text>
           ) : (
             visible.map((l) => (
@@ -247,6 +258,17 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,32,0,0.03)',
   },
   searchWrap: { marginBottom: spacing['4'] },
+  suggestionsWrap: {
+    marginTop: spacing['2'],
+    backgroundColor: colors.surface.white,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(28, 32, 36, 0.12)',
+    paddingVertical: spacing['1'],
+    overflow: 'hidden',
+    maxHeight: 140,
+    width: '100%',
+  },
   scroll: { flex: 1 },
   scrollContent: { paddingBottom: spacing['8'] },
   chipsRow: { gap: spacing['2'], paddingBottom: 0, marginBottom: spacing['3'], paddingRight: spacing['4'] },

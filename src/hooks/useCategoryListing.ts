@@ -2,9 +2,6 @@ import { useInfiniteQuery, useQuery, type UseQueryResult } from '@tanstack/react
 import { useMemo } from 'react';
 
 import {
-  browseActivities,
-  browseGlamping,
-  browsePackages,
   fetchActivityById,
   fetchCancellationPolicies,
   fetchGlampingById,
@@ -20,129 +17,113 @@ import type {
   GlampingDetail,
   ListingReview,
   PackageDetail,
-  PaginatedBrowseResponse,
-  PublicActivity,
-  PublicGlamping,
-  PublicPackage,
+  SearchType,
 } from '@/src/api/types';
 import type { Listing } from '@/src/api/types';
-import {
-  mapActivitiesToListings,
-  mapGlampingToListings,
-  mapPackagesToListings,
-} from '@/src/utils/mapCategoryListing';
 import {
   buildActivityDetailDisplay,
   buildGlampingDetailDisplay,
   buildPackageDetailDisplay,
   type CategoryDetailDisplay,
 } from '@/src/utils/categoryDetailDisplay';
+import {
+  useUnifiedSearch,
+  useUnifiedSearchPage,
+  type UnifiedSearchFilters,
+} from '@/src/hooks/useUnifiedSearch';
 
-export type CategorySearchFilters = Pick<
-  BrowseListingsParams,
-  'city' | 'activityType' | 'limit'
->;
+export type CategorySearchFilters = {
+  q?: string;
+  /** @deprecated use q */
+  city?: string;
+  activityType?: ActivityTypeEnum | string;
+  limit?: number;
+  checkIn?: string;
+  checkOut?: string;
+};
 
-function useInfiniteCategoryBrowse<T>(
-  key: string,
-  browseFn: (params: BrowseListingsParams) => Promise<PaginatedBrowseResponse<T>>,
-  mapFn: (items: T[]) => Listing[],
+function categoryToSearchType(category: 'activities' | 'glamping' | 'packages'): SearchType {
+  if (category === 'activities') return 'activity';
+  if (category === 'glamping') return 'glamping';
+  return 'package';
+}
+
+function buildCategorySearchFilters(
+  category: 'activities' | 'glamping' | 'packages',
+  filters: CategorySearchFilters,
+): UnifiedSearchFilters {
+  return {
+    type: categoryToSearchType(category),
+    q: filters.q ?? filters.city,
+    checkIn: filters.checkIn,
+    checkOut: filters.checkOut,
+    category: filters.activityType,
+    limit: filters.limit,
+  };
+}
+
+function useInfiniteCategoryBrowse(
+  category: 'activities' | 'glamping' | 'packages',
   filters: CategorySearchFilters,
   enabled = true,
 ) {
-  const limit = filters.limit ?? 20;
+  const unifiedFilters = buildCategorySearchFilters(category, filters);
+  const result = useUnifiedSearch(unifiedFilters, enabled);
 
-  const query = useInfiniteQuery({
-    queryKey: [key, 'search', filters],
-    queryFn: ({ pageParam }) =>
-      browseFn({
-        city: filters.city,
-        activityType: filters.activityType,
-        limit,
-        offset: pageParam,
-      }),
-    initialPageParam: 0,
-    getNextPageParam: (lastPage, allPages) => {
-      const loaded = allPages.reduce((sum, page) => sum + page.data.length, 0);
-      if (loaded >= lastPage.total) return undefined;
-      return loaded;
-    },
-    enabled,
-    staleTime: 60 * 1000,
-  });
-
-  const items = useMemo(
-    () => query.data?.pages.flatMap((page) => page.data) ?? [],
-    [query.data?.pages],
-  );
-  const listings = useMemo(() => mapFn(items), [items, mapFn]);
-  const total = query.data?.pages[0]?.total ?? items.length;
-
-  return { ...query, listings, items, total, hasMore: items.length < total };
+  return {
+    ...result,
+    items: result.items,
+    listings: result.listings,
+    total: result.total,
+    hasMore: result.hasMore,
+  };
 }
 
 export function useActivitySearch(filters: CategorySearchFilters = {}, enabled = true) {
-  return useInfiniteCategoryBrowse(
-    'activities',
-    browseActivities,
-    mapActivitiesToListings,
-    filters,
-    enabled,
-  );
+  return useInfiniteCategoryBrowse('activities', filters, enabled);
 }
 
 export function useGlampingSearch(filters: CategorySearchFilters = {}, enabled = true) {
-  return useInfiniteCategoryBrowse(
-    'glamping',
-    browseGlamping,
-    mapGlampingToListings,
-    filters,
-    enabled,
-  );
+  return useInfiniteCategoryBrowse('glamping', filters, enabled);
 }
 
 export function usePackageSearch(filters: CategorySearchFilters = {}, enabled = true) {
-  return useInfiniteCategoryBrowse(
-    'packages',
-    browsePackages,
-    mapPackagesToListings,
-    filters,
-    enabled,
-  );
+  return useInfiniteCategoryBrowse('packages', filters, enabled);
 }
 
 export function useCategoryListings(
   category: 'activities' | 'glamping' | 'packages',
-  params: BrowseListingsParams & { enabled?: boolean },
+  params: BrowseListingsParams & {
+    enabled?: boolean;
+    q?: string;
+    checkIn?: string;
+    checkOut?: string;
+    category?: string;
+  },
 ) {
-  const { enabled = true, ...browseParams } = params;
+  const { enabled = true, category: activityCategory, ...browseParams } = params;
   const limit = browseParams.limit ?? 20;
   const offset =
     browseParams.offset ??
     (browseParams.page != null ? Math.max(0, (browseParams.page - 1) * limit) : 0);
 
-  const query = useQuery({
-    queryKey: [category, 'browse', { ...browseParams, limit, offset }],
-    queryFn: async () => {
-      const args = { ...browseParams, limit, offset };
-      if (category === 'activities') return browseActivities(args);
-      if (category === 'glamping') return browseGlamping(args);
-      return browsePackages(args);
-    },
+  const unifiedFilters: UnifiedSearchFilters & { enabled?: boolean } = {
+    ...buildCategorySearchFilters(category, {
+      q: browseParams.q ?? browseParams.city,
+      activityType: browseParams.activityType ?? activityCategory,
+      limit,
+      checkIn: browseParams.checkIn,
+      checkOut: browseParams.checkOut,
+    }),
+    offset,
     enabled,
-    staleTime: 60 * 1000,
-  });
+  };
 
-  const listings = useMemo(() => {
-    const data = query.data?.data ?? [];
-    if (category === 'activities') return mapActivitiesToListings(data as PublicActivity[]);
-    if (category === 'glamping') return mapGlampingToListings(data as PublicGlamping[]);
-    return mapPackagesToListings(data as PublicPackage[]);
-  }, [category, query.data?.data]);
+  const query = useUnifiedSearchPage(unifiedFilters);
 
   return {
-    listings,
-    total: query.data?.total ?? listings.length,
+    listings: query.listings,
+    total: query.total,
     isLoading: query.isLoading,
     isError: query.isError,
     error: query.error,
@@ -249,4 +230,4 @@ export function usePackageDetail(
   });
 }
 
-export type { ActivityTypeEnum, CategoryDetailDisplay };
+export type { ActivityTypeEnum, CategoryDetailDisplay, Listing };

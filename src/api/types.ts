@@ -650,6 +650,83 @@ export interface PaginatedBrowseResponse<T> {
   offset: number;
 }
 
+export type SearchType = 'hotel' | 'package' | 'activity' | 'glamping';
+
+export interface SearchParams {
+  type: SearchType;
+  q?: string;
+  checkIn?: string;
+  checkOut?: string;
+  rooms?: number;
+  guests?: number;
+  category?: string;
+  limit?: number;
+  offset?: number;
+}
+
+export interface SearchListing {
+  id: string;
+  title: string;
+  category: SearchType;
+  description?: string;
+  locationJson?: {
+    city?: string;
+    state?: string;
+    country?: string;
+    lat?: number;
+    lng?: number;
+    address?: string;
+    searchLabel?: string;
+    streetAddress?: string;
+  };
+  avgRating?: number | null;
+  reviewCount?: number;
+  coverImage?: string | null;
+  hotelProperty?: Record<string, unknown>;
+  package?: Record<string, unknown>;
+  activity?: Record<string, unknown>;
+  glampingSite?: Record<string, unknown>;
+}
+
+export interface SearchResponse {
+  success?: boolean;
+  data: SearchListing[];
+  total: number;
+  limit: number;
+  offset: number;
+  meta?: {
+    checkIn?: string;
+    checkOut?: string;
+    rooms?: number | null;
+    guests?: number | null;
+  };
+}
+
+export interface SearchSuggestionsParams {
+  q: string;
+  type?: SearchType;
+}
+
+export interface SuggestionLocation {
+  city: string;
+  state: string | null;
+  categories: SearchType[];
+}
+
+export interface SuggestionListing {
+  id: string;
+  title: string;
+  category: SearchType;
+  city: string | null;
+  state: string | null;
+}
+
+export interface SuggestionsResponse {
+  success?: boolean;
+  locations: SuggestionLocation[];
+  listings: SuggestionListing[];
+}
+
 export interface PublicListingImage {
   url: string;
   isCover?: boolean;

@@ -3,6 +3,7 @@ import type { Listing } from '@/src/api/types';
 import { useHotelListings } from '@/src/hooks/useHotelListings';
 import { useCategoryListings } from '@/src/hooks/useCategoryListing';
 import { cityQueryFromLocation, formatStayDateLabel } from '@/src/utils/hotelSearchFilters';
+import { totalGuests } from '@/src/components/home/homeSearchConfig';
 import { router } from 'expo-router';
 import React, { useEffect, useMemo, useRef } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
@@ -44,43 +45,48 @@ export function MobileHotelsHome() {
   const locationQuery = searchParams?.location?.trim() ?? '';
   const checkIn = searchParams?.checkIn;
   const checkOut = searchParams?.checkOut;
-  const cityQuery = cityQueryFromLocation(locationQuery);
+  const guestCounts = searchParams?.guests;
+  const searchText = locationQuery || undefined;
 
   const { listings: hotelListings, isLoading: hotelsLoading } = useHotelListings({
     page: 1,
     limit: 20,
-    city: searchMode ? cityQuery : isHotels ? undefined : cityQuery,
-    locationQuery: searchMode ? cityQuery ?? locationQuery : undefined,
+    q: searchMode ? searchText : isHotels ? undefined : searchText,
     checkIn: searchMode ? checkIn : undefined,
     checkOut: searchMode ? checkOut : undefined,
+    rooms: guestCounts?.rooms,
+    guests: guestCounts ? totalGuests(guestCounts) : undefined,
     enabled: searchMode ? searchTab === 'hotels' : isHotels,
   });
 
   const { listings: varkalaHotels } = useHotelListings({
     page: 1,
     limit: 20,
-    city: 'Varkala',
+    q: 'Varkala',
     enabled: isHotels,
   });
 
   const { listings: packageListings, isLoading: packagesLoading } = useCategoryListings('packages', {
     page: 1,
     limit: 20,
-    city: searchMode ? cityQuery : undefined,
+    q: searchMode ? searchText : undefined,
     enabled: searchMode ? searchTab === 'packages' : isPackages,
   });
 
   const { listings: glampingListings, isLoading: glampingLoading } = useCategoryListings('glamping', {
     page: 1,
     limit: 20,
-    city: searchMode ? cityQuery : undefined,
+    q: searchMode ? searchText : undefined,
+    checkIn: searchMode ? checkIn : undefined,
+    checkOut: searchMode ? checkOut : undefined,
     enabled: searchMode ? searchTab === 'glamping' : isGlamping,
   });
 
   const { listings: activityListings, isLoading: activitiesLoading } = useCategoryListings('activities', {
     page: 1,
     limit: 20,
-    city: searchMode ? cityQuery : undefined,
+    q: searchMode ? searchText : undefined,
+    category: searchParams?.activityMood,
     enabled: searchMode ? searchTab === 'activities' : isActivities,
   });
 

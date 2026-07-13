@@ -1,53 +1,43 @@
-import { browseHotels } from '@/src/api/hotel.service';
-import type { BrowseHotelsParams, Listing, PublicHotel } from '@/src/api/types';
-import { mapHotelsToListings } from '@/src/utils/mapHotelToListing';
-import { useInfiniteQuery } from '@tanstack/react-query';
-import { useMemo } from 'react';
+import type { SearchType } from '@/src/api/types';
+import { useUnifiedSearch, type UnifiedSearchFilters } from '@/src/hooks/useUnifiedSearch';
 
-export type HotelSearchFilters = Pick<BrowseHotelsParams, 'city' | 'minRating' | 'limit'>;
+export type HotelSearchFilters = {
+  q?: string;
+  /** @deprecated use q */
+  city?: string;
+  minRating?: number;
+  limit?: number;
+  checkIn?: string;
+  checkOut?: string;
+  rooms?: number;
+  guests?: number;
+  starRatingMin?: number;
+  starRatingMax?: number;
+};
 
 export const hotelSearchQueryKey = (filters: HotelSearchFilters) =>
-  ['hotels', 'search', filters] as const;
-
-export type HotelSearchPage = Awaited<ReturnType<typeof browseHotels>>;
+  ['search', 'hotel', filters] as const;
 
 export function useHotelSearch(filters: HotelSearchFilters = {}, enabled = true) {
-  const limit = filters.limit ?? 20;
+  const q = filters.q ?? filters.city;
+  const unified: UnifiedSearchFilters = {
+    type: 'hotel',
+    q,
+    checkIn: filters.checkIn,
+    checkOut: filters.checkOut,
+    rooms: filters.rooms,
+    guests: filters.guests,
+    limit: filters.limit,
+    starRatingMin: filters.starRatingMin,
+    starRatingMax: filters.starRatingMax,
+  };
 
-  const query = useInfiniteQuery({
-    queryKey: hotelSearchQueryKey(filters),
-    queryFn: ({ pageParam }) =>
-      browseHotels({
-        city: filters.city,
-        minRating: filters.minRating,
-        limit,
-        offset: pageParam,
-      }),
-    initialPageParam: 0,
-    getNextPageParam: (lastPage, allPages) => {
-      const loaded = allPages.reduce((sum, page) => sum + page.data.length, 0);
-      if (loaded >= lastPage.total) return undefined;
-      return loaded;
-    },
-    enabled,
-    staleTime: 60 * 1000,
-  });
-
-  const hotels = useMemo(
-    () => query.data?.pages.flatMap((page) => page.data) ?? [],
-    [query.data?.pages],
-  );
-
-  const listings = useMemo(() => mapHotelsToListings(hotels), [hotels]);
-
-  const total = query.data?.pages[0]?.total ?? hotels.length;
-  const hasMore = hotels.length < total;
+  const result = useUnifiedSearch(unified, enabled);
 
   return {
-    ...query,
-    listings,
-    hotels,
-    total,
-    hasMore,
+    ...result,
+    hotels: result.items,
   };
 }
+
+export type { SearchType };
