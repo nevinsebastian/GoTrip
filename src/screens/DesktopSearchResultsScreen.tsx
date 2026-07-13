@@ -1,3 +1,4 @@
+import type { Listing } from '@/src/api/types';
 import { Text } from '@/components/ui';
 import { colors, typography } from '@/constants/DesignTokens';
 import { DesktopSearchResultsHeader } from '@/src/components/desktop/DesktopSearchResultsHeader';
@@ -19,7 +20,7 @@ import { totalGuests } from '@/src/components/home/homeSearchConfig';
 import { DesktopSearchListingDetail } from '@/src/screens/DesktopSearchListingDetail';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useMemo, useState } from 'react';
-import { Image, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Image, Platform, Pressable, ScrollView, StyleSheet, View, ActivityIndicator } from 'react-native';
 
 import { getPrimaryImage } from '@/src/utils/getPrimaryImage';
 
@@ -46,6 +47,11 @@ function HotelResultCard({
       ? Number(listing.price_start).toLocaleString('en-IN')
       : '—';
 
+  const rating =
+    (listing as Listing & { rating?: number }).rating != null
+      ? String((listing as Listing & { rating?: number }).rating)
+      : '—';
+
   return (
     <Pressable style={styles.hotelCard} onPress={() => onPress(listing)}>
       <View style={styles.hotelImageWrap}>
@@ -66,7 +72,7 @@ function HotelResultCard({
           </Text>
           <View style={styles.hotelRating}>
             <Ionicons name="star" size={16} color={colors.accent.main} />
-            <Text style={styles.hotelRatingText}>4.5</Text>
+            <Text style={styles.hotelRatingText}>{rating}</Text>
           </View>
         </View>
         <View style={styles.hotelFooter}>
@@ -97,7 +103,8 @@ function CategoryResultCard({
     listing.price_start != null
       ? Number(listing.price_start).toLocaleString('en-IN')
       : '—';
-  const image = DESKTOP_SEARCH_LISTING_IMAGES[tab];
+  const remoteImage = getPrimaryImage(listing.media);
+  const image = remoteImage ? { uri: remoteImage } : DESKTOP_SEARCH_LISTING_IMAGES[tab];
   const tag = listing.tag ?? 'COUPLE';
   const duration =
     listing.nights != null
@@ -187,8 +194,8 @@ export function DesktopSearchResultsScreen({
   const checkOut = searchParams?.checkOut;
   const guestCounts = searchParams?.guests;
   const searchText = locationQuery || undefined;
-  const [selectedChip, setSelectedChip] = useState(
-    searchParams?.packageMood ?? searchParams?.activityMood ?? 'budget',
+  const [selectedChip, setSelectedChip] = useState<string | null>(
+    searchParams?.packageMood ?? searchParams?.activityMood ?? null,
   );
 
   const starFilter = useMemo(() => {
@@ -197,7 +204,7 @@ export function DesktopSearchResultsScreen({
     return {};
   }, [selectedChip]);
 
-  const { listings: hotelListingsFromApi, isLoading: hotelsLoading, total: hotelTotal } =
+  const { listings: hotelListingsFromApi, isLoading: hotelsLoading } =
     useHotelListings({
       page: 1,
       limit: 20,
@@ -210,7 +217,7 @@ export function DesktopSearchResultsScreen({
       enabled: tab === 'hotels',
     });
 
-  const { listings: packageListingsFromApi, isLoading: packagesLoading, total: packageTotal } =
+  const { listings: packageListingsFromApi, isLoading: packagesLoading } =
     useCategoryListings('packages', {
       page: 1,
       limit: 20,
@@ -218,7 +225,7 @@ export function DesktopSearchResultsScreen({
       enabled: tab === 'packages',
     });
 
-  const { listings: glampingListingsFromApi, isLoading: glampingLoading, total: glampingTotal } =
+  const { listings: glampingListingsFromApi, isLoading: glampingLoading } =
     useCategoryListings('glamping', {
       page: 1,
       limit: 20,
@@ -228,7 +235,7 @@ export function DesktopSearchResultsScreen({
       enabled: tab === 'glamping',
     });
 
-  const { listings: activityListingsFromApi, isLoading: activitiesLoading, total: activityTotal } =
+  const { listings: activityListingsFromApi, isLoading: activitiesLoading } =
     useCategoryListings('activities', {
       page: 1,
       limit: 20,
@@ -238,7 +245,7 @@ export function DesktopSearchResultsScreen({
     });
 
   useEffect(() => {
-    setSelectedChip(searchParams?.packageMood ?? searchParams?.activityMood ?? 'budget');
+    setSelectedChip(searchParams?.packageMood ?? searchParams?.activityMood ?? null);
   }, [searchParams?.packageMood, searchParams?.activityMood, tab]);
 
   const openListing = (listing: DesktopSearchListingMeta) => {
@@ -277,8 +284,6 @@ export function DesktopSearchResultsScreen({
     (tab === 'glamping' && glampingLoading) ||
     (tab === 'activities' && activitiesLoading);
 
-  const categoryTotal =
-    tab === 'packages' ? packageTotal : tab === 'glamping' ? glampingTotal : tab === 'activities' ? activityTotal : 0;
   const filterChips = DESKTOP_SEARCH_FILTER_CHIPS[tab];
   const copy = DESKTOP_SEARCH_SECTION_COPY[tab];
   const categoryTitle = DESKTOP_SEARCH_CATEGORY_TITLES[tab];
@@ -287,9 +292,8 @@ export function DesktopSearchResultsScreen({
   const locationLabel = locationQuery || (isHotels ? 'Varkala, Kerala' : locationQuery);
   const dateLabel =
     isHotels && checkIn && checkOut ? formatStayDateLabel(checkIn, checkOut) : undefined;
-  const propertyCount = isHotels
-    ? hotelTotal || hotelListings.length
-    : categoryTotal || categoryListings.length;
+  const propertyCount = isHotels ? hotelListings.length : categoryListings.length;
+  const isLoading = isHotels ? hotelsLoading : categoryLoading;
 
   if (selectedSearchListing) {
     return (
@@ -369,12 +373,20 @@ export function DesktopSearchResultsScreen({
             </View>
 
             <View style={styles.hotelGrid}>
-              {hotelListings.map((listing) => (
-                <HotelResultCard key={listing.id} listing={listing} onPress={openListing} />
-              ))}
-              {hotelListings.map((listing) => (
-                <HotelResultCard key={`${listing.id}-dup`} listing={listing} onPress={openListing} />
-              ))}
+              {isLoading ? (
+                <View style={styles.loadingWrap}>
+                  <ActivityIndicator size="large" color={colors.accent.main} />
+                </View>
+              ) : hotelListings.length === 0 ? (
+                <Text style={styles.emptyText}>
+                  No properties match your search{selectedChip ? ' and filters' : ''}. Try another
+                  location or clear filters.
+                </Text>
+              ) : (
+                hotelListings.map((listing) => (
+                  <HotelResultCard key={listing.id} listing={listing} onPress={openListing} />
+                ))
+              )}
             </View>
           </>
         ) : (
@@ -391,12 +403,14 @@ export function DesktopSearchResultsScreen({
               tab={tab}
               onListingPress={openListing}
             />
+            {categoryListings.length > 1 ? (
             <CategorySection
               title={copy.topRated}
               listings={[...categoryListings].reverse()}
               tab={tab}
               onListingPress={openListing}
             />
+            ) : null}
           </>
         )}
       </View>
@@ -516,6 +530,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 24,
+    width: '100%',
+  },
+  loadingWrap: {
+    width: '100%',
+    paddingVertical: 48,
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontFamily: typography.fontFamily.text,
+    fontSize: 14,
+    lineHeight: 22,
+    color: colors.text.secondary,
+    width: '100%',
+    paddingVertical: 24,
   },
   hotelCard: {
     width: HOTEL_CARD_W,
