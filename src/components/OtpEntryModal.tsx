@@ -1,7 +1,9 @@
 import { Text } from '@/components/ui';
 import { borderRadius, colors, spacing, typography } from '@/constants/DesignTokens';
 import type { OtpChannel } from '@/src/api/types';
-import { useVerifyOtp } from '@/src/hooks/useVerifyOtp';
+import { authSuccessMessage, hasAuthTokens } from '@/src/api/auth.service';
+import { OTP_LENGTH } from '@/src/constants/authConstants';
+import { useVerifyOtp, type VerifyOtpFlow } from '@/src/hooks/useVerifyOtp';
 import { getErrorMessage } from '@/src/utils/errorHandler';
 import { enterVendorWorkspace, VENDOR_HOME_PATH } from '@/src/utils/vendorNavigation';
 import { Ionicons } from '@expo/vector-icons';
@@ -19,7 +21,10 @@ import {
 } from 'react-native';
 
 const ACCENT = colors.accent.main;
-const OTP_LENGTH = 4;
+
+function emptyOtpDigits() {
+  return Array.from({ length: OTP_LENGTH }, () => '');
+}
 
 function maskContact(value: string, isEmail: boolean): string {
   if (!value.trim()) return isEmail ? 'your email' : 'your phone number';
@@ -42,8 +47,10 @@ export type OtpEntryModalProps = {
   email?: string;
   phone?: string;
   onAuthenticated?: () => void | Promise<void>;
-  /** Skip API verification — any 4-digit OTP succeeds. */
+  /** Skip API verification — any OTP succeeds. */
   mockMode?: boolean;
+  /** Login vs registration verify endpoint */
+  flow?: VerifyOtpFlow;
   /** Route after successful mock or API auth (default guest tabs). */
   redirectTo?: string;
 };
@@ -57,10 +64,11 @@ export function OtpEntryModal({
   email,
   phone,
   onAuthenticated,
-  mockMode = false,
   redirectTo = '/(tabs)',
+  mockMode = false,
+  flow = fullName ? 'register' : 'login',
 }: OtpEntryModalProps) {
-  const [digits, setDigits] = useState<string[]>(['', '', '', '']);
+  const [digits, setDigits] = useState<string[]>(emptyOtpDigits);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const inputRefs = useRef<(TextInput | null)[]>([]);
 
@@ -72,7 +80,7 @@ export function OtpEntryModal({
 
   useEffect(() => {
     if (visible) {
-      setDigits(['', '', '', '']);
+      setDigits(emptyOtpDigits());
       setSubmitError(null);
       setTimeout(() => inputRefs.current[0]?.focus(), 200);
     }
@@ -80,7 +88,7 @@ export function OtpEntryModal({
 
   const handleClose = () => {
     setSubmitError(null);
-    setDigits(['', '', '', '']);
+    setDigits(emptyOtpDigits());
     onClose();
   };
 
@@ -139,15 +147,14 @@ export function OtpEntryModal({
 
     verifyOtp(
       {
-        full_name: fullName || undefined,
-        channel,
+        flow,
         otp: code,
         ...(email ? { email } : isEmailMode ? { email: contact } : {}),
         ...(phone ? { phone } : !isEmailMode ? { phone: contact } : {}),
       },
       {
         onSuccess: async (res) => {
-          if (res?.success && res?.data?.access_token) {
+          if (hasAuthTokens(res)) {
             try {
               await onAuthenticated?.();
             } finally {
@@ -156,7 +163,7 @@ export function OtpEntryModal({
             }
             return;
           }
-          setSubmitError(res?.message ?? 'Invalid or expired OTP.');
+          setSubmitError(authSuccessMessage(res) ?? 'Invalid or expired OTP.');
         },
         onError: (err) => {
           setSubmitError(getErrorMessage(err));
@@ -293,12 +300,12 @@ const styles = StyleSheet.create({
   otpRow: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 10,
+    gap: 6,
     marginVertical: spacing['2'],
   },
   otpBox: {
-    width: 52,
-    height: 52,
+    width: 44,
+    height: 48,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: 'rgba(0, 0, 47, 0.15)',

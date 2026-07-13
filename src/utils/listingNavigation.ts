@@ -19,7 +19,7 @@ export function listingDetailHref(
   if (tab === 'packages') return { pathname: '/package/[id]' as const, params };
   if (tab === 'glamping') return { pathname: '/glamping/[id]' as const, params };
   if (tab === 'activities') return { pathname: '/activity/[id]' as const, params };
-  return { pathname: '/resort/[id]' as const, params };
+  return { pathname: '/hotels/[id]' as const, params };
 }
 
 export function getDirectImageUrl(url?: string | null) {

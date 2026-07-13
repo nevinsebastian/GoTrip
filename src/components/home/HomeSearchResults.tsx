@@ -11,12 +11,14 @@ import { useHomeScale } from '@/src/components/home/useHomeScale';
 export function HomeSearchResults({
   listings,
   locationLabel,
+  dateLabel,
   loading,
   onListingPress,
   variant = 'hotels',
 }: {
   listings: Listing[];
   locationLabel: string;
+  dateLabel?: string;
   loading?: boolean;
   onListingPress: (listing: Listing) => void;
   variant?: 'hotels' | 'packages' | 'glamping' | 'activities';
@@ -55,6 +57,11 @@ export function HomeSearchResults({
                   ? 'Curated Adventure Experiences'
                   : 'Curated Travel Experiences'}
           </Text>
+          {dateLabel ? (
+            <Text style={[styles.dateLabel, { fontSize: s(11), lineHeight: s(15) }]}>
+              {dateLabel}
+            </Text>
+          ) : null}
         </View>
         <Pressable
           style={[styles.menuBtn, { width: s(36), height: s(36), borderRadius: s(8) }]}
@@ -129,6 +136,11 @@ const styles = StyleSheet.create({
     fontFamily: typography.fontFamily.text,
     fontWeight: typography.fontWeight.medium,
     color: colors.text.primary,
+  },
+  dateLabel: {
+    fontFamily: typography.fontFamily.text,
+    fontWeight: typography.fontWeight.regular,
+    color: colors.accent.main,
   },
   subtitle: {
     fontFamily: typography.fontFamily.text,

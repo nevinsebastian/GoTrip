@@ -6,6 +6,7 @@ import {
   type VendorListingCardData,
 } from '@/src/constants/vendorListingsConstants';
 import { VENDOR_DASHBOARD_BTN_RED } from '@/src/constants/vendorDashboardConstants';
+import { VendorListingStatusBadge } from '@/src/components/vendor/listings/VendorListingStatusBadge';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React from 'react';
@@ -13,18 +14,22 @@ import { Image, Pressable, StyleSheet, View } from 'react-native';
 
 type VendorListingCardProps = {
   listing: VendorListingCardData;
+  onPricing?: () => void;
   onDelete?: () => void;
 };
 
-export function VendorListingCard({ listing, onDelete }: VendorListingCardProps) {
+export function VendorListingCard({ listing, onPricing, onDelete }: VendorListingCardProps) {
   const theme = VENDOR_LISTING_THEME_COLORS[listing.theme];
 
   return (
     <View style={styles.card}>
       <View style={styles.cardHeader}>
-        <Text style={styles.refText}>
-          {listing.typeLabel} # : <Text style={styles.refValue}>{listing.listingRef}</Text>
-        </Text>
+        <View style={styles.cardHeaderMain}>
+          <Text style={styles.refText}>
+            {listing.typeLabel} # : <Text style={styles.refValue}>{listing.listingRef}</Text>
+          </Text>
+          {listing.status ? <VendorListingStatusBadge status={listing.status} compact /> : null}
+        </View>
         <View style={[styles.locationPill, { backgroundColor: theme.pillBg }]}>
           <Text style={[styles.locationPillText, { color: theme.accent }]} numberOfLines={1}>
             {listing.locationPill}
@@ -70,7 +75,10 @@ export function VendorListingCard({ listing, onDelete }: VendorListingCardProps)
       </View>
 
       <View style={styles.actions}>
-        <Pressable style={[styles.pricingBtn, { borderColor: theme.accent }]}>
+        <Pressable
+          style={[styles.pricingBtn, { borderColor: theme.accent }]}
+          onPress={onPricing}
+        >
           <Text style={[styles.pricingSymbol, { color: theme.accent }]}>₹</Text>
           <Text style={[styles.pricingText, { color: theme.accent }]}>{VENDOR_LISTINGS_COPY.pricing}</Text>
         </Pressable>
@@ -101,9 +109,13 @@ const styles = StyleSheet.create({
   },
   cardHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
     gap: 8,
+  },
+  cardHeaderMain: {
+    flex: 1,
+    gap: 6,
   },
   refText: {
     flex: 1,

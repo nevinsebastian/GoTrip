@@ -16,6 +16,7 @@ type DesktopConfirmDatesModalProps = {
   onCheckOutChange: (date: string | null) => void;
   onClose: () => void;
   onSave: () => void;
+  disabledDates?: Set<string>;
 };
 
 function monthStart(iso: string) {
@@ -48,10 +49,22 @@ function formatSelectedSummary(checkIn: string | null, checkOut: string | null) 
   return `${month} ${days}`;
 }
 
-function buildMarkedDates(checkIn: string | null, checkOut: string | null) {
+function buildMarkedDates(
+  checkIn: string | null,
+  checkOut: string | null,
+  disabledDates?: Set<string>,
+) {
   const lightFill = 'rgba(229, 77, 46, 0.12)';
   const primary = SPECS.accent;
-  const out: Record<string, { customStyles?: { container?: object; text?: object } }> = {};
+  const out: Record<
+    string,
+    { customStyles?: { container?: object; text?: object }; disabled?: boolean; disableTouchEvent?: boolean }
+  > = {};
+
+  disabledDates?.forEach((d) => {
+    out[d] = { disabled: true, disableTouchEvent: true };
+  });
+
   if (!checkIn) return out;
 
   if (!checkOut) {
@@ -155,13 +168,18 @@ export function DesktopConfirmDatesModal({
   onCheckOutChange,
   onClose,
   onSave,
+  disabledDates,
 }: DesktopConfirmDatesModalProps) {
   const seed = checkIn ?? new Date().toISOString().slice(0, 10);
   const [visibleMonth, setVisibleMonth] = useState(() => monthStart(seed));
-  const markedDates = useMemo(() => buildMarkedDates(checkIn, checkOut), [checkIn, checkOut]);
+  const markedDates = useMemo(
+    () => buildMarkedDates(checkIn, checkOut, disabledDates),
+    [checkIn, checkOut, disabledDates],
+  );
 
   const handleDayPress = (day: DateData) => {
     const date = day.dateString;
+    if (disabledDates?.has(date)) return;
     if (!checkIn || (checkIn && checkOut)) {
       onCheckInChange(date);
       onCheckOutChange(null);

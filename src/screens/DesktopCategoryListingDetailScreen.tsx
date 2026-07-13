@@ -6,9 +6,12 @@ import { DesktopSiteFooter } from '@/src/components/desktop/DesktopSiteFooter';
 import type { DesktopBookingFocusState } from '@/src/hooks/useDesktopBookingFocus';
 import type { HomeCategoryTab } from '@/src/components/home/homeSearchConfig';
 import { desktopContentShellStyle } from '@/src/constants/desktopLayoutConstants';
-import { FIGMA_ACTIVITY_DETAIL } from '@/src/constants/activityDetailConstants';
-import { FIGMA_GLAMPING_DETAIL } from '@/src/constants/glampingDetailConstants';
-import { FIGMA_PACKAGE_DETAIL } from '@/src/constants/packageDetailConstants';
+import type { CategoryDetailDisplay } from '@/src/utils/categoryDetailDisplay';
+import {
+  mergeActivityDetailContent,
+  mergeGlampingDetailContent,
+  mergePackageDetailContent,
+} from '@/src/utils/mergeCategoryDetailContent';
 import {
   ACTIVITY_EXPANDED_IMAGE,
   GLAMPING_EXPANDED_IMAGE,
@@ -36,60 +39,68 @@ type CategoryDetailCopy = {
   heroImage: number;
 };
 
-function copyForTab(tab: HomeCategoryTab, title?: string, price?: string): CategoryDetailCopy {
+function copyForTab(
+  tab: HomeCategoryTab,
+  title?: string,
+  price?: string,
+  display?: CategoryDetailDisplay,
+): CategoryDetailCopy {
   if (tab === 'packages') {
+    const figma = mergePackageDetailContent(display);
     return {
-      searchLabel: FIGMA_PACKAGE_DETAIL.searchLabel,
-      title: title ?? FIGMA_PACKAGE_DETAIL.title,
-      locationLabel: 'Singapore',
-      rating: FIGMA_PACKAGE_DETAIL.rating,
-      customersLabel: FIGMA_PACKAGE_DETAIL.customersLabel,
-      description: FIGMA_PACKAGE_DETAIL.description,
-      providesTitle: FIGMA_PACKAGE_DETAIL.providesTitle,
-      providesLink: FIGMA_PACKAGE_DETAIL.providesLink,
-      provides: FIGMA_PACKAGE_DETAIL.provides,
-      priceLabel: price ?? FIGMA_PACKAGE_DETAIL.priceLabel,
-      taxLabel: FIGMA_PACKAGE_DETAIL.taxLabel,
-      cancellationText: FIGMA_PACKAGE_DETAIL.cancellationText,
-      durationLabel: FIGMA_PACKAGE_DETAIL.nightsLabel,
-      primaryButtons: { contact: 'Contact Us', book: 'Book Now' },
+      searchLabel: figma.searchLabel,
+      title: title ?? figma.title,
+      locationLabel: display?.locationLabel ?? 'Singapore',
+      rating: figma.rating,
+      customersLabel: figma.customersLabel,
+      description: figma.description,
+      providesTitle: figma.providesTitle,
+      providesLink: figma.providesLink,
+      provides: figma.provides,
+      priceLabel: price ?? figma.priceLabel,
+      taxLabel: figma.taxLabel,
+      cancellationText: figma.cancellationText,
+      durationLabel: figma.nightsLabel,
+      primaryButtons: { contact: 'Contact Us', book: display?.bookingMode === 'enquiry_only' ? 'Send Enquiry' : 'Book Now' },
       heroImage: PACKAGE_EXPANDED_IMAGE,
     };
   }
   if (tab === 'glamping') {
+    const figma = mergeGlampingDetailContent(display);
     return {
-      searchLabel: FIGMA_GLAMPING_DETAIL.searchLabel,
-      title: title ?? FIGMA_GLAMPING_DETAIL.title,
-      locationLabel: FIGMA_GLAMPING_DETAIL.locationLabel,
-      rating: FIGMA_GLAMPING_DETAIL.rating,
-      customersLabel: FIGMA_GLAMPING_DETAIL.customersLabel,
-      description: FIGMA_GLAMPING_DETAIL.descriptionBlocks.join('\n\n'),
-      providesTitle: FIGMA_GLAMPING_DETAIL.providesTitle,
-      providesLink: FIGMA_GLAMPING_DETAIL.providesLink,
-      provides: FIGMA_GLAMPING_DETAIL.provides.map((p) => ({ ...p, icon: 'leaf-outline' as const })),
-      priceLabel: price ?? FIGMA_GLAMPING_DETAIL.priceLabel,
-      taxLabel: FIGMA_GLAMPING_DETAIL.taxLabel,
-      cancellationText: FIGMA_GLAMPING_DETAIL.cancellationText,
-      durationLabel: FIGMA_GLAMPING_DETAIL.nightsLabel,
-      primaryButtons: FIGMA_GLAMPING_DETAIL.primaryButtons,
+      searchLabel: figma.searchLabel,
+      title: title ?? figma.title,
+      locationLabel: figma.locationLabel,
+      rating: figma.rating,
+      customersLabel: figma.customersLabel,
+      description: figma.descriptionBlocks.join('\n\n'),
+      providesTitle: figma.providesTitle,
+      providesLink: figma.providesLink,
+      provides: figma.provides.map((p) => ({ ...p, icon: 'leaf-outline' as const })),
+      priceLabel: price ?? figma.priceLabel,
+      taxLabel: figma.taxLabel,
+      cancellationText: figma.cancellationText,
+      durationLabel: figma.nightsLabel,
+      primaryButtons: figma.primaryButtons,
       heroImage: GLAMPING_EXPANDED_IMAGE,
     };
   }
+  const figma = mergeActivityDetailContent(display);
   return {
-    searchLabel: FIGMA_ACTIVITY_DETAIL.searchLabel,
-    title: title ?? FIGMA_ACTIVITY_DETAIL.title,
-    locationLabel: FIGMA_ACTIVITY_DETAIL.locationLabel,
-    rating: FIGMA_ACTIVITY_DETAIL.rating,
-    customersLabel: FIGMA_ACTIVITY_DETAIL.customersLabel,
-    description: FIGMA_ACTIVITY_DETAIL.descriptionBlocks.join('\n\n'),
-    providesTitle: FIGMA_ACTIVITY_DETAIL.providesTitle,
-    providesLink: FIGMA_ACTIVITY_DETAIL.providesLink,
-    provides: FIGMA_ACTIVITY_DETAIL.provides,
-    priceLabel: price ?? FIGMA_ACTIVITY_DETAIL.priceLabel,
-    taxLabel: FIGMA_ACTIVITY_DETAIL.taxLabel,
-    cancellationText: FIGMA_ACTIVITY_DETAIL.cancellationText,
-    durationLabel: FIGMA_ACTIVITY_DETAIL.durationLabel,
-    primaryButtons: FIGMA_ACTIVITY_DETAIL.primaryButtons,
+    searchLabel: figma.searchLabel,
+    title: title ?? figma.title,
+    locationLabel: figma.locationLabel,
+    rating: figma.rating,
+    customersLabel: figma.customersLabel,
+    description: figma.descriptionBlocks.join('\n\n'),
+    providesTitle: figma.providesTitle,
+    providesLink: figma.providesLink,
+    provides: figma.provides,
+    priceLabel: price ?? figma.priceLabel,
+    taxLabel: figma.taxLabel,
+    cancellationText: figma.cancellationText,
+    durationLabel: figma.durationLabel,
+    primaryButtons: figma.primaryButtons,
     heroImage: ACTIVITY_EXPANDED_IMAGE,
   };
 }
@@ -98,6 +109,7 @@ type DesktopCategoryListingDetailScreenProps = {
   tab: HomeCategoryTab;
   title?: string;
   priceLabel?: string;
+  display?: CategoryDetailDisplay;
   onBookNow: () => void;
   isLoggedIn?: boolean;
   onMenuPress?: () => void;
@@ -112,6 +124,7 @@ export function DesktopCategoryListingDetailScreen({
   tab,
   title,
   priceLabel,
+  display,
   onBookNow,
   isLoggedIn,
   onMenuPress,
@@ -121,7 +134,7 @@ export function DesktopCategoryListingDetailScreen({
   onTabChange,
   bookingFocus,
 }: DesktopCategoryListingDetailScreenProps) {
-  const copy = copyForTab(tab, title, priceLabel);
+  const copy = copyForTab(tab, title, priceLabel, display);
 
   return (
     <View style={styles.pageRoot}>

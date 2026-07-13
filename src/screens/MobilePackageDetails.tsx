@@ -20,8 +20,13 @@ import { MobileBottomTabBar } from '@/src/components/navigation/MobileBottomTabB
 import { PackageDetailHeader } from '@/src/components/package/PackageDetailHeader';
 import { PackageFixedDatesRow } from '@/src/components/package/PackageFixedDatesRow';
 import { ResortAmenitiesSection } from '@/src/components/resort/ResortAmenitiesSection';
+import type { CategoryDetailDisplay } from '@/src/utils/categoryDetailDisplay';
 import {
-  FIGMA_PACKAGE_DETAIL,
+  carouselImagesFromDisplay,
+  mergePackageDetailContent,
+  reviewsFromDisplay,
+} from '@/src/utils/mergeCategoryDetailContent';
+import {
   FIGMA_PACKAGE_EXPLORE,
   PACKAGE_DAY_ONE,
   PACKAGE_EXCLUSIONS,
@@ -32,7 +37,7 @@ import { PACKAGE_EXPANDED_IMAGE } from '@/src/constants/placeholderImages';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-const PACKAGE_REVIEWS = [
+const PACKAGE_REVIEWS_FALLBACK = [
   {
     id: '1',
     name: 'Mr. Ashish Kumar',
@@ -53,6 +58,7 @@ export type MobilePackageDetailsProps = {
   listingId?: string;
   title?: string;
   priceLabel?: string;
+  display?: CategoryDetailDisplay;
   onBookNow: () => void;
 };
 
@@ -60,16 +66,27 @@ function PriceActionBlock({
   onBookNow,
   compact,
   listingId,
+  detailContent,
+  display,
+  bookCtaLabel = 'Book Now',
 }: {
   onBookNow: () => void;
   compact?: boolean;
   listingId?: string;
+  detailContent: ReturnType<typeof mergePackageDetailContent>;
+  display?: CategoryDetailDisplay;
+  bookCtaLabel?: string;
 }) {
   const { s } = useHomeScale();
 
   return (
     <View style={{ gap: s(compact ? 12 : 18) }}>
-      <PackageFixedDatesRow listingId={listingId} showNote={!compact} />
+      <PackageFixedDatesRow
+        listingId={listingId}
+        checkIn={display?.travelCheckIn}
+        checkOut={display?.travelCheckOut}
+        showNote={!compact}
+      />
 
       <View
         style={[
@@ -83,18 +100,18 @@ function PriceActionBlock({
       >
         <View style={{ flex: 1, gap: s(18) }}>
           <Text style={[styles.nightsPerson, { fontSize: s(12), lineHeight: s(24) }]}>
-            {FIGMA_PACKAGE_DETAIL.nightsLabel}
+            {detailContent.nightsLabel}
           </Text>
           <Text style={[styles.cancellation, { fontSize: s(10), lineHeight: s(24) }]}>
-            {FIGMA_PACKAGE_DETAIL.cancellationText}
+            {detailContent.cancellationText}
           </Text>
         </View>
         <View style={{ alignItems: 'flex-end', gap: s(8) }}>
           <Text style={[styles.price, { fontSize: s(20), lineHeight: s(24) }]}>
-            {FIGMA_PACKAGE_DETAIL.priceLabel}
+            {detailContent.priceLabel}
           </Text>
           <Text style={[styles.tax, { fontSize: s(8), lineHeight: s(16) }]}>
-            {FIGMA_PACKAGE_DETAIL.taxLabel}
+            {detailContent.taxLabel}
           </Text>
         </View>
       </View>
@@ -126,19 +143,43 @@ function PriceActionBlock({
           ]}
           onPress={onBookNow}
         >
-          <Text style={[styles.bookText, { fontSize: s(12) }]}>Book Now</Text>
+          <Text style={[styles.bookText, { fontSize: s(12) }]}>{bookCtaLabel}</Text>
         </Pressable>
       </View>
     </View>
   );
 }
 
-export function MobilePackageDetailsScreen({ listingId, onBookNow }: MobilePackageDetailsProps) {
+export function MobilePackageDetailsScreen({ listingId, onBookNow, display }: MobilePackageDetailsProps) {
+  const detailContent = mergePackageDetailContent(display);
+  const bookCtaLabel = display?.bookCtaLabel ?? 'Book Now';
+  const carouselSlides = carouselImagesFromDisplay(display);
+  const apiReviews = reviewsFromDisplay(display);
+  const itineraryDays = display?.itineraries?.length
+    ? display.itineraries.map((day) => ({
+        id: day.id,
+        label: `Day ${day.dayNumber}`,
+        title: day.title,
+        description: day.description ?? '',
+        activities: day.activities,
+        mealsCovered: day.mealsCovered,
+      }))
+    : PACKAGE_ITINERARY_DAYS.map((day) => ({
+        id: day.id,
+        label: day.label,
+        title: day.id === 'day-1' ? PACKAGE_DAY_ONE.subtitle : day.label,
+        description: day.id === 'day-1' ? PACKAGE_DAY_ONE.body : '',
+        activities: day.id === 'day-1' ? PACKAGE_DAY_ONE.activities.map((a) => a.label) : [],
+        mealsCovered: [] as string[],
+      }));
+  const tripHighlights = display?.inclusions?.length ? display.inclusions : PACKAGE_TRIP_HIGHLIGHTS;
+  const exclusions = display?.exclusions?.length ? display.exclusions : PACKAGE_EXCLUSIONS;
+  const reviewItems = apiReviews ?? PACKAGE_REVIEWS_FALLBACK;
   const { s } = useHomeScale();
   const [carouselIndex, setCarouselIndex] = useState(0);
-  const [expandedDay, setExpandedDay] = useState('day-1');
+  const [expandedDay, setExpandedDay] = useState(itineraryDays[0]?.id ?? 'day-1');
   const carouselRef = useRef<ScrollView>(null);
-  const slides = [0, 1, 2];
+  const slides = carouselSlides;
 
   const onCarouselScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const { contentOffset, layoutMeasurement } = e.nativeEvent;
@@ -177,9 +218,13 @@ export function MobilePackageDetailsScreen({ listingId, onBookNow }: MobilePacka
             onMomentumScrollEnd={onCarouselScroll}
             style={{ borderRadius: s(24), overflow: 'hidden' }}
           >
-            {slides.map((i) => (
+            {slides.map((slide, i) => (
               <View key={i} style={{ width: SCREEN_WIDTH - s(32), height: s(312) }}>
-                <Image source={PACKAGE_EXPANDED_IMAGE} style={styles.heroImage} resizeMode="cover" />
+                {typeof slide === 'number' ? (
+                  <Image source={PACKAGE_EXPANDED_IMAGE} style={styles.heroImage} resizeMode="cover" />
+                ) : (
+                  <Image source={slide} style={styles.heroImage} resizeMode="cover" />
+                )}
               </View>
             ))}
           </ScrollView>
@@ -225,39 +270,50 @@ export function MobilePackageDetailsScreen({ listingId, onBookNow }: MobilePacka
 
         <View style={[styles.content, { paddingHorizontal: s(16), gap: s(20), paddingTop: s(16) }]}>
           <Text style={[styles.title, { fontSize: s(20), lineHeight: s(28) }]}>
-            {FIGMA_PACKAGE_DETAIL.title}
+            {detailContent.title}
           </Text>
 
           <View style={[styles.metaRow, { gap: s(8) }]}>
             <View style={[styles.coupleTag, { paddingHorizontal: s(8), paddingVertical: s(4), borderRadius: s(24) }]}>
-              <Text style={[styles.coupleTagText, { fontSize: s(10) }]}>{FIGMA_PACKAGE_DETAIL.coupleLabel}</Text>
+              <Text style={[styles.coupleTagText, { fontSize: s(10) }]}>{detailContent.coupleLabel}</Text>
             </View>
             <View style={[styles.ratingPill, { paddingHorizontal: s(8), paddingVertical: s(4), borderRadius: s(24), gap: s(4) }]}>
               <Ionicons name="star" size={s(12)} color={colors.accent.main} />
-              <Text style={[styles.ratingText, { fontSize: s(14) }]}>{FIGMA_PACKAGE_DETAIL.rating}</Text>
+              <Text style={[styles.ratingText, { fontSize: s(14) }]}>{detailContent.rating}</Text>
             </View>
             <Text style={[styles.divider, { fontSize: s(12) }]}>|</Text>
             <Text style={[styles.customers, { fontSize: s(14) }]}>
-              <Text style={styles.customersAccent}>500+</Text>
-              {' '}
-              <Text style={styles.customersAccent}>customers</Text>
+              {display?.customersLabel ? (
+                <Text style={styles.customersAccent}>{display.customersLabel}</Text>
+              ) : (
+                <>
+                  <Text style={styles.customersAccent}>500+</Text>
+                  {' '}
+                  <Text style={styles.customersAccent}>customers</Text>
+                </>
+              )}
             </Text>
           </View>
 
-          <PackageFixedDatesRow listingId={listingId} showNote />
+          <PackageFixedDatesRow
+            listingId={listingId}
+            checkIn={display?.travelCheckIn}
+            checkOut={display?.travelCheckOut}
+            showNote
+          />
 
           <View style={[styles.overviewCard, { padding: s(16), borderRadius: s(18), gap: s(18) }]}>
             <Text style={[styles.description, { fontSize: s(10), lineHeight: s(12) }]}>
-              {FIGMA_PACKAGE_DETAIL.description}
+              {detailContent.description}
             </Text>
 
             <View style={[styles.highlightsBox, { padding: s(12), borderRadius: s(12), gap: s(12) }]}>
               <View style={[styles.highlightsHeader, { paddingHorizontal: s(12), paddingVertical: s(4), borderRadius: s(24) }]}>
                 <Text style={[styles.highlightsTitle, { fontSize: s(12) }]}>
-                  {FIGMA_PACKAGE_DETAIL.highlightsTitle}
+                  {detailContent.highlightsTitle}
                 </Text>
               </View>
-              {FIGMA_PACKAGE_DETAIL.highlights.map((row, i) => (
+              {detailContent.highlights.map((row, i) => (
                 <View key={i} style={[styles.highlightRow, { gap: s(24) }]}>
                   <Text style={[styles.highlightText, { fontSize: s(12), flex: 1 }]}>{row.left}</Text>
                   <View style={[styles.highlightDot, { width: s(4), height: s(4), borderRadius: s(2) }]} />
@@ -270,12 +326,12 @@ export function MobilePackageDetailsScreen({ listingId, onBookNow }: MobilePacka
 
             <View style={{ gap: s(12) }}>
               <View style={styles.providesHeader}>
-                <Text style={[styles.providesTitle, { fontSize: s(12) }]}>{FIGMA_PACKAGE_DETAIL.providesTitle}</Text>
-                <Text style={[styles.providesLink, { fontSize: s(10) }]}>{FIGMA_PACKAGE_DETAIL.providesLink}</Text>
+                <Text style={[styles.providesTitle, { fontSize: s(12) }]}>{detailContent.providesTitle}</Text>
+                <Text style={[styles.providesLink, { fontSize: s(10) }]}>{detailContent.providesLink}</Text>
               </View>
               <View style={{ gap: s(16) }}>
                 <View style={[styles.providesRow, { gap: s(16) }]}>
-                  {FIGMA_PACKAGE_DETAIL.provides.slice(0, 2).map((item) => (
+                  {detailContent.provides.slice(0, 2).map((item) => (
                     <View key={item.id} style={[styles.provideChip, { padding: s(4), borderRadius: s(40), gap: s(12) }]}>
                       <View style={[styles.provideIcon, { padding: s(6), borderRadius: s(100) }]}>
                         <Ionicons name={item.icon} size={s(12)} color={colors.accent.main} />
@@ -285,7 +341,7 @@ export function MobilePackageDetailsScreen({ listingId, onBookNow }: MobilePacka
                   ))}
                 </View>
                 <View style={[styles.providesRow, { gap: s(16) }]}>
-                  {FIGMA_PACKAGE_DETAIL.provides.slice(2).map((item) => (
+                  {detailContent.provides.slice(2).map((item) => (
                     <View key={item.id} style={[styles.provideChip, { padding: s(4), borderRadius: s(40), gap: s(12) }]}>
                       <View style={[styles.provideIcon, { padding: s(6), borderRadius: s(100) }]}>
                         <Ionicons name={item.icon} size={s(12)} color={colors.accent.main} />
@@ -297,14 +353,20 @@ export function MobilePackageDetailsScreen({ listingId, onBookNow }: MobilePacka
               </View>
             </View>
 
-            <PriceActionBlock onBookNow={onBookNow} listingId={listingId} />
+            <PriceActionBlock
+              onBookNow={onBookNow}
+              listingId={listingId}
+              detailContent={detailContent}
+              display={display}
+              bookCtaLabel={bookCtaLabel}
+            />
           </View>
 
           <Text style={[styles.sectionTitle, { fontSize: s(20), lineHeight: s(28) }]}>
-            {FIGMA_PACKAGE_DETAIL.itineraryTitle}
+            {detailContent.itineraryTitle}
           </Text>
 
-          {PACKAGE_ITINERARY_DAYS.map((day) => {
+          {itineraryDays.map((day) => {
             const isExpanded = expandedDay === day.id;
             return (
               <View
@@ -316,7 +378,10 @@ export function MobilePackageDetailsScreen({ listingId, onBookNow }: MobilePacka
                   onPress={() => setExpandedDay(isExpanded ? '' : day.id)}
                 >
                   <View style={[styles.dayTab, { paddingHorizontal: s(16), paddingVertical: s(12), borderRadius: s(8) }]}>
-                    <Text style={[styles.dayTabText, { fontSize: s(16), lineHeight: s(24) }]}>{day.label}</Text>
+                    <Text style={[styles.dayTabText, { fontSize: s(16), lineHeight: s(24) }]}>
+                      {day.label}
+                      {day.title ? ` · ${day.title}` : ''}
+                    </Text>
                   </View>
                   <Ionicons
                     name={isExpanded ? 'chevron-up' : 'chevron-down'}
@@ -325,60 +390,37 @@ export function MobilePackageDetailsScreen({ listingId, onBookNow }: MobilePacka
                   />
                 </Pressable>
 
-                {isExpanded && day.id === 'day-1' ? (
+                {isExpanded ? (
                   <>
-                    <Text style={[styles.daySubtitle, { fontSize: s(12), lineHeight: s(16) }]}>
-                      {PACKAGE_DAY_ONE.subtitle}
-                    </Text>
-                    <View style={[styles.separator, { height: s(8) }]} />
-                    <Text style={[styles.dayBody, { fontSize: s(10), lineHeight: s(12) }]}>
-                      {PACKAGE_DAY_ONE.body}
-                    </Text>
-                    <View style={[styles.activitiesBox, { padding: s(8), borderRadius: s(12), gap: s(8) }]}>
-                      {PACKAGE_DAY_ONE.activities.map((act) => (
-                        <View
-                          key={act.label}
-                          style={[styles.activityRow, { paddingHorizontal: s(16), paddingVertical: s(8), borderRadius: s(24), gap: s(10) }]}
-                        >
-                          <Ionicons name={act.icon} size={s(14)} color={colors.text.primary} />
-                          <Text style={[styles.activityLabel, { fontSize: s(10) }]}>{act.label}</Text>
-                        </View>
-                      ))}
-                    </View>
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -s(4) }}>
-                      <View style={[styles.dayImages, { gap: s(16) }]}>
-                        {[0, 1, 2, 3].map((i) => (
-                          <View key={i} style={[styles.dayImage, { width: s(73), height: s(73), borderRadius: s(8) }]}>
-                            <Image source={PACKAGE_EXPANDED_IMAGE} style={styles.dayImageInner} resizeMode="cover" />
+                    {day.description ? (
+                      <Text style={[styles.dayBody, { fontSize: s(10), lineHeight: s(12) }]}>
+                        {day.description}
+                      </Text>
+                    ) : null}
+                    {day.activities.length ? (
+                      <View style={[styles.activitiesBox, { padding: s(8), borderRadius: s(12), gap: s(8) }]}>
+                        {day.activities.map((act) => (
+                          <View
+                            key={act}
+                            style={[styles.activityRow, { paddingHorizontal: s(16), paddingVertical: s(8), borderRadius: s(24), gap: s(10) }]}
+                          >
+                            <Ionicons name="walk-outline" size={s(14)} color={colors.text.primary} />
+                            <Text style={[styles.activityLabel, { fontSize: s(10) }]}>{act}</Text>
                           </View>
                         ))}
                       </View>
-                    </ScrollView>
-                    <View style={[styles.purpleRow, { padding: s(4), borderRadius: s(40), gap: s(16) }]}>
-                      <View style={[styles.purpleTag, { paddingHorizontal: s(12), paddingVertical: s(4), borderRadius: s(24), gap: s(10) }]}>
-                        <Ionicons name="business-outline" size={s(14)} color="#FFFFFF" />
-                        <Text style={[styles.purpleTagText, { fontSize: s(10) }]}>Hotel</Text>
+                    ) : null}
+                    {day.mealsCovered.length ? (
+                      <View style={[styles.purpleRow, { padding: s(4), borderRadius: s(40), gap: s(16) }]}>
+                        <View style={[styles.purpleTag, { paddingHorizontal: s(12), paddingVertical: s(4), borderRadius: s(24), gap: s(10) }]}>
+                          <Ionicons name="restaurant-outline" size={s(14)} color="#FFFFFF" />
+                          <Text style={[styles.purpleTagText, { fontSize: s(10) }]}>Meals</Text>
+                        </View>
+                        <Text style={[styles.purpleDetail, { fontSize: s(10), flex: 1 }]}>
+                          {day.mealsCovered.join(', ')}
+                        </Text>
                       </View>
-                      <Text style={[styles.purpleDetail, { fontSize: s(10), flex: 1 }]}>{PACKAGE_DAY_ONE.hotel}</Text>
-                    </View>
-                    <View style={[styles.purpleRow, { padding: s(4), borderRadius: s(40), gap: s(16) }]}>
-                      <View style={[styles.purpleTag, { paddingHorizontal: s(12), paddingVertical: s(4), borderRadius: s(24), gap: s(10) }]}>
-                        <Ionicons name="leaf-outline" size={s(14)} color="#FFFFFF" />
-                        <Text style={[styles.purpleTagText, { fontSize: s(10) }]}>Activity</Text>
-                      </View>
-                      <Text style={[styles.purpleDetail, { fontSize: s(10), flex: 1 }]}>{PACKAGE_DAY_ONE.activity}</Text>
-                    </View>
-                    <Pressable
-                      style={[
-                        styles.contactBtn,
-                        { height: s(36), borderRadius: s(100), paddingHorizontal: s(12), gap: s(8) },
-                      ]}
-                    >
-                      <Ionicons name="call-outline" size={s(14)} color={colors.text.primary} />
-                      <Text style={[styles.contactText, { fontSize: s(12) }]}>
-                        Contact us for full itinerary
-                      </Text>
-                    </Pressable>
+                    ) : null}
                   </>
                 ) : null}
               </View>
@@ -390,9 +432,9 @@ export function MobilePackageDetailsScreen({ listingId, onBookNow }: MobilePacka
           <View style={[styles.tripCard, { padding: s(24), borderRadius: s(24), gap: s(36) }]}>
             <View style={{ gap: s(8), paddingVertical: s(12) }}>
               <Text style={[styles.tripTitle, { fontSize: s(16), lineHeight: s(24) }]}>
-                {FIGMA_PACKAGE_DETAIL.tripHighlightsTitle}
+                {detailContent.tripHighlightsTitle}
               </Text>
-              {PACKAGE_TRIP_HIGHLIGHTS.map((item, i) => (
+              {tripHighlights.map((item, i) => (
                 <View key={i} style={[styles.bulletRow, { gap: s(8) }]}>
                   <Text style={[styles.bullet, { fontSize: s(14) }]}>•</Text>
                   <Text style={[styles.bulletText, { fontSize: s(14), lineHeight: s(18), flex: 1 }]}>{item}</Text>
@@ -405,9 +447,9 @@ export function MobilePackageDetailsScreen({ listingId, onBookNow }: MobilePacka
             </View>
             <View style={{ gap: s(8), paddingVertical: s(12) }}>
               <Text style={[styles.exclusionsTitle, { fontSize: s(16), lineHeight: s(24) }]}>
-                {FIGMA_PACKAGE_DETAIL.exclusionsTitle}
+                {detailContent.exclusionsTitle}
               </Text>
-              {PACKAGE_EXCLUSIONS.map((item, i) => (
+              {exclusions.map((item, i) => (
                 <View key={i} style={[styles.bulletRow, { gap: s(8) }]}>
                   <Text style={[styles.bullet, { fontSize: s(14) }]}>•</Text>
                   <Text style={[styles.bulletText, { fontSize: s(14), lineHeight: s(18), flex: 1 }]}>{item}</Text>
@@ -420,7 +462,7 @@ export function MobilePackageDetailsScreen({ listingId, onBookNow }: MobilePacka
             <Text style={[styles.reviewsTitle, { fontSize: s(16), lineHeight: s(34), paddingHorizontal: s(4) }]}>
               Customer Reviews
             </Text>
-            {PACKAGE_REVIEWS.map((review) => (
+            {reviewItems.map((review) => (
               <View key={review.id}>
                 <View style={[styles.reviewCard, { padding: s(18), borderRadius: s(12), gap: s(12) }]}>
                   <View style={[styles.reviewHeader, { gap: s(12) }]}>
@@ -463,13 +505,20 @@ export function MobilePackageDetailsScreen({ listingId, onBookNow }: MobilePacka
           >
             <View style={{ gap: s(16), paddingHorizontal: s(4), paddingVertical: s(8) }}>
               <Text style={[styles.footerAccentTitle, { fontSize: s(16), lineHeight: s(34) }]}>
-                {FIGMA_PACKAGE_DETAIL.shortTitle}
+                {detailContent.shortTitle}
               </Text>
               <Text style={[styles.footerNights, { fontSize: s(16), lineHeight: s(34) }]}>
-                {FIGMA_PACKAGE_DETAIL.nightsShort}
+                {detailContent.nightsShort}
               </Text>
             </View>
-            <PriceActionBlock onBookNow={onBookNow} compact listingId={listingId} />
+            <PriceActionBlock
+              onBookNow={onBookNow}
+              compact
+              listingId={listingId}
+              detailContent={detailContent}
+              display={display}
+              bookCtaLabel={bookCtaLabel}
+            />
           </View>
 
           <View style={{ paddingVertical: s(24), gap: s(24), alignItems: 'center' }}>
@@ -539,7 +588,7 @@ export function MobilePackageDetailsScreen({ listingId, onBookNow }: MobilePacka
                 { fontSize: s(10), lineHeight: s(15), paddingHorizontal: s(20), textAlign: 'center' },
               ]}
             >
-              {FIGMA_PACKAGE_DETAIL.footerText}
+              {detailContent.footerText}
             </Text>
           </View>
         </View>

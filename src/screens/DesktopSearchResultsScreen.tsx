@@ -10,14 +10,17 @@ import {
   DESKTOP_SEARCH_FILTER_CHIPS,
   DESKTOP_SEARCH_LISTING_IMAGES,
   DESKTOP_SEARCH_SECTION_COPY,
-  resolveDesktopSearchListings,
   type DesktopSearchListingMeta,
 } from '@/src/constants/desktopSearchConstants';
-import { useListings } from '@/src/hooks/useListings';
+import { useHotelListings } from '@/src/hooks/useHotelListings';
+import { useCategoryListings } from '@/src/hooks/useCategoryListing';
+import { cityQueryFromLocation, formatStayDateLabel } from '@/src/utils/hotelSearchFilters';
 import { DesktopSearchListingDetail } from '@/src/screens/DesktopSearchListingDetail';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Image, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+
+import { getPrimaryImage } from '@/src/utils/getPrimaryImage';
 
 import HeartIcon from '@/assets/images/heart.svg';
 
@@ -35,7 +38,8 @@ function HotelResultCard({
   listing: DesktopSearchListingMeta;
   onPress: (listing: DesktopSearchListingMeta) => void;
 }) {
-  const image = DESKTOP_SEARCH_LISTING_IMAGES.hotels;
+  const remoteImage = getPrimaryImage(listing.media);
+  const image = remoteImage ? { uri: remoteImage } : DESKTOP_SEARCH_LISTING_IMAGES.hotels;
   const price =
     listing.price_start != null
       ? Number(listing.price_start).toLocaleString('en-IN')
@@ -178,14 +182,54 @@ export function DesktopSearchResultsScreen({
   } = useHomeSearch();
   const tab = searchParams?.tab ?? activeCategoryTab;
   const locationQuery = searchParams?.location?.trim() ?? '';
+  const checkIn = searchParams?.checkIn;
+  const checkOut = searchParams?.checkOut;
+  const cityQuery = cityQueryFromLocation(locationQuery);
   const [selectedChip, setSelectedChip] = useState(
     searchParams?.packageMood ?? searchParams?.activityMood ?? 'budget',
   );
 
-  const { data: hotelListingsRes } = useListings(
-    { page: 1, limit: 20 },
-    tab === 'hotels',
-  );
+  const starFilter = useMemo(() => {
+    if (selectedChip === 'budget') return { starRatingMax: 3 };
+    if (selectedChip === 'luxury') return { starRatingMin: 4 };
+    return {};
+  }, [selectedChip]);
+
+  const { listings: hotelListingsFromApi, isLoading: hotelsLoading, total: hotelTotal } =
+    useHotelListings({
+      page: 1,
+      limit: 20,
+      city: cityQuery,
+      locationQuery: cityQuery ?? locationQuery,
+      checkIn,
+      checkOut,
+      ...starFilter,
+      enabled: tab === 'hotels',
+    });
+
+  const { listings: packageListingsFromApi, isLoading: packagesLoading, total: packageTotal } =
+    useCategoryListings('packages', {
+      page: 1,
+      limit: 20,
+      city: cityQuery,
+      enabled: tab === 'packages',
+    });
+
+  const { listings: glampingListingsFromApi, isLoading: glampingLoading, total: glampingTotal } =
+    useCategoryListings('glamping', {
+      page: 1,
+      limit: 20,
+      city: cityQuery,
+      enabled: tab === 'glamping',
+    });
+
+  const { listings: activityListingsFromApi, isLoading: activitiesLoading, total: activityTotal } =
+    useCategoryListings('activities', {
+      page: 1,
+      limit: 20,
+      city: cityQuery,
+      enabled: tab === 'activities',
+    });
 
   useEffect(() => {
     setSelectedChip(searchParams?.packageMood ?? searchParams?.activityMood ?? 'budget');
@@ -201,27 +245,45 @@ export function DesktopSearchResultsScreen({
     });
   };
 
-  const mockListings = useMemo(
-    () => resolveDesktopSearchListings(tab, locationQuery),
-    [tab, locationQuery],
+  const hotelListings = useMemo(
+    () => hotelListingsFromApi.map((l) => ({ ...l, tag: 'COUPLE' as const })) as DesktopSearchListingMeta[],
+    [hotelListingsFromApi],
   );
 
-  const hotelListings = useMemo(() => {
-    const api = hotelListingsRes?.data ?? [];
-    if (api.length) {
-      return api.map((l) => ({ ...l, tag: 'COUPLE' as const })) as DesktopSearchListingMeta[];
-    }
-    return mockListings;
-  }, [hotelListingsRes?.data, mockListings]);
+  const categoryListingsFromApi = useMemo(() => {
+    if (tab === 'packages') return packageListingsFromApi;
+    if (tab === 'glamping') return glampingListingsFromApi;
+    if (tab === 'activities') return activityListingsFromApi;
+    return [];
+  }, [tab, packageListingsFromApi, glampingListingsFromApi, activityListingsFromApi]);
 
-  const categoryListings = mockListings;
+  const categoryListings = useMemo(
+    () =>
+      categoryListingsFromApi.map((l) => ({
+        ...l,
+        tag: 'COUPLE' as const,
+      })) as DesktopSearchListingMeta[],
+    [categoryListingsFromApi],
+  );
+
+  const categoryLoading =
+    (tab === 'packages' && packagesLoading) ||
+    (tab === 'glamping' && glampingLoading) ||
+    (tab === 'activities' && activitiesLoading);
+
+  const categoryTotal =
+    tab === 'packages' ? packageTotal : tab === 'glamping' ? glampingTotal : tab === 'activities' ? activityTotal : 0;
   const filterChips = DESKTOP_SEARCH_FILTER_CHIPS[tab];
   const copy = DESKTOP_SEARCH_SECTION_COPY[tab];
   const categoryTitle = DESKTOP_SEARCH_CATEGORY_TITLES[tab];
   const isHotels = tab === 'hotels';
 
   const locationLabel = locationQuery || (isHotels ? 'Varkala, Kerala' : locationQuery);
-  const propertyCount = isHotels ? hotelListings.length * 33 || 133 : categoryListings.length;
+  const dateLabel =
+    isHotels && checkIn && checkOut ? formatStayDateLabel(checkIn, checkOut) : undefined;
+  const propertyCount = isHotels
+    ? hotelTotal || hotelListings.length
+    : categoryTotal || categoryListings.length;
 
   if (selectedSearchListing) {
     return (
@@ -288,6 +350,7 @@ export function DesktopSearchResultsScreen({
               <View>
                 <Text style={styles.resultsCount}>
                   {propertyCount} Properties found Nearby {locationLabel}
+                  {dateLabel ? ` · ${dateLabel}` : ''}
                 </Text>
                 <Text style={styles.resultsSubtitle}>Curated Travel Experiences</Text>
               </View>

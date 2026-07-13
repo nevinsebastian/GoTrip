@@ -322,6 +322,10 @@ export function MobileBecomeVendorScreen({
   const [isProceedingCategory, setIsProceedingCategory] = useState(false);
 
   useEffect(() => {
+    setStep(initialStep);
+  }, [initialStep]);
+
+  useEffect(() => {
     if (isWeb) return;
     const showSub = Keyboard.addListener(
       Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',

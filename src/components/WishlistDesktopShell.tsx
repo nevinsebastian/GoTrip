@@ -224,7 +224,7 @@ export function WishlistDesktopShell({
       Number.isFinite(priceNum) && priceNum >= 0
         ? `₹${priceNum.toLocaleString('en-IN')}${priceSuffix(l)}`
         : '—';
-    const goToListing = () => router.push({ pathname: '/resort/[id]', params: { id: l.id } });
+    const goToListing = () => router.push({ pathname: '/hotels/[id]', params: { id: l.id } });
 
     return (
       <View key={l.wishlist_id} style={[dw.cardCell, { width: cardSlotWidth }]}>

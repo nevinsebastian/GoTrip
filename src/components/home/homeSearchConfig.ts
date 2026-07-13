@@ -1,5 +1,27 @@
 export type HomeCategoryTab = 'hotels' | 'packages' | 'glamping' | 'activities';
 
+function isoDate(d: Date): string {
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+/** Rolling defaults so search dates stay in the future after hard-coded config goes stale. */
+export function getDefaultStayDates(checkInDaysFromNow = 7, nights = 2) {
+  const checkIn = new Date();
+  checkIn.setHours(12, 0, 0, 0);
+  checkIn.setDate(checkIn.getDate() + checkInDaysFromNow);
+  const checkOut = new Date(checkIn);
+  checkOut.setDate(checkOut.getDate() + nights);
+  return { checkIn: isoDate(checkIn), checkOut: isoDate(checkOut) };
+}
+
+const DEFAULT_HOTEL_STAY = getDefaultStayDates(7, 2);
+const DEFAULT_PACKAGE_STAY = getDefaultStayDates(14, 5);
+const DEFAULT_GLAMPING_STAY = getDefaultStayDates(7, 2);
+const DEFAULT_ACTIVITY_STAY = getDefaultStayDates(7, 0);
+
 export type HomeSearchConfig = {
   locationLabel: string;
   defaultLocation: string;
@@ -20,8 +42,8 @@ export const HOME_SEARCH_BY_TAB: Record<HomeCategoryTab, HomeSearchConfig> = {
   hotels: {
     locationLabel: 'City Name, Location, or Hotel',
     defaultLocation: 'Varkala',
-    defaultCheckIn: '2026-04-03',
-    defaultCheckOut: '2026-04-05',
+    defaultCheckIn: DEFAULT_HOTEL_STAY.checkIn,
+    defaultCheckOut: DEFAULT_HOTEL_STAY.checkOut,
     guestsLabel: 'Rooms and Guests',
     guestUnit: 'Guests',
     roomUnit: 'Room',
@@ -35,8 +57,8 @@ export const HOME_SEARCH_BY_TAB: Record<HomeCategoryTab, HomeSearchConfig> = {
   packages: {
     locationLabel: 'Enter your dream destination',
     defaultLocation: 'Singapore',
-    defaultCheckIn: '2026-04-10',
-    defaultCheckOut: '2026-04-15',
+    defaultCheckIn: DEFAULT_PACKAGE_STAY.checkIn,
+    defaultCheckOut: DEFAULT_PACKAGE_STAY.checkOut,
     guestsLabel: 'Travelers',
     guestUnit: 'Travelers',
     roomUnit: 'Package',
@@ -50,8 +72,8 @@ export const HOME_SEARCH_BY_TAB: Record<HomeCategoryTab, HomeSearchConfig> = {
   glamping: {
     locationLabel: 'Find Your Dream Campfire',
     defaultLocation: 'Wildlife safari camps',
-    defaultCheckIn: '2026-04-03',
-    defaultCheckOut: '2026-04-05',
+    defaultCheckIn: DEFAULT_GLAMPING_STAY.checkIn,
+    defaultCheckOut: DEFAULT_GLAMPING_STAY.checkOut,
     guestsLabel: 'Guests and Tents',
     guestUnit: 'Guests',
     roomUnit: 'Tent',
@@ -65,8 +87,8 @@ export const HOME_SEARCH_BY_TAB: Record<HomeCategoryTab, HomeSearchConfig> = {
   activities: {
     locationLabel: 'Enter Your Dream Adventure',
     defaultLocation: 'Scuba Diving',
-    defaultCheckIn: '2026-04-03',
-    defaultCheckOut: '2026-04-03',
+    defaultCheckIn: DEFAULT_ACTIVITY_STAY.checkIn,
+    defaultCheckOut: DEFAULT_ACTIVITY_STAY.checkIn,
     guestsLabel: 'Participants',
     guestUnit: 'People',
     roomUnit: 'Group',

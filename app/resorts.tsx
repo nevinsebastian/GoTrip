@@ -13,11 +13,14 @@ import { Button, IconButton, Input, Text } from '@/components/ui';
 import { useResponsive } from '@/components/ui/useResponsive';
 import { borderRadius, colors, spacing } from '@/constants/DesignTokens';
 import { logout } from '@/src/api/auth.service';
-import type { Category, Listing, ListingMedia } from '@/src/api/types';
+import type { Category, Listing } from '@/src/api/types';
 import { AuthWebModal } from '@/src/components/AuthWebModal';
 import { useCategoriesByType } from '@/src/hooks/useCategoriesByType';
-import { useListings } from '@/src/hooks/useListings';
+import { useHotelSearch } from '@/src/hooks/useHotelSearch';
 import { USER_PROFILE_QUERY_KEY, useUserProfile } from '@/src/hooks/useUserProfile';
+import { cityQueryFromLocation, filterHotelsForSearch } from '@/src/utils/hotelSearchFilters';
+import { mapHotelsToListings } from '@/src/utils/mapHotelToListing';
+import { getPrimaryImage } from '@/src/utils/getPrimaryImage';
 import { Ionicons } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
@@ -37,28 +40,6 @@ import { RESORT_PLACEHOLDER_IMAGE } from '@/src/constants/placeholderImages';
 const TICKETS_BG = '#FFF8F6';
 const ResortImage = RESORT_PLACEHOLDER_IMAGE;
 import { DESKTOP_WEB_IMAGES } from '@/src/constants/desktopHomeConstants';
-
-function getPrimaryImage(media?: ListingMedia[]) {
-  if (!media?.length) return null;
-  const isDirectImageUrl = (url: string) => {
-    const u = url.toLowerCase();
-    if (!u.startsWith('http')) return false;
-    return (
-      u.includes('i.ibb.co/') ||
-      u.endsWith('.jpg') ||
-      u.endsWith('.jpeg') ||
-      u.endsWith('.png') ||
-      u.endsWith('.webp') ||
-      u.endsWith('.gif') ||
-      u.includes('cloudfront') ||
-      u.includes('amazonaws.com') ||
-      u.includes('cdn')
-    );
-  };
-  const images = media.filter((m) => m.media_type === 'image' && !!m.url && isDirectImageUrl(m.url));
-  const first = images.find((m) => m.sort_order === 0) ?? images[0];
-  return first?.url ?? null;
-}
 
 function chipIconForCategory(category: Category, active: boolean): React.ReactNode {
   const blob = `${category.type ?? ''} ${category.name} ${category.slug}`.toLowerCase();
@@ -130,19 +111,46 @@ export default function ResortsScreen() {
   const root = categoriesRes?.data?.[0];
   const children: Category[] = root?.children ?? [];
 
-  const categoryId = root?.id;
-  const effectiveCategoryId = selectedChild ?? categoryId;
+  const starFilter = useMemo(() => {
+    if (!selectedChild) return {} as { starRatingMin?: number; starRatingMax?: number; minRating?: number };
+    const cat = children.find((c) => c.id === selectedChild);
+    const name = `${cat?.name ?? ''} ${cat?.slug ?? ''}`.toLowerCase();
+    if (/(budget|economy|cheap)/.test(name)) return { starRatingMax: 3 };
+    if (/(luxury|premium|deluxe)/.test(name)) return { starRatingMin: 4, minRating: 4 };
+    return {};
+  }, [selectedChild, children]);
 
-  const { data: listingsRes } = useListings(
-    { page: 1, limit: 20, category_id: effectiveCategoryId },
-    Boolean(effectiveCategoryId),
-  );
+  const {
+    hotels,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading: hotelsLoading,
+    isError: hotelsError,
+    refetch: refetchHotels,
+  } = useHotelSearch({
+    city: cityQueryFromLocation(query) || undefined,
+    minRating: starFilter.minRating,
+    limit: 20,
+  });
 
-  const listings = listingsRes?.data ?? [];
+  const listings = useMemo(() => {
+    const filtered = filterHotelsForSearch(hotels, {
+      locationQuery: query.trim() || undefined,
+      starRatingMin: starFilter.starRatingMin,
+      starRatingMax: starFilter.starRatingMax,
+    });
+    return mapHotelsToListings(filtered);
+  }, [hotels, query, starFilter.starRatingMin, starFilter.starRatingMax]);
+
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return listings;
-    return listings.filter((l) => l.title.toLowerCase().includes(q));
+    return listings.filter(
+      (l) =>
+        l.title.toLowerCase().includes(q) ||
+        (l.location?.toLowerCase().includes(q) ?? false),
+    );
   }, [listings, query]);
 
   const handleWebMenuLogout = async () => {
@@ -245,7 +253,7 @@ export default function ResortsScreen() {
               <Pressable
                 key={l.id}
                 style={[dw.cardWrap, { width: cardW }]}
-                onPress={() => router.push({ pathname: '/resort/[id]', params: { id: l.id } })}
+                onPress={() => router.push({ pathname: '/hotels/[id]', params: { id: l.id } })}
                 accessibilityLabel={l.title}
               >
                 <View style={dw.cardImageWrap}>
@@ -573,7 +581,7 @@ export default function ResortsScreen() {
               <Pressable
                 key={l.id}
                 style={styles.card}
-                onPress={() => router.push({ pathname: '/resort/[id]', params: { id: l.id } })}
+                onPress={() => router.push({ pathname: '/hotels/[id]', params: { id: l.id } })}
                 accessibilityLabel={l.title}
               >
                 <View style={styles.imageWrap}>
@@ -601,6 +609,29 @@ export default function ResortsScreen() {
             );
           })}
         </View>
+        {hotelsLoading ? (
+          <Text variant="caption" style={{ textAlign: 'center', paddingVertical: spacing['4'] }}>
+            Loading hotels…
+          </Text>
+        ) : null}
+        {hotelsError ? (
+          <Pressable onPress={() => refetchHotels()} style={{ alignSelf: 'center', padding: spacing['3'] }}>
+            <Text variant="caption" color="primaryBrand">
+              Could not load hotels. Tap to retry.
+            </Text>
+          </Pressable>
+        ) : null}
+        {hasNextPage ? (
+          <Pressable
+            style={styles.loadMoreBtn}
+            onPress={() => fetchNextPage()}
+            disabled={isFetchingNextPage}
+          >
+            <Text variant="bodySemibold" style={styles.loadMoreText}>
+              {isFetchingNextPage ? 'Loading…' : 'Load more'}
+            </Text>
+          </Pressable>
+        ) : null}
         <View style={{ height: 24 }} />
       </ScrollView>
     </SafeAreaView>
@@ -911,4 +942,14 @@ const styles = StyleSheet.create({
   price: { color: colors.text.secondary },
   ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   rating: { color: colors.text.secondary },
+  loadMoreBtn: {
+    marginTop: spacing['4'],
+    alignSelf: 'center',
+    paddingVertical: spacing['2'],
+    paddingHorizontal: spacing['5'],
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: colors.primary,
+  },
+  loadMoreText: { color: colors.primary },
 });

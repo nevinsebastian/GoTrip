@@ -11,7 +11,10 @@ import MobileIcon from '@/assets/images/mobile.svg';
 import { Button, Divider, Input, Text } from '@/components/ui';
 import { borderRadius, colors, spacing } from '@/constants/DesignTokens';
 import { useSendOtp } from '@/src/hooks/useSendOtp';
+import { useRegister } from '@/src/hooks/useRegister';
 import { useVerifyOtp } from '@/src/hooks/useVerifyOtp';
+import { authSuccessMessage, hasAuthTokens } from '@/src/api/auth.service';
+import { OTP_LENGTH } from '@/src/constants/authConstants';
 import { getErrorMessage } from '@/src/utils/errorHandler';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useRef, useState } from 'react';
@@ -31,7 +34,6 @@ import {
 import { DESKTOP_WEB_IMAGES } from '@/src/constants/desktopHomeConstants';
 const isWeb = Platform.OS === 'web';
 const socialIconSize = 20;
-const OTP_LENGTH = 4;
 /** Below this width, use a centered single-column card instead of full-width split panel. */
 const WEB_AUTH_COMPACT_MAX_WIDTH = 640;
 
@@ -82,6 +84,7 @@ export function AuthWebModal({
   const [loginValue, setLoginValue] = useState('');
   const [fullName, setFullName] = useState('');
   const [contactValue, setContactValue] = useState('');
+  const [password, setPassword] = useState('');
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [otpDigits, setOtpDigits] = useState<string[]>(() =>
     Array.from({ length: OTP_LENGTH }, () => ''),
@@ -96,6 +99,7 @@ export function AuthWebModal({
   const otpRefs = useRef<(TextInput | null)[]>([]);
 
   const { mutate: sendOtp, isPending: isSendingOtp } = useSendOtp();
+  const { mutate: registerUser, isPending: isRegistering } = useRegister();
   const { mutate: verifyOtp, isPending: isVerifyingOtp } = useVerifyOtp();
 
   const isLogin = mode === 'login';
@@ -111,6 +115,7 @@ export function AuthWebModal({
       setLoginValue('');
       setFullName('');
       setContactValue('');
+      setPassword('');
       setOtpDigits(Array.from({ length: OTP_LENGTH }, () => ''));
       setPendingVerify(null);
     }
@@ -171,10 +176,7 @@ export function AuthWebModal({
 
     verifyOtp(
       {
-        ...(pendingVerify.fullName != null && pendingVerify.fullName !== ''
-          ? { full_name: pendingVerify.fullName }
-          : {}),
-        channel: pendingVerify.channel,
+        flow: isLogin ? 'login' : 'register',
         otp: code,
         ...(pendingVerify.channel === 'email'
           ? { email: pendingVerify.contact }
@@ -182,7 +184,7 @@ export function AuthWebModal({
       },
       {
         onSuccess: async (res) => {
-          if (res?.success && res?.data?.access_token) {
+          if (hasAuthTokens(res)) {
             try {
               await onAuthenticated?.();
             } finally {
@@ -194,7 +196,7 @@ export function AuthWebModal({
             }
             return;
           }
-          setSubmitError(res?.message ?? 'Invalid or expired OTP.');
+          setSubmitError(authSuccessMessage(res) ?? 'Invalid or expired OTP.');
         },
         onError: (err) => setSubmitError(getErrorMessage(err)),
       },
@@ -208,9 +210,7 @@ export function AuthWebModal({
       setSubmitError('Please enter your email or phone number.');
       return;
     }
-    const payload = isEmailLogin
-      ? { channel: 'email' as const, email: trimmed }
-      : { channel: 'phone' as const, phone: trimmed };
+    const payload = isEmailLogin ? { email: trimmed } : { phone: trimmed };
 
     sendOtp(payload, {
       onSuccess: (res) => {
@@ -233,15 +233,21 @@ export function AuthWebModal({
     setSubmitError(null);
     const trimmedName = fullName.trim();
     const trimmedContact = contactValue.trim();
+    const trimmedPassword = password.trim();
     if (!trimmedName || !trimmedContact) {
       setSubmitError('Please enter your full name and contact details.');
       return;
     }
+    if (!trimmedPassword || trimmedPassword.length < 6) {
+      setSubmitError('Please enter a password (at least 6 characters).');
+      return;
+    }
 
-    sendOtp(
+    registerUser(
       {
-        full_name: trimmedName,
-        channel: isEmailSignup ? 'email' : 'phone',
+        fullName: trimmedName,
+        password: trimmedPassword,
+        role: 'user',
         ...(isEmailSignup ? { email: trimmedContact } : { phone: trimmedContact }),
       },
       {
@@ -564,6 +570,15 @@ export function AuthWebModal({
                           onChangeText={setFullName}
                           autoCapitalize="words"
                         />
+                        <Input
+                          placeholder="Password"
+                          secureTextEntry
+                          placeholderTextColor={colors.neutral.alpha['9']}
+                          style={styles.input}
+                          value={password}
+                          onChangeText={setPassword}
+                          autoCapitalize="none"
+                        />
                         <View>
                           <Input
                             placeholder={isEmailSignup ? 'Email' : 'Phone number'}
@@ -589,9 +604,9 @@ export function AuthWebModal({
                           size="default"
                           style={styles.primaryCta}
                           onPress={handleSignupGetOtp}
-                          disabled={isSendingOtp}
+                          disabled={isRegistering}
                         >
-                          {isSendingOtp ? 'Sending OTP...' : 'Get OTP'}
+                          {isRegistering ? 'Sending OTP...' : 'Get OTP'}
                         </Button>
                         <Divider style={styles.divider} />
                         <View style={styles.socialStack}>

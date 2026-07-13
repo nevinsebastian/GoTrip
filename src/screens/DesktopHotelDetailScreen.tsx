@@ -1,6 +1,8 @@
 import { Text } from '@/components/ui';
 import { colors, typography } from '@/constants/DesignTokens';
 import type { Listing, ListingDetail } from '@/src/api/types';
+import type { HotelReviewDisplay, HotelRoomDisplay } from '@/src/utils/hotelDetailHelpers';
+import { getPrimaryImage } from '@/src/utils/getPrimaryImage';
 import { DesktopSearchResultsHeader } from '@/src/components/desktop/DesktopSearchResultsHeader';
 import { DesktopBookingFocusOverlay } from '@/src/components/desktop/DesktopBookingFocusOverlay';
 import { DesktopSiteFooter } from '@/src/components/desktop/DesktopSiteFooter';
@@ -41,9 +43,22 @@ type DesktopHotelDetailScreenProps = {
   locationLabel: string;
   address?: string;
   rating: string;
+  reviewCountLabel?: string;
+  starRating?: number;
+  description?: string;
+  propertyRules?: string[];
+  highlights?: string[];
+  checkInTime?: string;
+  checkOutTime?: string;
+  cancellationText?: string;
   carouselImages: string[];
   displayPrice: string;
+  rooms?: HotelRoomDisplay[];
+  reviews?: HotelReviewDisplay[];
+  relatedListings?: Listing[];
   onBookNow: () => void;
+  onSelectRoom?: (roomTypeId: string) => void;
+  selectedRoomTypeId?: string;
   activeTab?: HomeCategoryTab;
   onTabChange?: (tab: HomeCategoryTab) => void;
   isLoggedIn?: boolean;
@@ -76,6 +91,7 @@ function DesktopRoomRow({
   priceLabel,
   images,
   variant,
+  cancellationText,
   onBookNow,
 }: {
   name: string;
@@ -84,6 +100,7 @@ function DesktopRoomRow({
   priceLabel: string;
   images: string[];
   variant: 'featured' | 'special' | 'breakfast' | 'compact';
+  cancellationText?: string;
   onBookNow: () => void;
 }) {
   const imgA = images[0];
@@ -143,7 +160,7 @@ function DesktopRoomRow({
         <View style={styles.roomPriceRow}>
           <View>
             <Text style={styles.roomPriceLabel}>Price for one night</Text>
-            <Text style={styles.roomCancelText}>{CANCELLATION_TEXT}</Text>
+            <Text style={styles.roomCancelText}>{cancellationText ?? CANCELLATION_TEXT}</Text>
           </View>
           <View style={styles.roomPriceRight}>
             <Text style={styles.roomPrice}>{priceLabel}</Text>
@@ -179,9 +196,22 @@ export function DesktopHotelDetailScreen({
   locationLabel,
   address,
   rating,
+  reviewCountLabel,
+  starRating,
+  description,
+  propertyRules = [],
+  highlights = [],
+  checkInTime,
+  checkOutTime,
+  cancellationText,
   carouselImages,
   displayPrice,
+  rooms,
+  reviews = [],
+  relatedListings = [],
   onBookNow,
+  onSelectRoom,
+  selectedRoomTypeId,
   activeTab = 'hotels',
   onTabChange,
   isLoggedIn,
@@ -195,8 +225,36 @@ export function DesktopHotelDetailScreen({
   const [galleryWidth, setGalleryWidth] = useState(620);
   const carouselRef = useRef<ScrollView>(null);
   const slides = carouselImages.length ? carouselImages : [null];
-  const featuredRoom = DEFAULT_ROOM_CONFIGS[0];
+  const roomCards = rooms?.length ? rooms : DEFAULT_ROOM_CONFIGS.map((room) => ({
+    id: room.id,
+    name: room.name,
+    guests: room.guests,
+    rooms: room.rooms,
+    priceLabel: room.priceLabel,
+    variant: room.variant,
+    showImages: room.showImages,
+    mealPlans: [],
+    amenities: [],
+  }));
+  const featuredRoom = roomCards[0];
+  const otherRooms = roomCards.slice(1);
   const addressText = address ?? FIGMA_PROPERTY.address;
+  const customersLabel = reviewCountLabel ?? FIGMA_PROPERTY.customersLabel;
+  const reviewItems = reviews.length ? reviews : MOCK_REVIEWS;
+  const exploreItems =
+    relatedListings.length > 0
+      ? relatedListings.slice(0, 4).map((l) => ({
+          id: l.id,
+          title: l.title ?? 'Hotel',
+          location: l.location ?? locationLabel,
+          rating: String((l as Listing & { rating?: number }).rating ?? rating),
+          price:
+            l.price_start != null
+              ? `₹${Number(l.price_start).toLocaleString('en-IN')}/night`
+              : displayPrice,
+          image: getPrimaryImage(l.media),
+        }))
+      : FIGMA_EXPLORE_HOTELS.map((h) => ({ ...h, image: null as string | null }));
 
   const onCarouselScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const { contentOffset, layoutMeasurement } = e.nativeEvent;
@@ -242,7 +300,10 @@ export function DesktopHotelDetailScreen({
           </Pressable>
         ) : null}
         <View style={styles.propertyHeader}>
-          <Text style={styles.propertyTitle}>{title}</Text>
+          <Text style={styles.propertyTitle}>
+            {title}
+            {starRating ? ` · ${starRating}★` : ''}
+          </Text>
           <View style={styles.propertyMeta}>
             <Text style={styles.propertyAddress} numberOfLines={1}>
               {addressText}
@@ -314,14 +375,19 @@ export function DesktopHotelDetailScreen({
               </Text>
             </View>
 
-            <Text style={styles.featuredDesc}>{ROOM_DESCRIPTION}</Text>
+            <Text style={styles.featuredDesc}>{description ?? ROOM_DESCRIPTION}</Text>
 
             <View style={styles.ratingRow}>
               <Ionicons name="star" size={14} color={colors.accent.main} />
               <Text style={styles.ratingValue}>{rating}</Text>
               <Text style={styles.ratingDivider}>|</Text>
-              <Text style={styles.customersLabel}>{FIGMA_PROPERTY.customersLabel}</Text>
+              <Text style={styles.customersLabel}>{customersLabel}</Text>
             </View>
+            {checkInTime || checkOutTime ? (
+              <Text style={styles.featuredDesc}>
+                Check-in: {checkInTime ?? '—'} · Check-out: {checkOutTime ?? '—'}
+              </Text>
+            ) : null}
 
             <View style={styles.amenitiesSection}>
               <View style={styles.roomAmenitiesHeader}>
@@ -340,7 +406,7 @@ export function DesktopHotelDetailScreen({
             <View style={styles.featuredPriceRow}>
               <View>
                 <Text style={styles.roomPriceLabel}>Price for one night</Text>
-                <Text style={styles.roomCancelText}>{CANCELLATION_TEXT}</Text>
+                <Text style={styles.roomCancelText}>{cancellationText ?? CANCELLATION_TEXT}</Text>
               </View>
               <View style={styles.roomPriceRight}>
                 <Text style={styles.roomPrice}>{displayPrice}</Text>
@@ -352,7 +418,13 @@ export function DesktopHotelDetailScreen({
               <Pressable style={styles.outlineBtn}>
                 <Text style={styles.outlineBtnText}>Select rooms</Text>
               </Pressable>
-              <Pressable style={styles.bookBtn} onPress={onBookNow}>
+              <Pressable
+                style={styles.bookBtn}
+                onPress={() => {
+                  onSelectRoom?.(featuredRoom.id);
+                  onBookNow();
+                }}
+              >
                 <Text style={styles.bookBtnText}>Book Now</Text>
               </Pressable>
             </View>
@@ -382,16 +454,32 @@ export function DesktopHotelDetailScreen({
           </View>
 
           <View style={styles.instructionsCol}>
-            <Text style={styles.instructionsTitle}>Instructions</Text>
-            <Text style={styles.instructionsBody}>{INSTRUCTIONS_TEXT}</Text>
-            <Pressable style={styles.linkBtn}>
-              <Text style={styles.linkBtnText}>More detals</Text>
-            </Pressable>
+            <Text style={styles.instructionsTitle}>About this stay</Text>
+            <Text style={styles.instructionsBody}>{description ?? INSTRUCTIONS_TEXT}</Text>
+            {highlights.length ? (
+              <View style={{ gap: 8, marginTop: 8 }}>
+                {highlights.map((item) => (
+                  <Text key={item} style={styles.instructionsBody}>
+                    • {item}
+                  </Text>
+                ))}
+              </View>
+            ) : null}
+            {propertyRules.length ? (
+              <View style={{ gap: 8, marginTop: 12 }}>
+                <Text style={styles.instructionsTitle}>Property rules</Text>
+                {propertyRules.map((rule) => (
+                  <Text key={rule} style={styles.instructionsBody}>
+                    • {rule}
+                  </Text>
+                ))}
+              </View>
+            ) : null}
           </View>
         </View>
 
         <View style={styles.roomsSection}>
-          {DEFAULT_ROOM_CONFIGS.slice(1).map((room) => (
+          {otherRooms.map((room) => (
             <DesktopRoomRow
               key={room.id}
               name={room.name}
@@ -400,7 +488,11 @@ export function DesktopHotelDetailScreen({
               priceLabel={room.priceLabel}
               images={carouselImages}
               variant={room.variant}
-              onBookNow={onBookNow}
+              cancellationText={cancellationText}
+              onBookNow={() => {
+                onSelectRoom?.(room.id);
+                onBookNow();
+              }}
             />
           ))}
         </View>
@@ -408,7 +500,7 @@ export function DesktopHotelDetailScreen({
         <View style={styles.reviewsSection}>
           <Text style={styles.sectionTitle}>Reviews</Text>
           <View style={styles.reviewsGrid}>
-            {MOCK_REVIEWS.map((review) => (
+            {reviewItems.map((review) => (
               <View key={review.id} style={styles.reviewCard}>
                 <View style={styles.reviewHeader}>
                   <Text style={styles.reviewName}>{review.name}</Text>
@@ -432,18 +524,22 @@ export function DesktopHotelDetailScreen({
             </Pressable>
           </View>
           <View style={styles.exploreGrid}>
-            {FIGMA_EXPLORE_HOTELS.map((item) => (
+            {exploreItems.map((item) => (
               <Pressable
                 key={item.id}
                 style={styles.exploreCard}
                 onPress={() =>
                   router.push({
-                    pathname: '/resort/[id]',
-                    params: { id: item.id, title: item.title, rating: item.rating },
+                    pathname: '/hotels/[id]',
+                    params: { id: item.id },
                   })
                 }
               >
-                <Image source={RESORT_PLACEHOLDER_IMAGE} style={styles.exploreImage} resizeMode="cover" />
+                {item.image ? (
+                  <Image source={{ uri: item.image }} style={styles.exploreImage} resizeMode="cover" />
+                ) : (
+                  <Image source={RESORT_PLACEHOLDER_IMAGE} style={styles.exploreImage} resizeMode="cover" />
+                )}
                 <View style={styles.exploreHeart}>
                   <HeartIcon width={14} height={14} />
                 </View>

@@ -19,7 +19,13 @@ import { useHomeScale } from '@/src/components/home/useHomeScale';
 import { MobileBottomTabBar } from '@/src/components/navigation/MobileBottomTabBar';
 import { GlampingDetailHeader } from '@/src/components/glamping/GlampingDetailHeader';
 import { ResortAmenitiesSection } from '@/src/components/resort/ResortAmenitiesSection';
-import { FIGMA_GLAMPING_DETAIL, FIGMA_GLAMPING_EXPLORE } from '@/src/constants/glampingDetailConstants';
+import { FIGMA_GLAMPING_EXPLORE } from '@/src/constants/glampingDetailConstants';
+import type { CategoryDetailDisplay } from '@/src/utils/categoryDetailDisplay';
+import {
+  carouselImagesFromDisplay,
+  mergeGlampingDetailContent,
+  reviewsFromDisplay,
+} from '@/src/utils/mergeCategoryDetailContent';
 import { GLAMPING_EXPANDED_IMAGE } from '@/src/constants/placeholderImages';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -41,15 +47,17 @@ const GLAMPING_REVIEWS = [
 
 export type MobileGlampingDetailsProps = {
   onBookNow: () => void;
+  display?: CategoryDetailDisplay;
 };
 
-export function MobileGlampingDetailsScreen({ onBookNow }: MobileGlampingDetailsProps) {
+export function MobileGlampingDetailsScreen({ onBookNow, display }: MobileGlampingDetailsProps) {
   const { s } = useHomeScale();
+  const detailContent = mergeGlampingDetailContent(display);
+  const reviewItems = reviewsFromDisplay(display) ?? GLAMPING_REVIEWS;
+  const slides = carouselImagesFromDisplay(display);
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [expanded, setExpanded] = useState(true);
   const carouselRef = useRef<ScrollView>(null);
-
-  const slides = [0, 1, 2];
 
   const onCarouselScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const { contentOffset, layoutMeasurement } = e.nativeEvent;
@@ -88,9 +96,13 @@ export function MobileGlampingDetailsScreen({ onBookNow }: MobileGlampingDetails
             onMomentumScrollEnd={onCarouselScroll}
             style={{ borderRadius: s(24), overflow: 'hidden' }}
           >
-            {slides.map((i) => (
+            {slides.map((slide, i) => (
               <View key={i} style={{ width: SCREEN_WIDTH - s(32), height: s(312) }}>
-                <Image source={GLAMPING_EXPANDED_IMAGE} style={styles.heroImage} resizeMode="cover" />
+                <Image
+                  source={typeof slide === 'object' && 'uri' in slide ? slide : GLAMPING_EXPANDED_IMAGE}
+                  style={styles.heroImage}
+                  resizeMode="cover"
+                />
               </View>
             ))}
           </ScrollView>
@@ -128,18 +140,18 @@ export function MobileGlampingDetailsScreen({ onBookNow }: MobileGlampingDetails
         </View>
 
         <View style={[styles.content, { paddingHorizontal: s(16), gap: s(20), paddingTop: s(16) }]}>
-          <Text style={[styles.title, { fontSize: s(20), lineHeight: s(24) }]}>{FIGMA_GLAMPING_DETAIL.title}</Text>
+          <Text style={[styles.title, { fontSize: s(20), lineHeight: s(24) }]}>{detailContent.title}</Text>
 
           <View style={[styles.metaRow, { height: s(29) }]}>
             <View style={[styles.locationPill, { paddingHorizontal: s(8), paddingVertical: s(4), borderRadius: s(24), gap: s(4) }]}>
               <Ionicons name="location-outline" size={s(10)} color={colors.accent.main} />
-              <Text style={[styles.locationText, { fontSize: s(12) }]}>{FIGMA_GLAMPING_DETAIL.locationLabel}</Text>
+              <Text style={[styles.locationText, { fontSize: s(12) }]}>{detailContent.locationLabel}</Text>
             </View>
 
             <View style={styles.metaRight}>
               <View style={[styles.ratingRow, { gap: s(2), paddingRight: s(8) }]}>
                 <Ionicons name="star" size={s(14)} color={colors.accent.main} />
-                <Text style={[styles.ratingText, { fontSize: s(14) }]}>{FIGMA_GLAMPING_DETAIL.rating}</Text>
+                <Text style={[styles.ratingText, { fontSize: s(14) }]}>{detailContent.rating}</Text>
               </View>
               <Text style={[styles.divider, { fontSize: s(12) }]}>|</Text>
               <View style={{ paddingLeft: s(8) }}>
@@ -154,27 +166,27 @@ export function MobileGlampingDetailsScreen({ onBookNow }: MobileGlampingDetails
 
           <View style={[styles.overviewCard, { padding: s(16), borderRadius: s(18), gap: s(18) }]}>
             <Text style={[styles.description, { fontSize: s(10), lineHeight: s(12) }]}>
-              {FIGMA_GLAMPING_DETAIL.descriptionBlocks.join('\n')}
+              {detailContent.descriptionBlocks.join('\n')}
             </Text>
 
             <View style={[styles.highlightsBox, { padding: s(12), borderRadius: s(12), gap: s(16) }]}>
               <View style={[styles.highlightsHeader, { paddingHorizontal: s(12), paddingVertical: s(4), borderRadius: s(24) }]}>
-                <Text style={[styles.highlightsTitle, { fontSize: s(12) }]}>{FIGMA_GLAMPING_DETAIL.highlightsTitle}</Text>
+                <Text style={[styles.highlightsTitle, { fontSize: s(12) }]}>{detailContent.highlightsTitle}</Text>
               </View>
-              {FIGMA_GLAMPING_DETAIL.highlights.map((h) => (
+              {detailContent.highlights.map((h) => (
                 <Text key={h} style={[styles.highlightText, { fontSize: s(12), textAlign: 'center' }]}>{h}</Text>
               ))}
             </View>
 
             <View style={{ gap: s(12) }}>
               <View style={styles.providesHeader}>
-                <Text style={[styles.providesTitle, { fontSize: s(12) }]}>{FIGMA_GLAMPING_DETAIL.providesTitle}</Text>
-                <Text style={[styles.providesLink, { fontSize: s(10) }]}>{FIGMA_GLAMPING_DETAIL.providesLink}</Text>
+                <Text style={[styles.providesTitle, { fontSize: s(12) }]}>{detailContent.providesTitle}</Text>
+                <Text style={[styles.providesLink, { fontSize: s(10) }]}>{detailContent.providesLink}</Text>
               </View>
 
               <View style={{ gap: s(16) }}>
                 <View style={[styles.providesRow, { gap: s(16) }]}>
-                  {FIGMA_GLAMPING_DETAIL.provides.slice(0, 2).map((item) => (
+                  {detailContent.provides.slice(0, 2).map((item) => (
                     <View key={item.id} style={[styles.provideChip, { padding: s(4), borderRadius: s(40), gap: s(12) }]}>
                       <View style={[styles.provideIcon, { padding: s(6), borderRadius: s(100) }]}>
                         <Ionicons name="flame-outline" size={s(12)} color={colors.accent.main} />
@@ -184,7 +196,7 @@ export function MobileGlampingDetailsScreen({ onBookNow }: MobileGlampingDetails
                   ))}
                 </View>
                 <View style={[styles.providesRow, { gap: s(16) }]}>
-                  {FIGMA_GLAMPING_DETAIL.provides.slice(2).map((item) => (
+                  {detailContent.provides.slice(2).map((item) => (
                     <View key={item.id} style={[styles.provideChip, { padding: s(4), borderRadius: s(40), gap: s(12) }]}>
                       <View style={[styles.provideIcon, { padding: s(6), borderRadius: s(100) }]}>
                         <Ionicons name="cafe-outline" size={s(12)} color={colors.accent.main} />
@@ -199,18 +211,18 @@ export function MobileGlampingDetailsScreen({ onBookNow }: MobileGlampingDetails
             <View style={[styles.priceBox, { padding: s(18), borderRadius: s(8), gap: s(18) }]}>
               <View style={{ flex: 1, gap: s(18) }}>
                 <Text style={[styles.nightsPerson, { fontSize: s(12), lineHeight: s(24) }]}>
-                  {FIGMA_GLAMPING_DETAIL.nightsLabel}
+                  {detailContent.nightsLabel}
                 </Text>
                 <Text style={[styles.cancellation, { fontSize: s(10), lineHeight: s(24) }]}>
-                  {FIGMA_GLAMPING_DETAIL.cancellationText}
+                  {detailContent.cancellationText}
                 </Text>
               </View>
               <View style={{ alignItems: 'flex-end', gap: s(8) }}>
                 <Text style={[styles.price, { fontSize: s(20), lineHeight: s(24) }]}>
-                  {FIGMA_GLAMPING_DETAIL.priceLabel}
+                  {detailContent.priceLabel}
                 </Text>
                 <Text style={[styles.tax, { fontSize: s(8), lineHeight: s(16) }]}>
-                  {FIGMA_GLAMPING_DETAIL.taxLabel}
+                  {detailContent.taxLabel}
                 </Text>
               </View>
             </View>
@@ -219,25 +231,25 @@ export function MobileGlampingDetailsScreen({ onBookNow }: MobileGlampingDetails
               <Pressable
                 style={[styles.contactBtn, { height: s(36), borderRadius: s(100), paddingHorizontal: s(12), gap: s(8) }]}>
                 <Ionicons name="call-outline" size={s(14)} color={colors.text.primary} />
-                <Text style={[styles.contactText, { fontSize: s(12) }]}>{FIGMA_GLAMPING_DETAIL.primaryButtons.contact}</Text>
+                <Text style={[styles.contactText, { fontSize: s(12) }]}>{detailContent.primaryButtons.contact}</Text>
               </Pressable>
 
               <Pressable
                 style={[styles.bookBtn, { height: s(36), borderRadius: s(100), paddingHorizontal: s(12) }]}
                 onPress={onBookNow}
               >
-                <Text style={[styles.bookText, { fontSize: s(12) }]}>{FIGMA_GLAMPING_DETAIL.primaryButtons.book}</Text>
+                <Text style={[styles.bookText, { fontSize: s(12) }]}>{detailContent.primaryButtons.book}</Text>
               </Pressable>
             </View>
           </View>
 
-          <Text style={[styles.sectionTitle, { fontSize: s(20), lineHeight: s(28) }]}>{FIGMA_GLAMPING_DETAIL.itineraryTitle}</Text>
+          <Text style={[styles.sectionTitle, { fontSize: s(20), lineHeight: s(28) }]}>{detailContent.itineraryTitle}</Text>
 
           <View style={[styles.dayCard, { padding: s(16), borderRadius: s(18), gap: expanded ? s(16) : 0 }]}>
             <Pressable style={[styles.dayHeader, { gap: s(24) }]} onPress={() => setExpanded((v) => !v)}>
               <View style={[styles.dayTab, { paddingHorizontal: s(16), paddingVertical: s(12), borderRadius: s(8) }]}>
                 <Text style={[styles.dayTabText, { fontSize: s(16), lineHeight: s(24) }]}>
-                  {FIGMA_GLAMPING_DETAIL.aboutCampingTitle}
+                  {detailContent.aboutCampingTitle}
                 </Text>
               </View>
               <Ionicons
@@ -250,15 +262,15 @@ export function MobileGlampingDetailsScreen({ onBookNow }: MobileGlampingDetails
             {expanded ? (
               <>
                 <Text style={[styles.daySubtitle, { fontSize: s(12), lineHeight: s(16) }]}>
-                  {FIGMA_GLAMPING_DETAIL.aboutCampingSubtitle}
+                  {detailContent.aboutCampingSubtitle}
                 </Text>
                 <View style={[styles.separator, { height: s(8) }]} />
                 <View style={{ gap: s(8) }}>
                   <Text style={[styles.dayBody, { fontSize: s(10), lineHeight: s(12) }]}>
-                    {FIGMA_GLAMPING_DETAIL.aboutCampingBodyIntro}
+                    {detailContent.aboutCampingBodyIntro}
                   </Text>
                   <View style={{ gap: s(4) }}>
-                    {FIGMA_GLAMPING_DETAIL.aboutCampingBullets.map((b) => (
+                    {detailContent.aboutCampingBullets.map((b) => (
                       <View key={b} style={{ flexDirection: 'row', gap: s(8) }}>
                         <Text style={[styles.bullet, { fontSize: s(10), lineHeight: s(14) }]}>•</Text>
                         <Text style={[styles.dayBody, { fontSize: s(10), lineHeight: s(14), flex: 1 }]}>{b}</Text>
@@ -271,10 +283,10 @@ export function MobileGlampingDetailsScreen({ onBookNow }: MobileGlampingDetails
                   <View style={{ gap: s(24) }}>
                     <View style={[styles.orangeHeader, { paddingHorizontal: s(12), paddingVertical: s(8), borderRadius: s(24), gap: s(10) }]}>
                       <Ionicons name="bag-add-outline" size={s(16)} color="#FFFFFF" />
-                      <Text style={[styles.orangeHeaderText, { fontSize: s(12) }]}>{FIGMA_GLAMPING_DETAIL.thingsToCarryTitle}</Text>
+                      <Text style={[styles.orangeHeaderText, { fontSize: s(12) }]}>{detailContent.thingsToCarryTitle}</Text>
                     </View>
                     <View style={{ gap: s(4) }}>
-                      {FIGMA_GLAMPING_DETAIL.thingsToCarry.map((t) => (
+                      {detailContent.thingsToCarry.map((t) => (
                         <View key={t} style={{ flexDirection: 'row', gap: s(8) }}>
                           <Text style={[styles.orangeBullet, { fontSize: s(10), lineHeight: s(14) }]}>•</Text>
                           <Text style={[styles.orangeListText, { fontSize: s(10), lineHeight: s(14), flex: 1 }]}>{t}</Text>
@@ -286,10 +298,10 @@ export function MobileGlampingDetailsScreen({ onBookNow }: MobileGlampingDetails
                   <View style={{ gap: s(24) }}>
                     <View style={[styles.orangeHeader, { paddingHorizontal: s(12), paddingVertical: s(8), borderRadius: s(24), gap: s(10) }]}>
                       <Ionicons name="navigate-outline" size={s(16)} color="#FFFFFF" />
-                      <Text style={[styles.orangeHeaderText, { fontSize: s(12) }]}>{FIGMA_GLAMPING_DETAIL.howToReachTitle}</Text>
+                      <Text style={[styles.orangeHeaderText, { fontSize: s(12) }]}>{detailContent.howToReachTitle}</Text>
                     </View>
                     <View style={{ gap: s(4) }}>
-                      {FIGMA_GLAMPING_DETAIL.howToReach.map((t) => (
+                      {detailContent.howToReach.map((t) => (
                         <View key={t} style={{ flexDirection: 'row', gap: s(8) }}>
                           <Text style={[styles.orangeBullet, { fontSize: s(10), lineHeight: s(14) }]}>•</Text>
                           <Text style={[styles.orangeListText, { fontSize: s(10), lineHeight: s(14), flex: 1 }]}>{t}</Text>
@@ -320,14 +332,14 @@ export function MobileGlampingDetailsScreen({ onBookNow }: MobileGlampingDetails
 
                 <View style={[styles.noteBox, { padding: s(16), borderRadius: s(12), gap: s(12) }]}>
                   <View style={[styles.noteHeader, { paddingVertical: s(4), paddingHorizontal: s(12), borderRadius: s(24) }]}>
-                    <Text style={[styles.noteHeaderText, { fontSize: s(10) }]}>{FIGMA_GLAMPING_DETAIL.noteTitle}</Text>
+                    <Text style={[styles.noteHeaderText, { fontSize: s(10) }]}>{detailContent.noteTitle}</Text>
                   </View>
-                  <Text style={[styles.noteText, { fontSize: s(10), lineHeight: s(16) }]}>{FIGMA_GLAMPING_DETAIL.noteBody}</Text>
+                  <Text style={[styles.noteText, { fontSize: s(10), lineHeight: s(16) }]}>{detailContent.noteBody}</Text>
                 </View>
 
                 <Pressable style={[styles.fullItineraryBtn, { height: s(36), borderRadius: s(100), paddingHorizontal: s(12), gap: s(8) }]}>
                   <Ionicons name="call-outline" size={s(14)} color={colors.text.primary} />
-                  <Text style={[styles.contactText, { fontSize: s(12) }]}>{FIGMA_GLAMPING_DETAIL.fullItineraryCta}</Text>
+                  <Text style={[styles.contactText, { fontSize: s(12) }]}>{detailContent.fullItineraryCta}</Text>
                 </Pressable>
               </>
             ) : null}
@@ -336,9 +348,9 @@ export function MobileGlampingDetailsScreen({ onBookNow }: MobileGlampingDetails
           <View style={[styles.tripCard, { padding: s(24), borderRadius: s(24), gap: s(18) }]}>
             <View style={{ gap: s(8) }}>
               <Text style={[styles.inclusionsTitle, { fontSize: s(14), lineHeight: s(24) }]}>
-                {FIGMA_GLAMPING_DETAIL.inclusionsTitle}
+                {detailContent.inclusionsTitle}
               </Text>
-              {FIGMA_GLAMPING_DETAIL.inclusions.map((item) => (
+              {detailContent.inclusions.map((item) => (
                 <View key={item} style={{ flexDirection: 'row', gap: s(8) }}>
                   <Text style={[styles.bullet, { fontSize: s(10), lineHeight: s(14) }]}>•</Text>
                   <Text style={[styles.tripText, { fontSize: s(10), lineHeight: s(14), flex: 1 }]}>{item}</Text>
@@ -348,9 +360,9 @@ export function MobileGlampingDetailsScreen({ onBookNow }: MobileGlampingDetails
 
             <View style={{ gap: s(8) }}>
               <Text style={[styles.exclusionsTitle, { fontSize: s(14), lineHeight: s(24) }]}>
-                {FIGMA_GLAMPING_DETAIL.exclusionsTitle}
+                {detailContent.exclusionsTitle}
               </Text>
-              {FIGMA_GLAMPING_DETAIL.exclusions.map((item) => (
+              {detailContent.exclusions.map((item) => (
                 <View key={item} style={{ flexDirection: 'row', gap: s(8) }}>
                   <Text style={[styles.bullet, { fontSize: s(10), lineHeight: s(14) }]}>•</Text>
                   <Text style={[styles.tripText, { fontSize: s(10), lineHeight: s(14), flex: 1 }]}>{item}</Text>
@@ -365,7 +377,7 @@ export function MobileGlampingDetailsScreen({ onBookNow }: MobileGlampingDetails
             <Text style={[styles.reviewsTitle, { fontSize: s(16), lineHeight: s(34), paddingHorizontal: s(4) }]}>
               Customer Reviews
             </Text>
-            {GLAMPING_REVIEWS.map((review) => (
+            {reviewItems.map((review) => (
               <View key={review.id}>
                 <View style={[styles.reviewCard, { padding: s(18), borderRadius: s(12), gap: s(12) }]}>
                   <View style={[styles.reviewHeader, { gap: s(12) }]}>
@@ -464,7 +476,7 @@ export function MobileGlampingDetailsScreen({ onBookNow }: MobileGlampingDetails
             </View>
 
             <Text style={[styles.footerText, { fontSize: s(8), lineHeight: s(10), paddingHorizontal: s(20), textAlign: 'center' }]}>
-              {FIGMA_GLAMPING_DETAIL.footerText}
+              {detailContent.footerText}
             </Text>
           </View>
         </View>

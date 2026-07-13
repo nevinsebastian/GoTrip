@@ -2,7 +2,7 @@ import { Input, Text } from '@/components/ui';
 import { colors, typography } from '@/constants/DesignTokens';
 import { VENDOR_ONBOARDING } from '@/src/constants/vendorOnboardingConstants';
 import { VENDOR_WORKSPACE_COPY } from '@/src/constants/vendorWorkspaceConstants';
-import { goToVendorHome } from '@/src/utils/vendorNavigation';
+import { goToVendorHome, goToVendorNewListing } from '@/src/utils/vendorNavigation';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React from 'react';
@@ -44,7 +44,7 @@ export function DesktopVendorWebHeader({ compact = false }: DesktopVendorWebHead
       <View style={styles.headerActions}>
         <Pressable
           accessibilityRole="button"
-          onPress={() => router.push('/become-vendor')}
+          onPress={() => void goToVendorNewListing()}
           style={({ pressed }) => [styles.actionBtn, styles.actionBtnBlue, pressed && styles.pressed]}
         >
           <Text style={styles.actionBtnText}>{VENDOR_WORKSPACE_COPY.addListing}</Text>

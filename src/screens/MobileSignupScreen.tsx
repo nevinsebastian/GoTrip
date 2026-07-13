@@ -21,7 +21,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import MailIcon from '@/assets/images/mail.svg';
-import { useSendOtp } from '@/src/hooks/useSendOtp';
+import { useRegister } from '@/src/hooks/useRegister';
 import { getErrorMessage } from '@/src/utils/errorHandler';
 
 const GoogleIcon = require('../../assets/images/google.png');
@@ -61,11 +61,12 @@ export function MobileSignupScreen() {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
+  const [password, setPassword] = useState('');
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [otpSession, setOtpSession] = useState<OtpSession | null>(null);
 
   const isEmailMode = signupMode === 'email';
-  const { mutate: sendOtp, isPending: isSendingOtp } = useSendOtp();
+  const { mutate: registerUser, isPending: isSendingOtp } = useRegister();
 
   useEffect(() => {
     if (isWeb) return;
@@ -99,8 +100,15 @@ export function MobileSignupScreen() {
     const trimmedEmail = email.trim();
     const trimmedPhone = phone.trim();
 
+    const trimmedPassword = password.trim();
+
     if (!trimmedName) {
       setSubmitError('Please enter your full name.');
+      return;
+    }
+
+    if (!trimmedPassword || trimmedPassword.length < 6) {
+      setSubmitError('Please enter a password (at least 6 characters).');
       return;
     }
 
@@ -117,12 +125,12 @@ export function MobileSignupScreen() {
     const channel: OtpChannel = isEmailMode ? 'email' : 'phone';
     const contact = isEmailMode ? trimmedEmail : trimmedPhone;
 
-    sendOtp(
+    registerUser(
       {
-        full_name: trimmedName,
-        channel,
-        ...(trimmedEmail ? { email: trimmedEmail } : {}),
-        ...(trimmedPhone ? { phone: trimmedPhone } : {}),
+        fullName: trimmedName,
+        password: trimmedPassword,
+        role: 'user',
+        ...(isEmailMode ? { email: trimmedEmail } : { phone: trimmedPhone }),
       },
       {
         onSuccess: (res) => {
@@ -187,6 +195,18 @@ export function MobileSignupScreen() {
                     value={fullName}
                     onChangeText={setFullName}
                     autoCapitalize="words"
+                    onFocus={scrollToForm}
+                  />
+
+                  <Input
+                    placeholder="Password"
+                    secureTextEntry
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    placeholderTextColor={colors.text.placeholder}
+                    style={authFieldInputStyle.field}
+                    value={password}
+                    onChangeText={setPassword}
                     onFocus={scrollToForm}
                   />
 
@@ -300,6 +320,7 @@ export function MobileSignupScreen() {
         fullName={otpSession?.fullName}
         email={otpSession?.email}
         phone={otpSession?.phone}
+        flow="register"
       />
     </SafeAreaView>
   );

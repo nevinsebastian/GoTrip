@@ -100,9 +100,7 @@ export function MobileLoginScreen() {
     }
 
     const channel: OtpChannel = isEmailMode ? 'email' : 'phone';
-    const payload = isEmailMode
-      ? { channel, email: trimmed }
-      : { channel, phone: trimmed };
+    const payload = isEmailMode ? { email: trimmed } : { phone: trimmed };
 
     sendOtp(payload, {
       onSuccess: (res) => {

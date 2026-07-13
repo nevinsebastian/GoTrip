@@ -17,7 +17,8 @@ import { DesktopPromoBanner } from '@/src/components/desktop/DesktopPromoBanner'
 import { DesktopSiteFooter } from '@/src/components/desktop/DesktopSiteFooter';
 import { useHomeSearch } from '@/src/components/home/HomeSearchContext';
 import { DesktopSearchResultsScreen } from '@/src/screens/DesktopSearchResultsScreen';
-import { useListings } from '@/src/hooks/useListings';
+import { useHotelListings } from '@/src/hooks/useHotelListings';
+import { useCategoryListings } from '@/src/hooks/useCategoryListing';
 import { USER_PROFILE_QUERY_KEY, useUserProfile } from '@/src/hooks/useUserProfile';
 import { Ionicons } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
@@ -37,6 +38,7 @@ function DesktopHomeContent() {
   const isUnauthorized = Boolean(profileError?.isUnauthorized);
   const isLoggedIn = Boolean(user) && !isUnauthorized;
   const { activeCategoryTab, setActiveCategoryTab, searchMode } = useHomeSearch();
+  const isHotelsTab = activeCategoryTab === 'hotels';
 
   const [webMenuOpen, setWebMenuOpen] = useState(false);
   const [webAuthModal, setWebAuthModal] = useState<{
@@ -44,11 +46,45 @@ function DesktopHomeContent() {
     mode: 'login' | 'signup';
   }>({ visible: false, mode: 'login' });
 
-  const { data: listingsRes } = useListings({ page: 1, limit: 20 });
-  const { data: economicRes } = useListings({ max_price: 2499, page: 1, limit: 20 });
-  const listings = listingsRes?.data ?? [];
-  const suggested = resolveDesktopListings(listings.slice(0, 6), 3);
-  const budget = resolveDesktopListings((economicRes?.data ?? listings).slice(0, 8), 8);
+  const { listings: hotelListings } = useHotelListings({
+    page: 1,
+    limit: 20,
+    enabled: isHotelsTab,
+  });
+
+  const isPackagesTab = activeCategoryTab === 'packages';
+  const isGlampingTab = activeCategoryTab === 'glamping';
+  const isActivitiesTab = activeCategoryTab === 'activities';
+
+  const { listings: packageListings } = useCategoryListings('packages', {
+    page: 1,
+    limit: 20,
+    enabled: isPackagesTab,
+  });
+  const { listings: glampingListings } = useCategoryListings('glamping', {
+    page: 1,
+    limit: 20,
+    enabled: isGlampingTab,
+  });
+  const { listings: activityListings } = useCategoryListings('activities', {
+    page: 1,
+    limit: 20,
+    enabled: isActivitiesTab,
+  });
+
+  const categoryListings = isPackagesTab
+    ? packageListings
+    : isGlampingTab
+      ? glampingListings
+      : isActivitiesTab
+        ? activityListings
+        : [];
+  const suggested = isHotelsTab
+    ? hotelListings.slice(0, 6)
+    : resolveDesktopListings(categoryListings.slice(0, 6), 3);
+  const budget = isHotelsTab
+    ? hotelListings.slice(0, 8)
+    : resolveDesktopListings(categoryListings.slice(0, 8), 8);
 
   const handleWebMenuLogout = async () => {
     setWebMenuOpen(false);

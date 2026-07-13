@@ -35,16 +35,23 @@ export interface LoginResponse {
 
 export type OtpChannel = 'email' | 'phone';
 
-export interface SendOtpRequest {
-  full_name?: string;
+export interface AuthContactPayload {
   email?: string;
   phone?: string;
-  channel: OtpChannel;
+}
+
+export interface SendLoginOtpRequest extends AuthContactPayload {}
+
+export interface SendOtpRequest extends AuthContactPayload {
+  /** @deprecated login flow — use SendLoginOtpRequest; kept for callers passing channel */
+  full_name?: string;
+  channel?: OtpChannel;
 }
 
 export interface SendOtpResponse {
   success: boolean;
   message: string;
+  channel?: OtpChannel;
   data?: {
     message?: string;
     channel?: OtpChannel;
@@ -66,20 +73,33 @@ export interface RegisterResponse {
   channel?: OtpChannel;
 }
 
-export interface VerifyOtpRequest {
+export interface VerifyOtpRequest extends AuthContactPayload {
+  otp: string;
+  /** @deprecated registration-only legacy field */
   full_name?: string;
+  channel?: OtpChannel;
+}
+
+export interface VerifyLoginOtpRequest extends AuthContactPayload {
+  otp: string;
+}
+
+export interface AuthUserPayload {
+  id: string;
   email?: string;
   phone?: string;
-  channel?: OtpChannel;
-  otp: string;
+  fullName?: string;
+  full_name?: string;
+  role?: string;
 }
 
 export interface VerifyOtpResponse {
   success: boolean;
   message?: string;
+  error?: string;
   accessToken?: string;
   refreshToken?: string;
-  user?: User;
+  user?: AuthUserPayload;
   data?: {
     user: User;
     access_token: string;
@@ -477,6 +497,498 @@ export interface ListingsResponse {
   meta: ListingsMeta;
 }
 
+export interface HotelLocationJson {
+  lat?: number;
+  lng?: number;
+  latitude?: number;
+  longitude?: number;
+  city?: string;
+  state?: string;
+  address?: string;
+  country?: string;
+  pinCode?: string;
+  searchLabel?: string;
+  streetAddress?: string;
+  unit?: string;
+}
+
+export interface HotelPropertyInfo {
+  id: string;
+  listingId: string;
+  listingType?: string;
+  starRating?: number | null;
+  checkInTime?: string;
+  checkOutTime?: string;
+  totalFloors?: number | null;
+  propertyRules?: unknown;
+  listing_id?: string;
+}
+
+export interface PublicHotel {
+  id: string;
+  vendorId?: string;
+  vendor_id?: string;
+  category?: string;
+  title: string;
+  description?: string | null;
+  status?: string;
+  isPublished?: boolean;
+  locationJson?: HotelLocationJson | null;
+  cancellationPolicyId?: string | null;
+  avgRating?: number | null;
+  reviewCount?: number;
+  metaJson?: Record<string, unknown> | null;
+  coverImage?: string | null;
+  hotelProperty?: HotelPropertyInfo | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface BrowseHotelsParams {
+  limit?: number;
+  offset?: number;
+  city?: string;
+  minRating?: number;
+  /** @deprecated use offset — converted as (page - 1) * limit when offset omitted */
+  page?: number;
+}
+
+export interface HotelsBrowseResponse {
+  success?: boolean;
+  data: PublicHotel[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface HotelImage {
+  url: string;
+  isCover?: boolean;
+  sortOrder?: number;
+}
+
+export interface HotelMealPlan {
+  id: string;
+  planCode?: string;
+  label?: string;
+  includesBreakfast?: boolean;
+  includesLunch?: boolean;
+  includesDinner?: boolean;
+}
+
+export interface HotelRoomAmenity {
+  id: string;
+  name: string;
+  icon?: string | null;
+}
+
+export interface HotelRoomType {
+  id: string;
+  name: string;
+  bedType?: string;
+  numBeds?: number;
+  totalUnits?: number;
+  basePricePerNight?: number;
+  maxAdultOccupancy?: number;
+  maxChildOccupancy?: number;
+  mealPlans?: HotelMealPlan[];
+  amenities?: HotelRoomAmenity[];
+}
+
+export interface HotelPropertyDetail extends HotelPropertyInfo {
+  roomTypes?: HotelRoomType[];
+}
+
+export interface HotelDetail {
+  id: string;
+  title: string;
+  description?: string | null;
+  category?: string;
+  status?: string;
+  isPublished?: boolean;
+  locationJson?: HotelLocationJson | null;
+  avgRating?: number | null;
+  reviewCount?: number;
+  cancellationPolicyId?: string | null;
+  images?: HotelImage[];
+  highlights?: string[];
+  hotelProperty?: HotelPropertyDetail | null;
+}
+
+export interface HotelDetailResponse {
+  success?: boolean;
+  hotel: HotelDetail;
+}
+
+export interface HotelRoomTypesResponse {
+  success?: boolean;
+  roomTypes: HotelRoomType[];
+}
+
+export type AvailabilityEntityType =
+  | 'room_type'
+  | 'full_property'
+  | 'activity_slot'
+  | 'glamping_site'
+  | 'package';
+
+export interface BrowseListingsParams {
+  limit?: number;
+  offset?: number;
+  city?: string;
+  minRating?: number;
+  activityType?: ActivityTypeEnum;
+  /** @deprecated use offset */
+  page?: number;
+}
+
+export interface PaginatedBrowseResponse<T> {
+  success?: boolean;
+  data: T[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface PublicListingImage {
+  url: string;
+  isCover?: boolean;
+  sortOrder?: number;
+}
+
+export interface PublicListingBase {
+  id: string;
+  vendorId?: string;
+  vendor_id?: string;
+  title: string;
+  description?: string | null;
+  status?: string;
+  isPublished?: boolean;
+  locationJson?: HotelLocationJson | null;
+  cancellationPolicyId?: string | null;
+  avgRating?: number | null;
+  reviewCount?: number;
+  coverImage?: string | null;
+  metaJson?: Record<string, unknown> | null;
+  images?: PublicListingImage[];
+  highlights?: string[];
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface ActivitySlot {
+  id: string;
+  label?: string;
+  startTime?: string;
+  durationMinutes?: number;
+  maxParticipants?: number;
+}
+
+export interface PublicActivity extends PublicListingBase {
+  activityType?: ActivityTypeEnum;
+  basePriceAdult?: number;
+  basePriceInfant?: number;
+  minAge?: number;
+  totalSlotsPerDay?: number;
+  aboutExperience?: string;
+  inclusions?: string[];
+  exclusions?: string[];
+  whatsprovided?: string[];
+  thingsToCarry?: string[];
+  howToReach?: string;
+  slots?: ActivitySlot[];
+}
+
+export interface ActivityDetail extends PublicActivity {}
+
+export interface ActivityDetailResponse {
+  success?: boolean;
+  activity: ActivityDetail;
+}
+
+export interface GlampingSite {
+  id: string;
+  name?: string;
+  totalUnits?: number;
+  maxAdults?: number;
+  maxInfants?: number;
+  basePricePerNight?: number;
+}
+
+export interface PublicGlamping extends PublicListingBase {
+  totalCamps?: number;
+  adultsPerCamp?: number;
+  infantsPerCamp?: number;
+  pricePerCampNight?: number;
+  extraAdultCharge?: number;
+  extraInfantCharge?: number;
+  aboutExperience?: string;
+  inclusions?: string[];
+  exclusions?: string[];
+  whatsprovided?: string[];
+  thingsToCarry?: string[];
+  howToReach?: string;
+  sites?: GlampingSite[];
+  mealPlans?: HotelMealPlan[];
+}
+
+export interface GlampingDetail extends PublicGlamping {}
+
+export interface GlampingDetailResponse {
+  success?: boolean;
+  glamping: GlampingDetail;
+}
+
+export interface PackageItineraryDay {
+  id?: string;
+  dayNumber: number;
+  title: string;
+  description?: string;
+  activities?: string[];
+  activitiesJson?: string[];
+  mealsCovered?: string[];
+}
+
+export interface PackageDeparture {
+  id: string;
+  startDate: string;
+  endDate: string;
+  seatsAvailable?: number;
+  pricePerPerson?: number;
+}
+
+export interface PackageProductInfo {
+  id: string;
+  listingId?: string;
+  totalDays?: number;
+  totalNights?: number;
+  pricePerPerson?: number;
+  minGroupSize?: number;
+  maxGroupSize?: number;
+  inclusions?: string[];
+  exclusions?: string[];
+  whatsprovided?: string[];
+  bookingMode?: PackageBookingMode;
+  itineraries?: PackageItineraryDay[];
+}
+
+export interface PublicPackage extends PublicListingBase {
+  category?: string;
+  package?: PackageProductInfo;
+  /** @deprecated flattened — prefer package.* */
+  totalDays?: number;
+  totalNights?: number;
+  pricePerPerson?: number;
+  minGroupSize?: number;
+  maxGroupSize?: number;
+  bookingMode?: PackageBookingMode;
+  inclusions?: string[];
+  exclusions?: string[];
+  whatsprovided?: string[];
+  itineraries?: PackageItineraryDay[];
+  departures?: PackageDeparture[];
+}
+
+export interface PackageDetail extends PublicPackage {}
+
+export interface PackageDetailResponse {
+  success?: boolean;
+  package: PackageDetail;
+}
+
+export interface PackageEnquiryRequest {
+  adults: number;
+  infants?: number;
+  travelDate?: string;
+  message?: string;
+}
+
+export interface PackageEnquiry {
+  id: string;
+  listingId: string;
+  userId?: string;
+  travelDate?: string | null;
+  adults: number;
+  infants?: number;
+  message?: string | null;
+  status: 'open' | 'replied' | 'closed' | 'converted' | string;
+  vendorReply?: string | null;
+  repliedAt?: string | null;
+  createdAt?: string;
+  listing?: { title?: string; id?: string };
+}
+
+export interface PackageEnquiryResponse {
+  success?: boolean;
+  message?: string;
+  enquiry?: PackageEnquiry;
+}
+
+export interface PackageEnquiriesResponse {
+  success?: boolean;
+  data: PackageEnquiry[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface BookingHoldGuest {
+  fullName: string;
+  age?: number;
+  isPrimary?: boolean;
+}
+
+export interface BookingHoldRequest {
+  listingId: string;
+  entityType: AvailabilityEntityType;
+  entityId: string;
+  checkIn: string;
+  checkOut: string;
+  adults: number;
+  children?: number;
+  infants?: number;
+  unitsBooked?: number;
+  mealPlanId?: string;
+  slotId?: string;
+  glampingSiteId?: string;
+  roomTypeId?: string;
+  couponCode?: string;
+  specialRequests?: string;
+  guests?: BookingHoldGuest[];
+}
+
+export interface BookingHoldResponse {
+  success?: boolean;
+  holdId?: string;
+  bookingId?: string;
+  booking?: Booking;
+  expiresAt?: string;
+  priceBreakdown?: BookingPriceBreakdown;
+}
+
+export interface InitiatePaymentRequest {
+  bookingId: string;
+  receipt?: string;
+}
+
+export interface InitiatePaymentResponse {
+  success?: boolean;
+  message?: string;
+  data?: {
+    order_id: string;
+    amount: number;
+    currency: string;
+    key_id: string;
+    booking_id?: string;
+  };
+}
+
+export interface AvailabilityDay {
+  date: string;
+  total_units?: number;
+  booked_units?: number;
+  blocked_units?: number;
+  available_units?: number;
+  is_blocked?: boolean;
+  effective_price?: number;
+}
+
+export interface AvailabilityResponse {
+  success?: boolean;
+  availability: AvailabilityDay[];
+}
+
+export interface ListingReviewsResponse {
+  success?: boolean;
+  reviews: ListingReview[];
+}
+
+export interface CancellationPolicy {
+  id: string;
+  name?: string;
+  description?: string;
+  policyText?: string;
+  rules?: unknown;
+}
+
+export interface CancellationPoliciesResponse {
+  success?: boolean;
+  data?: CancellationPolicy[];
+  policies?: CancellationPolicy[];
+}
+
+export interface CheckAvailabilityRequest {
+  entityType: AvailabilityEntityType;
+  entityId: string;
+  checkIn: string;
+  checkOut: string;
+  adults: number;
+  children?: number;
+  infants?: number;
+  unitsBooked?: number;
+  mealPlanId?: string;
+  slotId?: string;
+  glampingSiteId?: string;
+  roomTypeId?: string;
+  couponCode?: string;
+}
+
+export interface BookingPriceBreakdown {
+  nights?: number;
+  basePrice?: number;
+  extraPersonCharge?: number;
+  subtotal?: number;
+  taxAmount?: number;
+  platformFee?: number;
+  totalAmount?: number;
+}
+
+export interface CheckAvailabilityResponse {
+  success?: boolean;
+  available?: boolean;
+  priceBreakdown?: BookingPriceBreakdown;
+  unavailableDates?: string[];
+}
+
+export type VendorListingApiCategory = 'hotel' | 'package' | 'glamping' | 'activity';
+
+export type VendorListingApiStatus =
+  | 'draft'
+  | 'pending_approval'
+  | 'active'
+  | 'suspended'
+  | 'archived';
+
+export interface VendorMyListingsQuery {
+  category?: VendorListingApiCategory;
+  status?: VendorListingApiStatus;
+  limit?: number;
+  offset?: number;
+}
+
+export interface VendorMyListingsMeta {
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface VendorMyListingsResult {
+  listings: Listing[];
+  meta: VendorMyListingsMeta;
+}
+
+export interface VendorMyListingsResponse {
+  success?: boolean;
+  message?: string;
+  error?: string;
+  data?: Listing[];
+  listings?: Listing[];
+  total?: number;
+  limit?: number;
+  offset?: number;
+  meta?: Partial<VendorMyListingsMeta> & Partial<ListingsMeta>;
+}
+
 export interface ListingVendorLite {
   id: string;
   business_name: string;
@@ -488,6 +1000,8 @@ export interface ListingReview {
   comment?: string;
   created_at?: string;
   user_id?: string;
+  user?: { full_name?: string; name?: string };
+  reviewerName?: string;
 }
 
 export interface ListingDetail extends Listing {
@@ -522,7 +1036,11 @@ export interface Booking {
   listing_id: string;
   start_date: string;
   end_date: string;
+  check_in?: string;
+  check_out?: string;
   guests: number;
+  adults?: number;
+  infants?: number;
   rooms?: number;
   total_amount?: string;
   status?: BookingStatus;
@@ -534,6 +1052,8 @@ export interface Booking {
     id: string;
     title?: string;
     location?: string;
+    category?: string;
+    coverImage?: string;
   };
   payment?: {
     id: string;
@@ -549,10 +1069,11 @@ export interface CreateBookingResponse {
 }
 
 export interface BookingsMeta {
-  page: number;
+  page?: number;
   limit: number;
   total: number;
-  totalPages: number;
+  offset?: number;
+  totalPages?: number;
 }
 
 export interface BookingsResponse {

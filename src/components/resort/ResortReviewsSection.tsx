@@ -4,11 +4,13 @@ import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 
+import type { HotelReviewDisplay } from '@/src/utils/hotelDetailHelpers';
 import { MOCK_REVIEWS } from '@/src/components/resort/resortConstants';
 import { useHomeScale } from '@/src/components/home/useHomeScale';
 
-export function ResortReviewsSection() {
+export function ResortReviewsSection({ reviews }: { reviews?: HotelReviewDisplay[] }) {
   const { s } = useHomeScale();
+  const items = reviews?.length ? reviews : MOCK_REVIEWS;
 
   return (
     <View style={[styles.section, { paddingHorizontal: s(16), gap: s(16) }]}>
@@ -19,7 +21,7 @@ export function ResortReviewsSection() {
 
       <Text style={[styles.title, { fontSize: s(16), lineHeight: s(22) }]}>Customer Reviews</Text>
 
-      {MOCK_REVIEWS.map((review) => (
+      {items.map((review) => (
         <View key={review.id} style={[styles.card, { padding: s(14), borderRadius: s(18), gap: s(12) }]}>
           <View style={styles.headerRow}>
             <View style={[styles.avatar, { width: s(48), height: s(48), borderRadius: s(24) }]}>

@@ -1,8 +1,11 @@
 import { Text } from '@/components/ui';
 import { colors, typography } from '@/constants/DesignTokens';
 import { BookingTicketCard } from '@/src/components/tickets/BookingTicketCard';
+import { PackageEnquiryCard } from '@/src/components/package/PackageEnquiryCard';
 import { useHomeScale } from '@/src/components/home/useHomeScale';
 import { useBookings } from '@/src/hooks/useBookings';
+import { useIsAuthenticated } from '@/src/hooks/useIsAuthenticated';
+import { useMyPackageEnquiries } from '@/src/hooks/usePackageUser';
 import { getErrorMessage } from '@/src/utils/errorHandler';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -17,7 +20,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-type TabKey = 'active' | 'past';
+type TabKey = 'active' | 'past' | 'enquiries';
 
 function toDateOnly(input: string) {
   const d = new Date(input);
@@ -63,7 +66,13 @@ export function MobileTicketsScreen() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const contentPadding = s(16);
-  const { data: bookingsRes, isLoading, error } = useBookings({ page: 1, limit: 20 });
+  const { data: isLoggedIn = false } = useIsAuthenticated();
+  const { data: bookingsRes, isLoading, error } = useBookings({ limit: 20, offset: 0 }, isLoggedIn);
+  const {
+    data: enquiriesRes,
+    isLoading: enquiriesLoading,
+    error: enquiriesError,
+  } = useMyPackageEnquiries({ limit: 20, offset: 0 }, isLoggedIn);
 
   const todayOnly = useMemo(() => {
     const today = new Date();
@@ -95,8 +104,23 @@ export function MobileTicketsScreen() {
     });
   }, [bookingsRes?.data, activeTab, searchQuery, todayOnly]);
 
+  const visibleEnquiries = useMemo(() => {
+    const enquiries = enquiriesRes?.data ?? [];
+    const search = searchQuery.trim().toLowerCase();
+    if (!search) return enquiries;
+    return enquiries.filter((e) => {
+      const title = (e.listing?.title ?? '').toLowerCase();
+      return e.id.toLowerCase().includes(search) || title.includes(search);
+    });
+  }, [enquiriesRes?.data, searchQuery]);
+
   const emptyState =
-    activeTab === 'active'
+    activeTab === 'enquiries'
+      ? {
+          title: 'No package enquiries',
+          subtitle: 'Enquiries you send from package pages will appear here.',
+        }
+      : activeTab === 'active'
       ? {
           title: 'No Active tickets found',
           subtitle: 'Your active tickets & booking details will appear here.',
@@ -157,6 +181,23 @@ export function MobileTicketsScreen() {
             </Text>
             {activeTab === 'past' ? <View style={styles.tabUnderline} /> : null}
           </Pressable>
+          <Pressable
+            style={styles.tabBtn}
+            onPress={() => setActiveTab('enquiries')}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: activeTab === 'enquiries' }}
+          >
+            <Text
+              style={[
+                styles.tabLabel,
+                { fontSize: s(11) },
+                activeTab === 'enquiries' && styles.tabLabelActive,
+              ]}
+            >
+              Enquiries
+            </Text>
+            {activeTab === 'enquiries' ? <View style={styles.tabUnderline} /> : null}
+          </Pressable>
         </View>
 
         <View style={[styles.searchRow, { gap: s(8) }]}>
@@ -201,7 +242,53 @@ export function MobileTicketsScreen() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {error ? (
+        {activeTab === 'enquiries' && !isLoggedIn ? (
+          <View style={styles.stateWrap}>
+            <Text style={[styles.stateTitle, { fontSize: s(18) }]}>Log in to view enquiries</Text>
+            <Text style={[styles.stateBody, { fontSize: s(14), marginTop: s(8) }]}>
+              Package enquiries are saved to your account.
+            </Text>
+            <Pressable style={[styles.loginBtn, { marginTop: s(16) }]} onPress={() => router.push('/login')}>
+              <Text style={styles.loginBtnText}>Log in</Text>
+            </Pressable>
+          </View>
+        ) : activeTab === 'enquiries' && enquiriesError ? (
+          <View style={styles.stateWrap}>
+            <Text style={[styles.stateTitle, { fontSize: s(18) }]}>Unable to load enquiries</Text>
+            <Text style={[styles.stateBody, { fontSize: s(14), marginTop: s(8) }]}>
+              {getErrorMessage(enquiriesError)}
+            </Text>
+          </View>
+        ) : activeTab === 'enquiries' && enquiriesLoading ? (
+          <View style={styles.stateWrap}>
+            <ActivityIndicator size="large" color={colors.accent.main} />
+          </View>
+        ) : activeTab === 'enquiries' ? (
+          visibleEnquiries.length === 0 ? (
+            <View style={styles.stateWrap}>
+              <Text style={[styles.stateTitle, { fontSize: s(18) }]}>{emptyState.title}</Text>
+              <Text style={[styles.stateBody, { fontSize: s(14), marginTop: s(8) }]}>
+                {emptyState.subtitle}
+              </Text>
+            </View>
+          ) : (
+            <View style={{ gap: s(12) }}>
+              {visibleEnquiries.map((enquiry) => (
+                <PackageEnquiryCard
+                  key={enquiry.id}
+                  enquiry={enquiry}
+                  expanded={expandedId === enquiry.id}
+                  onToggle={() =>
+                    setExpandedId((prev) => (prev === enquiry.id ? null : enquiry.id))
+                  }
+                  onViewPackage={() =>
+                    router.push({ pathname: '/package/[id]', params: { id: enquiry.listingId } })
+                  }
+                />
+              ))}
+            </View>
+          )
+        ) : error ? (
           <View style={styles.stateWrap}>
             <Text style={[styles.stateTitle, { fontSize: s(18) }]}>Unable to load bookings</Text>
             <Text style={[styles.stateBody, { fontSize: s(14), marginTop: s(8) }]}>
@@ -351,5 +438,17 @@ const styles = StyleSheet.create({
     fontWeight: typography.fontWeight.regular,
     color: colors.text.secondary,
     textAlign: 'center',
+  },
+  loginBtn: {
+    backgroundColor: colors.accent.main,
+    paddingHorizontal: 24,
+    paddingVertical: 10,
+    borderRadius: 999,
+  },
+  loginBtnText: {
+    fontFamily: typography.fontFamily.text,
+    fontSize: 14,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.surface.white,
   },
 });

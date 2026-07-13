@@ -11,7 +11,7 @@ import { colors, spacing, typography } from '@/constants/DesignTokens';
 import type { OtpChannel } from '@/src/api/types';
 import { VENDOR_ONBOARDING } from '@/src/constants/vendorOnboardingConstants';
 import { VENDOR_WORKSPACE_COPY } from '@/src/constants/vendorWorkspaceConstants';
-import { goToVendorLogin, enterVendorWorkspace } from '@/src/utils/vendorNavigation';
+import { goToVendorLogin, goToVendorNewListing, enterVendorWorkspace } from '@/src/utils/vendorNavigation';
 import { loginExistingVendor } from '@/src/utils/vendorSession';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -186,7 +186,7 @@ export function DesktopVendorLoginScreen() {
           <View style={styles.headerActions}>
             <Pressable
               accessibilityRole="button"
-              onPress={() => router.push('/become-vendor')}
+              onPress={() => void goToVendorNewListing()}
               style={({ pressed }) => [styles.actionBtn, styles.actionBtnBlue, pressed && styles.pressed]}
             >
               <Text style={styles.actionBtnText}>{VENDOR_WORKSPACE_COPY.addListing}</Text>

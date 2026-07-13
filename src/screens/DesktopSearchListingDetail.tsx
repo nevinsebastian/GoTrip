@@ -1,6 +1,7 @@
 import type { HomeCategoryTab } from '@/src/components/home/homeSearchConfig';
 import { useHomeSearch, type SearchSelectedListing } from '@/src/components/home/HomeSearchContext';
 import { useDesktopBookingFocus } from '@/src/hooks/useDesktopBookingFocus';
+import { useActivityDetail, useGlampingDetail, usePackageDetail } from '@/src/hooks/useCategoryListing';
 import { useListingDetails } from '@/src/hooks/useListingDetails';
 import { DesktopCategoryListingDetailScreen } from '@/src/screens/DesktopCategoryListingDetailScreen';
 import { DesktopHotelDetailScreen } from '@/src/screens/DesktopHotelDetailScreen';
@@ -32,6 +33,21 @@ export function DesktopSearchListingDetail({
 }: DesktopSearchListingDetailProps) {
   const { searchParams } = useHomeSearch();
   const isHotels = tab === 'hotels';
+  const isPackages = tab === 'packages';
+  const isGlamping = tab === 'glamping';
+  const isActivities = tab === 'activities';
+
+  const { data: activityDetail } = useActivityDetail(listing.id, isActivities);
+  const { data: glampingDetail } = useGlampingDetail(listing.id, isGlamping);
+  const { data: packageDetail } = usePackageDetail(listing.id, isPackages);
+  const categoryDisplay = isActivities
+    ? activityDetail?.display
+    : isGlamping
+      ? glampingDetail?.display
+      : isPackages
+        ? packageDetail?.display
+        : undefined;
+
   const { data: listingRes } = useListingDetails(isHotels ? listing.id : undefined);
   const listingDetail = listingRes?.data;
 
@@ -72,6 +88,7 @@ export function DesktopSearchListingDetail({
         tab={tab}
         title={listing.title}
         priceLabel={priceFromMeta}
+        display={categoryDisplay}
         onBack={onBack}
         onTabChange={onTabChange}
         onBookNow={openDateModal}

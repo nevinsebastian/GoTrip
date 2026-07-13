@@ -4,18 +4,27 @@ import { VendorDashboardCategoryTabs } from '@/src/components/vendor/dashboard/V
 import { VendorDashboardTopBar } from '@/src/components/vendor/dashboard/VendorDashboardTopBar';
 import { VendorDeleteListingModal } from '@/src/components/vendor/listings/VendorDeleteListingModal';
 import { VendorListingCard } from '@/src/components/vendor/listings/VendorListingCard';
+import { VendorListingsStateViews } from '@/src/components/vendor/listings/VendorListingsStateViews';
+import { VendorUpdatePricingModal } from '@/src/components/vendor/listings/VendorUpdatePricingModal';
+import { VendorPropertyOptionSheet } from '@/src/components/vendor/VendorPropertyOptionSheet';
 import {
   useVendorTabBarInset,
   VendorWorkspaceFloatingTabBar,
 } from '@/src/components/vendor/workspace/VendorWorkspaceTabBar';
 import {
-  VENDOR_LISTING_CARDS,
+  VENDOR_LISTING_API_CATEGORY,
   VENDOR_LISTINGS_COPY,
+  VENDOR_LISTINGS_STATUS_OPTIONS,
   type VendorListingCardData,
+  type VendorListingStatusFilter,
 } from '@/src/constants/vendorListingsConstants';
 import type { VendorListingCategoryId } from '@/src/constants/vendorOnboardingConstants';
+import { useUserProfile } from '@/src/hooks/useUserProfile';
+import { useVendorMyListings } from '@/src/hooks/useVendorMyListings';
+import { useVendorWorkspaceAuthGuard } from '@/src/hooks/useVendorWorkspaceAuthGuard';
 import { useVendorListingCategory } from '@/src/hooks/useVendorListingCategory';
 import { getStoredVendorListingCategory } from '@/src/utils/vendorSession';
+import { applyListingPriceOverrides } from '@/src/utils/vendorListingPriceOverrides';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
@@ -25,11 +34,18 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 const DESIGN_WIDTH = 402;
 
 export function MobileVendorListingsScreen() {
+  useVendorWorkspaceAuthGuard();
+
   const storedCategory = useVendorListingCategory();
   const [categoryId, setCategoryId] = useState<VendorListingCategoryId>(storedCategory);
-  const [listingItems, setListingItems] = useState(VENDOR_LISTING_CARDS);
+  const [statusFilter, setStatusFilter] = useState<VendorListingStatusFilter>('all');
+  const [statusOpen, setStatusOpen] = useState(false);
+  const [hiddenIds, setHiddenIds] = useState<string[]>([]);
+  const [priceOverrides, setPriceOverrides] = useState<Record<string, number>>({});
   const [deleteTarget, setDeleteTarget] = useState<VendorListingCardData | null>(null);
+  const [pricingTarget, setPricingTarget] = useState<VendorListingCardData | null>(null);
   const tabInset = useVendorTabBarInset();
+  const { data: profile } = useUserProfile();
 
   useEffect(() => {
     getStoredVendorListingCategory().then((stored) => {
@@ -37,17 +53,49 @@ export function MobileVendorListingsScreen() {
     });
   }, []);
 
-  const filteredListings = useMemo(
-    () => listingItems.filter((listing) => listing.categoryId === categoryId),
-    [categoryId, listingItems],
+  const hostName = profile?.full_name ?? profile?.name;
+
+  const {
+    listings: apiListings,
+    total,
+    hasMore,
+    isLoading,
+    isError,
+    errorMessage,
+    refetch,
+    fetchNextPage,
+    isFetchingNextPage,
+  } = useVendorMyListings({
+    category: VENDOR_LISTING_API_CATEGORY[categoryId],
+    status: statusFilter === 'all' ? undefined : statusFilter,
+    hostName,
+  });
+
+  const listings = useMemo(
+    () =>
+      applyListingPriceOverrides(
+        apiListings.filter((listing) => !hiddenIds.includes(listing.id)),
+        priceOverrides,
+      ),
+    [apiListings, hiddenIds, priceOverrides],
   );
 
-  const listings = filteredListings.length > 0 ? filteredListings : listingItems;
+  const activeStatus =
+    VENDOR_LISTINGS_STATUS_OPTIONS.find((item) => item.id === statusFilter) ??
+    VENDOR_LISTINGS_STATUS_OPTIONS[0];
+
+  const showList = !isLoading && !isError && listings.length > 0;
+  const showEmpty = !isLoading && !isError && listings.length === 0;
 
   const handleConfirmDelete = () => {
     if (!deleteTarget) return;
-    setListingItems((prev) => prev.filter((item) => item.id !== deleteTarget.id));
+    setHiddenIds((prev) => [...prev, deleteTarget.id]);
     setDeleteTarget(null);
+  };
+
+  const handleConfirmPricing = (price: number) => {
+    if (!pricingTarget) return;
+    setPriceOverrides((prev) => ({ ...prev, [pricingTarget.id]: price }));
   };
 
   return (
@@ -66,43 +114,91 @@ export function MobileVendorListingsScreen() {
               <Ionicons name="chevron-back" size={18} color={colors.surface.white} />
             </Pressable>
             <Text style={styles.screenTitle}>{VENDOR_LISTINGS_COPY.title}</Text>
-            <Pressable style={styles.locationFilter}>
-              <Ionicons name="location-outline" size={14} color={colors.surface.white} />
-              <Text style={styles.locationFilterText} numberOfLines={1}>
-                {VENDOR_LISTINGS_COPY.locationFilter}
+            <Pressable style={styles.statusFilter} onPress={() => setStatusOpen(true)}>
+              <Ionicons name="filter-outline" size={14} color={colors.surface.white} />
+              <Text style={styles.statusFilterText} numberOfLines={1}>
+                {activeStatus.label}
               </Text>
               <Ionicons name="chevron-down" size={14} color={colors.surface.white} />
             </Pressable>
           </View>
 
-          <View style={styles.list}>
-            {listings.map((listing) => (
-              <VendorListingCard
-                key={listing.id}
-                listing={listing}
-                onDelete={() => setDeleteTarget(listing)}
-              />
-            ))}
-          </View>
+          {showList ? (
+            <View style={styles.list}>
+              {listings.map((listing) => (
+                <VendorListingCard
+                  key={listing.id}
+                  listing={listing}
+                  onPricing={() => setPricingTarget(listing)}
+                  onDelete={() => setDeleteTarget(listing)}
+                />
+              ))}
+            </View>
+          ) : null}
+
+          {showEmpty || isLoading || isError ? (
+            <VendorListingsStateViews
+              isLoading={isLoading}
+              isError={isError}
+              errorMessage={errorMessage}
+              isEmpty={showEmpty}
+              emptyFiltered={statusFilter !== 'all'}
+              onRetry={() => void refetch()}
+            />
+          ) : (
+            <VendorListingsStateViews
+              isLoading={false}
+              isError={false}
+              isEmpty={false}
+              hasMore={hasMore}
+              isFetchingNextPage={isFetchingNextPage}
+              shownCount={listings.length}
+              totalCount={total}
+              onLoadMore={() => void fetchNextPage()}
+            />
+          )}
         </ScrollView>
 
-        {deleteTarget ? (
-          <VendorDeleteListingModal
-            listing={deleteTarget}
-            bottomInset={tabInset}
-            onClose={() => setDeleteTarget(null)}
-            onConfirm={handleConfirmDelete}
-          />
-        ) : null}
+        <VendorPropertyOptionSheet
+          visible={statusOpen}
+          title="Filter by status"
+          options={VENDOR_LISTINGS_STATUS_OPTIONS.map((item) => ({
+            id: item.id,
+            label: item.label,
+          }))}
+          selectedId={statusFilter}
+          onClose={() => setStatusOpen(false)}
+          onSelect={(id) => {
+            setStatusFilter(id as VendorListingStatusFilter);
+            setStatusOpen(false);
+          }}
+        />
 
         <VendorWorkspaceFloatingTabBar activeTab="listings" />
       </View>
+
+      {deleteTarget ? (
+        <VendorDeleteListingModal
+          listing={deleteTarget}
+          variant="sheet"
+          onClose={() => setDeleteTarget(null)}
+          onConfirm={handleConfirmDelete}
+        />
+      ) : null}
+
+      {pricingTarget ? (
+        <VendorUpdatePricingModal
+          listing={pricingTarget}
+          onClose={() => setPricingTarget(null)}
+          onConfirm={handleConfirmPricing}
+        />
+      ) : null}
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.surface.white },
+  container: { flex: 1, backgroundColor: colors.surface.white, position: 'relative' },
   page: { flex: 1, width: '100%', maxWidth: DESIGN_WIDTH, alignSelf: 'center' },
   scrollContent: {
     paddingHorizontal: spacing['4'],
@@ -129,7 +225,7 @@ const styles = StyleSheet.create({
     fontWeight: typography.fontWeight.bold,
     color: colors.text.primary,
   },
-  locationFilter: {
+  statusFilter: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
@@ -139,7 +235,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 8,
   },
-  locationFilterText: {
+  statusFilterText: {
     flex: 1,
     fontFamily: typography.fontFamily.text,
     fontSize: 10,

@@ -5,6 +5,8 @@ import {
   spacing,
 } from '@/constants/DesignTokens';
 import { getErrorMessage } from '@/src/utils/errorHandler';
+import { authSuccessMessage, hasAuthTokens } from '@/src/api/auth.service';
+import { OTP_LENGTH } from '@/src/constants/authConstants';
 import { useSendOtp } from '@/src/hooks/useSendOtp';
 import { useVerifyOtp } from '@/src/hooks/useVerifyOtp';
 import { Ionicons } from '@expo/vector-icons';
@@ -19,7 +21,9 @@ import {
   View,
 } from 'react-native';
 
-const OTP_LENGTH = 4;
+function emptyOtpDigits() {
+  return Array.from({ length: OTP_LENGTH }, () => '');
+}
 
 type LoginStep = 'login' | 'otp';
 
@@ -42,7 +46,7 @@ export function LoginSheetModal({
   const [loginValue, setLoginValue] = useState('');
   const [loginError, setLoginError] = useState<string | null>(null);
   const [loginStep, setLoginStep] = useState<LoginStep>('login');
-  const [otpDigits, setOtpDigits] = useState<string[]>(['', '', '', '']);
+  const [otpDigits, setOtpDigits] = useState<string[]>(emptyOtpDigits);
   const otpRefs = useRef<(TextInput | null)[]>([]);
 
   const { mutate: sendOtp, isPending: isSendingOtp } = useSendOtp();
@@ -54,7 +58,7 @@ export function LoginSheetModal({
       setLoginError(null);
       setLoginMode('phone');
       setLoginValue('');
-      setOtpDigits(['', '', '', '']);
+      setOtpDigits(emptyOtpDigits());
     }
   }, [visible]);
 
@@ -62,7 +66,7 @@ export function LoginSheetModal({
     onClose();
     setLoginError(null);
     setLoginStep('login');
-    setOtpDigits(['', '', '', '']);
+    setOtpDigits(emptyOtpDigits());
   };
 
   const handleGetOtp = () => {
@@ -76,15 +80,13 @@ export function LoginSheetModal({
     }
 
     const payload =
-      loginMode === 'email'
-        ? { channel: 'email' as const, email: trimmed }
-        : { channel: 'phone' as const, phone: trimmed };
+      loginMode === 'email' ? { email: trimmed } : { phone: trimmed };
 
     sendOtp(payload, {
       onSuccess: (res) => {
         if (res?.success) {
           setLoginStep('otp');
-          setOtpDigits(['', '', '', '']);
+          setOtpDigits(emptyOtpDigits());
           setTimeout(() => otpRefs.current[0]?.focus?.(), 150);
           return;
         }
@@ -127,13 +129,13 @@ export function LoginSheetModal({
 
     verifyOtp(
       {
-        channel: loginMode === 'email' ? 'email' : 'phone',
+        flow: 'login',
         otp: code,
         ...(loginMode === 'email' ? { email: loginValue.trim() } : { phone: loginValue.trim() }),
       },
       {
         onSuccess: async (res) => {
-          if (res?.success && res?.data?.access_token) {
+          if (hasAuthTokens(res)) {
             try {
               await onAuthenticated?.();
             } finally {
@@ -141,7 +143,7 @@ export function LoginSheetModal({
             }
             return;
           }
-          setLoginError(res?.message ?? 'Invalid or expired OTP.');
+          setLoginError(authSuccessMessage(res) ?? 'Invalid or expired OTP.');
         },
         onError: (err) => setLoginError(getErrorMessage(err)),
       },
@@ -309,7 +311,7 @@ export function LoginSheetModal({
                   <Pressable
                     onPress={() => {
                       setLoginStep('login');
-                      setOtpDigits(['', '', '', '']);
+                      setOtpDigits(emptyOtpDigits());
                       setLoginError(null);
                     }}
                     accessibilityLabel="Change contact"

@@ -25,6 +25,7 @@ import { ResortHostInstructions } from '@/src/components/resort/ResortHostInstru
 import { ResortReviewsSection } from '@/src/components/resort/ResortReviewsSection';
 import { ResortRoomCard } from '@/src/components/resort/ResortRoomCard';
 import { DEFAULT_ROOM_CONFIGS, FIGMA_PROPERTY } from '@/src/components/resort/resortConstants';
+import type { HotelReviewDisplay, HotelRoomDisplay } from '@/src/utils/hotelDetailHelpers';
 
 import { RESORT_PLACEHOLDER_IMAGE } from '@/src/constants/placeholderImages';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -34,15 +35,44 @@ export type MobileResortDetailsProps = {
   listingId?: string;
   title: string;
   rating: string;
+  reviewCountLabel?: string;
+  starRating?: number;
   locationLabel: string;
+  address?: string;
+  description?: string;
+  propertyRules?: string[];
+  highlights?: string[];
+  checkInTime?: string;
+  checkOutTime?: string;
+  cancellationText?: string;
   carouselImages: string[];
+  rooms?: HotelRoomDisplay[];
+  reviews?: HotelReviewDisplay[];
   relatedListings: Listing[];
   onBookNow: () => void;
+  onSelectRoom?: (roomTypeId: string) => void;
+  selectedRoomTypeId?: string;
 };
 
 export function MobileResortDetailsScreen({
+  title,
+  address,
+  rating,
+  reviewCountLabel,
+  starRating,
+  description,
+  propertyRules = [],
+  highlights = [],
+  checkInTime,
+  checkOutTime,
+  cancellationText,
   carouselImages,
+  rooms,
+  reviews = [],
+  relatedListings,
   onBookNow,
+  onSelectRoom,
+  selectedRoomTypeId,
 }: MobileResortDetailsProps) {
   const { s } = useHomeScale();
   const [carouselIndex, setCarouselIndex] = useState(0);
@@ -51,8 +81,22 @@ export function MobileResortDetailsScreen({
   const images = carouselImages.length ? carouselImages : [];
   const slides = images.length ? images : [null];
 
-  const featuredRoom = DEFAULT_ROOM_CONFIGS[0];
-  const imageRooms = DEFAULT_ROOM_CONFIGS.slice(1);
+  const roomCards = rooms?.length ? rooms : DEFAULT_ROOM_CONFIGS.map((room) => ({
+    id: room.id,
+    name: room.name,
+    guests: room.guests,
+    rooms: room.rooms,
+    priceLabel: room.priceLabel,
+    variant: room.variant,
+    showImages: room.showImages,
+    mealPlans: [],
+    amenities: [],
+  }));
+  const featuredRoom = roomCards[0];
+  const imageRooms = roomCards.slice(1);
+  const displayTitle = title || FIGMA_PROPERTY.title;
+  const displayAddress = address || FIGMA_PROPERTY.address;
+  const customersLabel = reviewCountLabel ?? FIGMA_PROPERTY.customersLabel;
 
   const onCarouselScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const { contentOffset, layoutMeasurement } = e.nativeEvent;
@@ -71,8 +115,8 @@ export function MobileResortDetailsScreen({
 
   const goToListing = (id: string) => {
     router.push({
-      pathname: '/resort/[id]',
-      params: { id, title: FIGMA_PROPERTY.title, rating: FIGMA_PROPERTY.rating },
+      pathname: '/hotels/[id]',
+      params: { id },
     });
   };
 
@@ -168,10 +212,11 @@ export function MobileResortDetailsScreen({
         <View style={[styles.content, { paddingHorizontal: s(16), gap: s(20), paddingTop: s(16) }]}>
           <View style={{ gap: s(12) }}>
             <Text style={[styles.propertyTitle, { fontSize: s(20), lineHeight: s(26) }]}>
-              {FIGMA_PROPERTY.title}
+              {displayTitle}
+              {starRating ? ` · ${starRating}★` : ''}
             </Text>
             <Text style={[styles.addressText, { fontSize: s(10), lineHeight: s(14) }]}>
-              {FIGMA_PROPERTY.address}
+              {displayAddress}
             </Text>
             <Pressable style={[styles.viewLocationBtn, { paddingVertical: s(8), paddingHorizontal: s(16), borderRadius: s(9999) }]}>
               <Text style={[styles.viewLocationText, { fontSize: s(12) }]}>
@@ -180,10 +225,39 @@ export function MobileResortDetailsScreen({
             </Pressable>
             <View style={styles.ratingRow}>
               <Ionicons name="star" size={s(14)} color={colors.accent.main} />
-              <Text style={[styles.ratingText, { fontSize: s(12) }]}>{FIGMA_PROPERTY.rating}</Text>
+              <Text style={[styles.ratingText, { fontSize: s(12) }]}>{rating}</Text>
               <Text style={[styles.ratingDivider, { fontSize: s(12) }]}>|</Text>
-              <Text style={[styles.ratingText, { fontSize: s(12) }]}>{FIGMA_PROPERTY.customersLabel}</Text>
+              <Text style={[styles.ratingText, { fontSize: s(12) }]}>{customersLabel}</Text>
             </View>
+            {description ? (
+              <Text style={[styles.addressText, { fontSize: s(12), lineHeight: s(18) }]}>
+                {description}
+              </Text>
+            ) : null}
+            {checkInTime || checkOutTime ? (
+              <Text style={[styles.addressText, { fontSize: s(11) }]}>
+                Check-in: {checkInTime ?? '—'} · Check-out: {checkOutTime ?? '—'}
+              </Text>
+            ) : null}
+            {highlights.length ? (
+              <View style={{ gap: s(4) }}>
+                {highlights.map((item) => (
+                  <Text key={item} style={[styles.addressText, { fontSize: s(11) }]}>
+                    • {item}
+                  </Text>
+                ))}
+              </View>
+            ) : null}
+            {propertyRules.length ? (
+              <View style={{ gap: s(4) }}>
+                <Text style={[styles.propertyTitle, { fontSize: s(14) }]}>Property rules</Text>
+                {propertyRules.map((rule) => (
+                  <Text key={rule} style={[styles.addressText, { fontSize: s(11) }]}>
+                    • {rule}
+                  </Text>
+                ))}
+              </View>
+            ) : null}
           </View>
 
           {featuredRoom ? (
@@ -195,12 +269,17 @@ export function MobileResortDetailsScreen({
               variant={featuredRoom.variant}
               showImages={featuredRoom.showImages}
               priceLabel={featuredRoom.priceLabel}
+              cancellationText={cancellationText}
               images={images.length >= 2 ? [images[0], images[1]] : images}
-              onBookNow={onBookNow}
+              onBookNow={() => {
+                onSelectRoom?.(featuredRoom.id);
+                onBookNow();
+              }}
+              selected={selectedRoomTypeId === featuredRoom.id}
             />
           ) : null}
 
-          <ResortHostInstructions />
+          {description ? null : <ResortHostInstructions />}
 
           {imageRooms.map((room) => (
             <ResortRoomCard
@@ -211,17 +290,22 @@ export function MobileResortDetailsScreen({
               variant={room.variant}
               showImages={room.showImages}
               priceLabel={room.priceLabel}
+              cancellationText={cancellationText}
               images={images.length >= 2 ? [images[0], images[1]] : images}
-              onBookNow={onBookNow}
+              onBookNow={() => {
+                onSelectRoom?.(room.id);
+                onBookNow();
+              }}
+              selected={selectedRoomTypeId === room.id}
             />
           ))}
 
-          <ResortAmenitiesSection />
+          <ResortAmenitiesSection amenities={roomCards.flatMap((r) => r.amenities ?? [])} />
 
-          <ResortReviewsSection />
+          <ResortReviewsSection reviews={reviews} />
         </View>
 
-        <ResortExploreMore onCardPress={goToListing} />
+        <ResortExploreMore listings={relatedListings} onCardPress={goToListing} />
       </ScrollView>
 
       <MobileBottomTabBar />

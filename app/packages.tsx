@@ -4,11 +4,12 @@ import { useResponsive } from '@/components/ui/useResponsive';
 import { borderRadius, colors, spacing } from '@/constants/DesignTokens';
 import type { Category } from '@/src/api/types';
 import { useCategoriesByType } from '@/src/hooks/useCategoriesByType';
-import { useListings } from '@/src/hooks/useListings';
+import { usePackageSearch } from '@/src/hooks/useCategoryListing';
+import { cityQueryFromLocation } from '@/src/utils/hotelSearchFilters';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useMemo, useState } from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { RESORT_PLACEHOLDER_IMAGE } from '@/src/constants/placeholderImages';
 
@@ -30,17 +31,28 @@ export default function PackagesScreen() {
   const children: Category[] = packageCategory?.children ?? [];
   const effectiveCategoryId = selectedChild ?? categoryId;
 
-  const { data: listingsRes } = useListings(
-    { page: 1, limit: 20, category_id: effectiveCategoryId },
-    Boolean(effectiveCategoryId),
-  );
+  const cityQuery = cityQueryFromLocation(query) || undefined;
 
-  const listings = listingsRes?.data ?? [];
-  const visible = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return listings;
-    return listings.filter((l) => l.title.toLowerCase().includes(q));
-  }, [listings, query]);
+  const {
+    listings,
+    isLoading: packagesLoading,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isError,
+  } = usePackageSearch({ city: cityQuery, limit: 20 }, true);
+
+  const visible = listings;
+
+  const listingImage = (l: (typeof listings)[number]) => {
+    const url = l.media?.find((m) => m.media_type === 'image')?.url;
+    return url ? { uri: url } : ResortImage;
+  };
+
+  const listingRating = (l: (typeof listings)[number]) => {
+    const rating = (l as { rating?: number }).rating;
+    return rating != null ? String(rating) : '—';
+  };
 
   const maxWidth = width >= 1024 ? 600 : undefined;
 
@@ -132,10 +144,21 @@ export default function PackagesScreen() {
         </Text>
 
         <View style={styles.list}>
-          {visible.map((l) => (
+          {packagesLoading && visible.length === 0 ? (
+            <ActivityIndicator size="large" color={colors.primary} style={{ marginVertical: 32 }} />
+          ) : isError ? (
+            <Text variant="body" style={styles.emptyText}>
+              Could not load packages. Please try again.
+            </Text>
+          ) : visible.length === 0 ? (
+            <Text variant="body" style={styles.emptyText}>
+              {cityQuery ? `No packages found for ${cityQuery}.` : 'No packages available yet.'}
+            </Text>
+          ) : (
+            visible.map((l) => (
             <View key={l.id} style={styles.card}>
               <View style={styles.imageWrap}>
-                <Image source={ResortImage} style={styles.image} resizeMode="cover" />
+                <Image source={listingImage(l)} style={styles.image} resizeMode="cover" />
               </View>
               <View style={styles.cardBody}>
                 <Text variant="bodySemibold" numberOfLines={1} style={styles.cardTitle}>
@@ -148,7 +171,7 @@ export default function PackagesScreen() {
                   <View style={styles.ratingRow}>
                     <Ionicons name="star-outline" size={12} color={colors.rating.star} />
                     <Text variant="caption" style={styles.ratingText}>
-                      4.5
+                      {listingRating(l)}
                     </Text>
                   </View>
                 </View>
@@ -172,7 +195,23 @@ export default function PackagesScreen() {
                 </Pressable>
               </View>
             </View>
-          ))}
+            ))
+          )}
+          {hasNextPage ? (
+            <Pressable
+              style={styles.loadMoreBtn}
+              onPress={() => fetchNextPage()}
+              disabled={isFetchingNextPage}
+            >
+              {isFetchingNextPage ? (
+                <ActivityIndicator size="small" color={colors.primary} />
+              ) : (
+                <Text variant="bodySemibold" style={styles.loadMoreText}>
+                  Load more
+                </Text>
+              )}
+            </Pressable>
+          ) : null}
         </View>
 
         <View style={{ height: 24 }} />
@@ -275,5 +314,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   reserveText: { color: colors.surface.white },
+  emptyText: { color: colors.text.secondary, textAlign: 'center', paddingVertical: spacing['6'] },
+  loadMoreBtn: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing['3'],
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    minHeight: 40,
+  },
+  loadMoreText: { color: colors.primary },
 });
 

@@ -9,13 +9,35 @@ import { FIGMA_EXPLORE_HOTELS, RESORT_FOOTER_TEXT } from '@/src/components/resor
 import { RESORT_PLACEHOLDER_IMAGE } from '@/src/constants/placeholderImages';
 import { useHomeScale } from '@/src/components/home/useHomeScale';
 
-export function ResortExploreMore({ onCardPress }: { onCardPress?: (id: string) => void }) {
+import type { Listing } from '@/src/api/types';
+import { getPrimaryImage } from '@/src/utils/getPrimaryImage';
+
+export function ResortExploreMore({
+  listings,
+  onCardPress,
+}: {
+  listings?: Listing[];
+  onCardPress?: (id: string) => void;
+}) {
   const { s } = useHomeScale();
   const gap = s(12);
   const cardW = (s(367) - gap) / 2;
-  const hotels = FIGMA_EXPLORE_HOTELS;
+  const hotels =
+    listings?.length
+      ? listings.slice(0, 4).map((l) => ({
+          id: l.id,
+          title: l.title ?? 'Hotel',
+          location: l.location ?? '',
+          rating: String((l as Listing & { rating?: number }).rating ?? '4.5'),
+          price:
+            l.price_start != null
+              ? `₹${Number(l.price_start).toLocaleString('en-IN')}/night`
+              : '—',
+          image: getPrimaryImage(l.media),
+        }))
+      : FIGMA_EXPLORE_HOTELS.map((h) => ({ ...h, image: null as string | null }));
 
-  const rows: (typeof FIGMA_EXPLORE_HOTELS)[] = [];
+  const rows: (typeof hotels)[] = [];
   for (let i = 0; i < hotels.length; i += 2) {
     rows.push(hotels.slice(i, i + 2));
   }
@@ -41,7 +63,11 @@ export function ResortExploreMore({ onCardPress }: { onCardPress?: (id: string) 
                 onPress={() => onCardPress?.(hotel.id)}
               >
                 <View style={[styles.imageWrap, { height: s(132), borderRadius: s(18) }]}>
-                  <Image source={RESORT_PLACEHOLDER_IMAGE} style={styles.image} resizeMode="cover" />
+                  {hotel.image ? (
+                    <Image source={{ uri: hotel.image }} style={styles.image} resizeMode="cover" />
+                  ) : (
+                    <Image source={RESORT_PLACEHOLDER_IMAGE} style={styles.image} resizeMode="cover" />
+                  )}
                   <View style={[styles.heartBtn, { width: s(33), height: s(33), borderRadius: s(12) }]}>
                     <HeartIcon width={s(14)} height={s(14)} />
                   </View>

@@ -251,7 +251,7 @@ export function PaymentResultModal({
                       style={[styles.exploreCard, { width: cardWidth }]}
                       onPress={() => {
                         onClose();
-                        router.push({ pathname: '/resort/[id]', params: { id: l.id } });
+                        router.push({ pathname: '/hotels/[id]', params: { id: l.id } });
                       }}
                       accessibilityLabel={l.title}
                     >

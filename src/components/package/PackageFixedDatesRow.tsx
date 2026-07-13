@@ -10,16 +10,22 @@ import { formatPackageDateRange, getPackageFixedDates } from '@/src/utils/packag
 
 export function PackageFixedDatesRow({
   listingId,
+  checkIn,
+  checkOut,
   showNote = false,
   compact = false,
 }: {
   listingId?: string;
+  checkIn?: string;
+  checkOut?: string;
   showNote?: boolean;
   compact?: boolean;
 }) {
   const { s } = useHomeScale();
-  const dates = getPackageFixedDates(listingId);
-  const rangeLabel = formatPackageDateRange(dates.startDate, dates.endDate);
+  const fallback = getPackageFixedDates(listingId);
+  const startDate = checkIn ?? fallback.startDate;
+  const endDate = checkOut ?? fallback.endDate;
+  const rangeLabel = formatPackageDateRange(startDate, endDate);
 
   return (
     <View style={{ gap: s(showNote ? 4 : 0) }}>

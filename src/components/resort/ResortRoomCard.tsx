@@ -21,6 +21,8 @@ type ResortRoomCardProps = {
   images: string[];
   variant: ResortRoomVariant;
   showImages?: boolean;
+  cancellationText?: string;
+  selected?: boolean;
   onBookNow: () => void;
   onWishlist?: () => void;
 };
@@ -33,6 +35,8 @@ export function ResortRoomCard({
   images,
   variant,
   showImages = true,
+  cancellationText,
+  selected = false,
   onBookNow,
   onWishlist,
 }: ResortRoomCardProps) {
@@ -50,6 +54,8 @@ export function ResortRoomCard({
           borderRadius: s(18),
           gap: s(18),
           backgroundColor: colors.surface.white,
+          borderWidth: selected ? 2 : 0,
+          borderColor: selected ? colors.primary : 'transparent',
         },
       ]}
     >
@@ -139,7 +145,9 @@ export function ResortRoomCard({
       <View style={[styles.priceBox, { padding: s(12), borderRadius: s(12) }]}>
         <View style={{ flex: 1, gap: s(4) }}>
           <Text style={[styles.priceLabel, { fontSize: s(12) }]}>Price for one night</Text>
-          <Text style={[styles.cancelText, { fontSize: s(10) }]}>{CANCELLATION_TEXT}</Text>
+          <Text style={[styles.cancelText, { fontSize: s(10) }]}>
+            {cancellationText ?? CANCELLATION_TEXT}
+          </Text>
         </View>
         <View style={{ alignItems: 'flex-end' }}>
           <Text style={[styles.priceValue, { fontSize: s(20), lineHeight: s(24) }]}>{priceLabel}</Text>

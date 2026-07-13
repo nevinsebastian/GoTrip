@@ -89,6 +89,7 @@ function RootLayoutNav() {
           <Stack.Screen name="vendor-login" options={{ headerShown: false }} />
           <Stack.Screen name="signup" options={{ headerShown: false }} />
           <Stack.Screen name="otp" options={{ headerShown: false }} />
+          <Stack.Screen name="hotels/[id]" options={{ headerShown: false }} />
           <Stack.Screen name="resort/[id]" options={{ headerShown: false }} />
           <Stack.Screen name="package/[id]" options={{ headerShown: false }} />
           <Stack.Screen name="glamping/[id]" options={{ headerShown: false }} />

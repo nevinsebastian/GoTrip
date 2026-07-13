@@ -1,12 +1,21 @@
 import apiClient from './client';
 import { ENDPOINTS } from './endpoints';
 import type {
-    CreateHotelRequest,
-    CreateHotelResponse,
-    CreateRoomTypeRequest,
-    CreateRoomTypeResponse,
+  CreateHotelRequest,
+  CreateHotelResponse,
+  CreateRoomTypeRequest,
+  CreateRoomTypeResponse,
   SubmitHotelListingResponse,
 } from './types';
+
+export {
+  browseHotels,
+  fetchHotelById,
+  fetchHotelRoomTypes,
+  fetchAvailability,
+  fetchListingReviews,
+  fetchCancellationPolicies,
+} from './consumerListing.service';
 
 export const createHotel = async (
   payload: CreateHotelRequest,

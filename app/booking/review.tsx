@@ -3,7 +3,10 @@ import { PaymentResultModal } from '@/src/components/PaymentResultModal';
 import { RazorpayCheckoutModal } from '@/src/components/RazorpayCheckoutModal';
 import { useCreateBooking } from '@/src/hooks/useCreateBooking';
 import { useCreateOrder } from '@/src/hooks/useCreateOrder';
+import { useHoldBooking } from '@/src/hooks/useHoldBooking';
+import { useInitiatePayment } from '@/src/hooks/useInitiatePayment';
 import { useListingDetails } from '@/src/hooks/useListingDetails';
+import { usePackageDetailData } from '@/src/hooks/usePackageUser';
 import { useVerifyPayment } from '@/src/hooks/useVerifyPayment';
 import { MobileBookingReviewScreen } from '@/src/screens/MobileBookingReviewScreen';
 import { getErrorMessage } from '@/src/utils/errorHandler';
@@ -21,6 +24,7 @@ export default function BookingReviewRoute() {
     listingId?: string;
     imageUri?: string;
     listingType?: string;
+    packageEntityId?: string;
     title?: string;
     checkIn?: string;
     checkOut?: string;
@@ -28,16 +32,28 @@ export default function BookingReviewRoute() {
   const listingId = typeof params.listingId === 'string' ? params.listingId : undefined;
   const imageUriParam = typeof params.imageUri === 'string' ? params.imageUri : undefined;
   const listingTypeParam = typeof params.listingType === 'string' ? params.listingType : undefined;
+  const packageEntityIdParam =
+    typeof params.packageEntityId === 'string' ? params.packageEntityId : undefined;
 
   const { data: listingRes } = useListingDetails(listingId);
+  const { data: packageDetail } = usePackageDetailData(
+    listingId,
+    listingTypeParam === 'package' || Boolean(packageEntityIdParam),
+  );
   const listing = listingRes?.data;
   const isPackageListing =
     listingTypeParam === 'package' || listing?.category?.type === 'package';
+  const packageEntityId =
+    packageEntityIdParam ?? packageDetail?.display?.packageEntityId ?? '';
   const packageDates = getPackageFixedDates(listingId);
   const fixedCheckIn =
-    typeof params.checkIn === 'string' ? params.checkIn : packageDates.startDate;
+    typeof params.checkIn === 'string'
+      ? params.checkIn
+      : packageDetail?.display?.travelCheckIn ?? packageDates.startDate;
   const fixedCheckOut =
-    typeof params.checkOut === 'string' ? params.checkOut : packageDates.endDate;
+    typeof params.checkOut === 'string'
+      ? params.checkOut
+      : packageDetail?.display?.travelCheckOut ?? packageDates.endDate;
 
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -67,6 +83,8 @@ export default function BookingReviewRoute() {
 
   const { mutate: createBookingMut, isPending: isCreatingBooking } = useCreateBooking();
   const { mutate: createOrderMut, isPending: isCreatingOrder } = useCreateOrder();
+  const { mutate: holdBookingMut, isPending: isHoldingBooking } = useHoldBooking();
+  const { mutate: initiatePaymentMut, isPending: isInitiatingPayment } = useInitiatePayment();
   const { mutate: verifyPaymentMut } = useVerifyPayment();
 
   useEffect(() => {
@@ -81,14 +99,29 @@ export default function BookingReviewRoute() {
   }, []);
 
   const carouselImage = (() => {
+    if (isPackageListing && packageDetail?.display?.carouselImages?.[0]) {
+      return packageDetail.display.carouselImages[0];
+    }
     const media = listing?.media ?? [];
     const img = media.find((m) => m.media_type === 'image')?.url;
     return imageUriParam ?? img ?? null;
   })();
 
-  const title = isPackageListing
-    ? (typeof params.title === 'string' ? params.title : FIGMA_PACKAGE_DETAIL.title)
-    : FIGMA_PROPERTY.title;
+  const openPayment = (
+    bookingId: string,
+    orderData: { order_id: string; amount: number; currency: string; key_id: string },
+    meta: { checkIn: string; checkOut: string; guestsLabel: string; totalLabel: string },
+  ) => {
+    setLastBookingMeta(meta);
+    setPaymentOrder({
+      order_id: orderData.order_id,
+      amount: orderData.amount,
+      currency: orderData.currency ?? 'INR',
+      key_id: orderData.key_id,
+      booking_id: bookingId,
+    });
+    setPaymentVisible(true);
+  };
 
   const handleConfirm = ({
     checkIn,
@@ -117,6 +150,67 @@ export default function BookingReviewRoute() {
     ]
       .filter(Boolean)
       .join(', ');
+
+    if (isPackageListing) {
+      if (!packageEntityId) {
+        setErrorMessage('Package details missing. Please go back and try again.');
+        return;
+      }
+
+      holdBookingMut(
+        {
+          listingId,
+          entityType: 'package',
+          entityId: packageEntityId,
+          checkIn,
+          checkOut,
+          adults: Math.max(1, guests.adults),
+          children: guests.children || undefined,
+          infants: guests.infants || undefined,
+          unitsBooked: 1,
+          guests: [
+            {
+              fullName: 'Guest',
+              age: guests.adults >= 1 ? 30 : undefined,
+              isPrimary: true,
+            },
+          ],
+        },
+        {
+          onSuccess: (holdRes) => {
+            const bookingId = holdRes.bookingId ?? holdRes.booking?.id;
+            if (!holdRes.success || !bookingId) {
+              setErrorMessage('Failed to hold booking.');
+              return;
+            }
+            const totalAmount = holdRes.priceBreakdown?.totalAmount;
+            const totalLabel =
+              totalAmount != null
+                ? `₹ ${totalAmount.toLocaleString('en-IN')} including tax`
+                : '—';
+            const meta = { checkIn, checkOut, guestsLabel, totalLabel };
+
+            initiatePaymentMut(
+              { bookingId },
+              {
+                onSuccess: (payRes) => {
+                  const d = payRes?.data;
+                  if (!payRes?.success || !d?.order_id || !d?.key_id) {
+                    setErrorMessage(payRes?.message ?? 'Failed to initiate payment.');
+                    return;
+                  }
+                  openPayment(bookingId, d, meta);
+                },
+                onError: (err) => setErrorMessage(getErrorMessage(err)),
+              },
+            );
+          },
+          onError: (err) => setErrorMessage(getErrorMessage(err)),
+        },
+      );
+      return;
+    }
+
     const totalLabel = '₹ 2,420 including tax';
 
     createBookingMut(
@@ -145,20 +239,11 @@ export default function BookingReviewRoute() {
                   setErrorMessage(orderRes?.message ?? 'Failed to create payment order.');
                   return;
                 }
-                setLastBookingMeta({
-                  checkIn,
-                  checkOut,
-                  guestsLabel,
-                  totalLabel,
-                });
-                setPaymentOrder({
-                  order_id: d.order_id,
-                  amount: d.amount,
-                  currency: d.currency ?? 'INR',
-                  key_id: d.key_id,
-                  booking_id: bookingId,
-                });
-                setPaymentVisible(true);
+                openPayment(
+                  bookingId,
+                  d,
+                  { checkIn, checkOut, guestsLabel, totalLabel },
+                );
               },
               onError: (err) => setErrorMessage(getErrorMessage(err)),
             },
@@ -168,6 +253,13 @@ export default function BookingReviewRoute() {
       },
     );
   };
+
+  const title = isPackageListing
+    ? (typeof params.title === 'string' ? params.title : packageDetail?.display?.title ?? FIGMA_PACKAGE_DETAIL.title)
+    : FIGMA_PROPERTY.title;
+
+  const isSubmitting =
+    isCreatingBooking || isCreatingOrder || isHoldingBooking || isInitiatingPayment;
 
   return (
     <View style={{ flex: 1 }}>
@@ -275,7 +367,7 @@ export default function BookingReviewRoute() {
         fixedCheckIn={fixedCheckIn}
         fixedCheckOut={fixedCheckOut}
         onConfirm={handleConfirm}
-        isSubmitting={isCreatingBooking || isCreatingOrder}
+        isSubmitting={isSubmitting}
         errorMessage={errorMessage}
       />
     </View>

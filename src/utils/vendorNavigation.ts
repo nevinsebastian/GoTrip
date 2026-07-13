@@ -1,10 +1,12 @@
 import { router } from 'expo-router';
 import { Platform } from 'react-native';
 
+import { getStoredAuthToken } from '@/src/api/client';
 import { isVendorMode } from '@/src/utils/vendorSession';
 
 export const VENDOR_HOME_PATH = '/vendor/home';
 export const VENDOR_LOGIN_PATH = '/vendor-login';
+export const BECOME_VENDOR_PATH = '/become-vendor';
 
 /** Paths that belong to the guest GoTrip app (not vendor). */
 export function isConsumerAppPath(pathname: string): boolean {
@@ -65,6 +67,19 @@ export function goToVendorHome(): void {
 export function goToVendorLogin(replace = true): void {
   if (replace) router.replace(VENDOR_LOGIN_PATH);
   else router.push(VENDOR_LOGIN_PATH);
+}
+
+/**
+ * Logged-in vendors skip registration/KYC and go straight to listing type selection.
+ * Guests are sent through the full become-vendor onboarding flow.
+ */
+export async function goToVendorNewListing(): Promise<void> {
+  const token = await getStoredAuthToken();
+  if (token?.trim()) {
+    router.push({ pathname: BECOME_VENDOR_PATH, params: { step: 'category' } });
+    return;
+  }
+  router.push(BECOME_VENDOR_PATH);
 }
 
 /** If vendor session is active, keep the user inside vendor routes (web back-button safety). */

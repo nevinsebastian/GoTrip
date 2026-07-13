@@ -1,4 +1,4 @@
-import { register, verifyOtp } from '@/src/api/auth.service';
+import { register, verifyRegistrationOtp, hasAuthTokens } from '@/src/api/auth.service';
 import { createVendorProfile, uploadVendorKycDocuments } from '@/src/api/vendor.service';
 import type { OtpChannel } from '@/src/api/types';
 import type {
@@ -68,15 +68,14 @@ export async function verifyVendorRegistrationOtp(
     const phone =
       payload.channel === 'phone' ? normalizePhoneForApi(payload.phone) : undefined;
 
-    const res = await verifyOtp({
+    const res = await verifyRegistrationOtp({
       otp: payload.otp,
       ...(payload.channel === 'email'
         ? { email: payload.email.trim() }
         : { phone }),
     });
 
-    const accessToken = res?.data?.access_token ?? res?.accessToken;
-    if (res?.success && accessToken) {
+    if (hasAuthTokens(res)) {
       return { success: true };
     }
 

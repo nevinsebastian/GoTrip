@@ -70,10 +70,14 @@ function OrDivider() {
   );
 }
 
-export function DesktopBecomeVendorScreen() {
+export function DesktopBecomeVendorScreen({
+  initialStep = 'landing',
+}: {
+  initialStep?: VendorStep;
+}) {
   const otpInputRefs = useRef<(TextInput | null)[]>([]);
 
-  const [step, setStep] = useState<VendorStep>('landing');
+  const [step, setStep] = useState<VendorStep>(initialStep);
   const [signupMode, setSignupMode] = useState<VendorSignupMode>('phone');
   const [registrationChannel, setRegistrationChannel] = useState<VendorSignupMode>('phone');
   const [form, setForm] = useState<VendorRegistrationForm>(EMPTY_VENDOR_FORM);
@@ -93,6 +97,10 @@ export function DesktopBecomeVendorScreen() {
   const [isUploadingKyc, setIsUploadingKyc] = useState(false);
   const [listingCategory, setListingCategory] = useState<VendorListingCategoryId>('property');
   const [isProceedingCategory, setIsProceedingCategory] = useState(false);
+
+  useEffect(() => {
+    setStep(initialStep);
+  }, [initialStep]);
 
   useEffect(() => {
     if (step === 'otp') {

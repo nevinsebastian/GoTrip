@@ -106,7 +106,7 @@ export function MobileWishlistScreen() {
           ? '/glamping/[id]'
           : isActivity
             ? '/activity/[id]'
-            : '/resort/[id]',
+            : '/hotels/[id]',
       params: {
         id: listing.id,
         title: listing.title,

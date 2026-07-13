@@ -16,11 +16,16 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 const isWeb = Platform.OS === 'web';
 
 const HeaderLogo = require('@/assets/images/login-figma/logo-header.png');
+import { authSuccessMessage, hasAuthTokens } from '@/src/api/auth.service';
+import { OTP_LENGTH } from '@/src/constants/authConstants';
 import { useVerifyOtp } from '@/src/hooks/useVerifyOtp';
 import { getErrorMessage } from '@/src/utils/errorHandler';
 
 const isIOS = Platform.OS === 'ios';
-const OTP_LENGTH = 4;
+
+function emptyOtpDigits() {
+  return Array.from({ length: OTP_LENGTH }, () => '');
+}
 
 function maskContact(value: string, isEmail: boolean): string {
   if (!value.trim()) return isEmail ? 'your email' : '+91 97******10';
@@ -42,7 +47,7 @@ export default function OtpScreen() {
     isEmail?: string;
     fullName?: string;
   }>();
-  const [digits, setDigits] = useState<string[]>(['', '', '', '']);
+  const [digits, setDigits] = useState<string[]>(emptyOtpDigits);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const inputRefs = useRef<(TextInput | null)[]>([]);
 
@@ -91,18 +96,17 @@ export default function OtpScreen() {
 
     verifyOtp(
       {
-        full_name: fullName || undefined,
-        channel: isEmailMode ? 'email' : 'phone',
+        flow: fullName ? 'register' : 'login',
         otp: code,
         ...(isEmailMode ? { email: contact } : { phone: contact }),
       },
       {
         onSuccess: (res) => {
-          if (res?.success && res?.data?.access_token) {
+          if (hasAuthTokens(res)) {
             router.replace('/(tabs)');
             return;
           }
-          setSubmitError(res?.message ?? 'Invalid or expired OTP.');
+          setSubmitError(authSuccessMessage(res) ?? 'Invalid or expired OTP.');
         },
         onError: (err) => {
           setSubmitError(getErrorMessage(err));

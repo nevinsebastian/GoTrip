@@ -193,7 +193,7 @@ function DesktopBudgetCard({ listing }: { listing: Listing }) {
 
   const handlePress = () => {
     if (listing.id.startsWith('desktop-mock-')) return;
-    router.push({ pathname: '/resort/[id]', params: { id: listing.id } });
+    router.push({ pathname: '/hotels/[id]', params: { id: listing.id } });
   };
 
   return (
@@ -243,7 +243,7 @@ function DesktopListingCard({ listing }: { listing: Listing }) {
 
   const handlePress = () => {
     if (listing.id.startsWith('desktop-mock-')) return;
-    router.push({ pathname: '/resort/[id]', params: { id: listing.id } });
+    router.push({ pathname: '/hotels/[id]', params: { id: listing.id } });
   };
 
   return (

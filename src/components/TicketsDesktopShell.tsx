@@ -22,6 +22,8 @@ import { DESKTOP_LAYOUT, desktopContentShellStyle } from '@/src/constants/deskto
 import { DESKTOP_VENDOR_LANDING } from '@/src/constants/desktopWebConstants';
 import { RESORT_PLACEHOLDER_IMAGE } from '@/src/constants/placeholderImages';
 import { useBookings } from '@/src/hooks/useBookings';
+import { useMyPackageEnquiries } from '@/src/hooks/usePackageUser';
+import { PackageEnquiryCard } from '@/src/components/package/PackageEnquiryCard';
 import { USER_PROFILE_QUERY_KEY, useUserProfile } from '@/src/hooks/useUserProfile';
 import { getErrorMessage } from '@/src/utils/errorHandler';
 import { useQueryClient } from '@tanstack/react-query';
@@ -47,7 +49,7 @@ const GRID_GAP = 24;
 const THUMB_W = 145;
 const THUMB_H = 95;
 
-type TabKey = 'active' | 'past';
+type TabKey = 'active' | 'past' | 'enquiries';
 
 function toDateOnly(input: string) {
   const d = new Date(input);
@@ -111,7 +113,14 @@ export function TicketsDesktopShell() {
     isLoading: bookingsLoading,
     error: bookingsError,
     refetch: refetchBookings,
-  } = useBookings({ page: 1, limit: 20 }, canFetchBookings);
+  } = useBookings({ limit: 20, offset: 0 }, canFetchBookings);
+
+  const {
+    data: enquiriesRes,
+    isLoading: enquiriesLoading,
+    error: enquiriesError,
+    refetch: refetchEnquiries,
+  } = useMyPackageEnquiries({ limit: 20, offset: 0 }, canFetchBookings);
 
   const isLoggedIn = Boolean(user) && !isUnauthorized;
 
@@ -142,8 +151,20 @@ export function TicketsDesktopShell() {
     return b.id.toLowerCase().includes(search) || title.includes(search) || location.includes(search);
   });
 
+  const enquiries = enquiriesRes?.data ?? [];
+  const filteredEnquiries = enquiries.filter((e) => {
+    if (!search) return true;
+    const title = (e.listing?.title ?? '').toLowerCase();
+    return e.id.toLowerCase().includes(search) || title.includes(search);
+  });
+
   const emptyState =
-    activeTab === 'active'
+    activeTab === 'enquiries'
+      ? {
+          title: 'No package enquiries',
+          subtitle: 'Enquiries you send from package pages will appear here.',
+        }
+      : activeTab === 'active'
       ? {
           title: 'No Active tickets found',
           subtitle: 'Your active tickets & booking details will appear here.',
@@ -317,6 +338,46 @@ export function TicketsDesktopShell() {
         </View>
       );
     }
+    if (activeTab === 'enquiries') {
+      if (enquiriesLoading) {
+        return (
+          <View style={dt.centerBlock}>
+            <ActivityIndicator size="large" color={colors.accent.main} />
+          </View>
+        );
+      }
+      if (enquiriesError) {
+        return (
+          <View style={dt.centerBlock}>
+            <Text style={dt.errorText}>{getErrorMessage(enquiriesError as Error)}</Text>
+            <Button variant="primary" size="default" onPress={() => refetchEnquiries()}>
+              Try again
+            </Button>
+          </View>
+        );
+      }
+      if (filteredEnquiries.length === 0) {
+        return (
+          <View style={dt.centerBlock}>
+            <Text style={dt.messageTitle}>{emptyState.title}</Text>
+            <Text style={dt.messageBody}>{emptyState.subtitle}</Text>
+          </View>
+        );
+      }
+      return (
+        <View style={dt.enquiryList}>
+          {filteredEnquiries.map((enquiry) => (
+            <PackageEnquiryCard
+              key={enquiry.id}
+              enquiry={enquiry}
+              onViewPackage={() =>
+                router.push({ pathname: '/package/[id]', params: { id: enquiry.listingId } })
+              }
+            />
+          ))}
+        </View>
+      );
+    }
     if (bookingsLoading) {
       return (
         <View style={dt.centerBlock}>
@@ -419,6 +480,21 @@ export function TicketsDesktopShell() {
                   color={activeTab === 'past' ? colors.surface.white : colors.accent.main}
                 />
                 <Text style={[dt.tabChipLabel, activeTab === 'past' && dt.tabChipLabelActive]}>Past Bookings</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => setActiveTab('enquiries')}
+                style={[dt.tabChip, activeTab === 'enquiries' && dt.tabChipActive]}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: activeTab === 'enquiries' }}
+              >
+                <Ionicons
+                  name="mail-outline"
+                  size={16}
+                  color={activeTab === 'enquiries' ? colors.surface.white : colors.accent.main}
+                />
+                <Text style={[dt.tabChipLabel, activeTab === 'enquiries' && dt.tabChipLabelActive]}>
+                  Enquiries
+                </Text>
               </Pressable>
             </View>
 
@@ -557,6 +633,11 @@ const dt = StyleSheet.create({
     flexWrap: 'wrap',
     gap: GRID_GAP,
     width: '100%',
+  },
+  enquiryList: {
+    width: '100%',
+    gap: 12,
+    maxWidth: 720,
   },
   card: {
     flexShrink: 0,

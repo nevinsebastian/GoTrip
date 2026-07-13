@@ -1,6 +1,8 @@
 import { colors } from '@/constants/DesignTokens';
 import type { Listing } from '@/src/api/types';
-import { useListings } from '@/src/hooks/useListings';
+import { useHotelListings } from '@/src/hooks/useHotelListings';
+import { useCategoryListings } from '@/src/hooks/useCategoryListing';
+import { cityQueryFromLocation, formatStayDateLabel } from '@/src/utils/hotelSearchFilters';
 import { router } from 'expo-router';
 import React, { useEffect, useMemo, useRef } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
@@ -14,13 +16,10 @@ import {
   HomeSuggestedSection,
 } from '@/src/components/home/HomeListingSections';
 import { HomeHeroSection } from '@/src/components/home/HomeHeroSection';
-import { HomeSearchProvider, useHomeSearch } from '@/src/components/home/HomeSearchContext';
+import { useHomeSearch } from '@/src/components/home/HomeSearchContext';
 import { HomeSearchResults } from '@/src/components/home/HomeSearchResults';
 import { SearchModeHeader } from '@/src/components/home/SearchModeHeader';
 import { AppTopHeader } from '@/src/components/navigation/AppTopHeader';
-import { MOCK_ACTIVITY_LISTINGS } from '@/src/constants/homeActivityConfig';
-import { MOCK_PACKAGE_LISTINGS } from '@/src/constants/homePackageConfig';
-import { MOCK_GLAMPING_LISTINGS } from '@/src/constants/homeGlampingConfig';
 
 function filterListingsByLocation(listings: Listing[], query: string) {
   const q = query.trim().toLowerCase();
@@ -33,65 +32,87 @@ function filterListingsByLocation(listings: Listing[], query: string) {
   );
 }
 
-function MobileHotelsHomeContent() {
+export function MobileHotelsHome() {
   const scrollRef = useRef<ScrollView>(null);
   const { searchMode, searchParams, activeCategoryTab } = useHomeSearch();
-  const isPackages = activeCategoryTab === 'packages';
-  const isGlamping = activeCategoryTab === 'glamping';
-  const isActivities = activeCategoryTab === 'activities';
-
-  const { data: listingsRes } = useListings({ page: 1, limit: 20 });
-  const { data: economicRes } = useListings({ max_price: 2499, page: 1, limit: 20 });
-  const { data: nearYouRes } = useListings({ location: 'varkala', page: 1, limit: 20 });
+  const searchTab = searchMode ? (searchParams?.tab ?? activeCategoryTab) : activeCategoryTab;
+  const isPackages = searchTab === 'packages';
+  const isGlamping = searchTab === 'glamping';
+  const isActivities = searchTab === 'activities';
+  const isHotels = searchTab === 'hotels';
 
   const locationQuery = searchParams?.location?.trim() ?? '';
-  const { data: searchRes, isLoading: searchLoading } = useListings(
-    { location: locationQuery.toLowerCase(), page: 1, limit: 20 },
-    searchMode && Boolean(locationQuery),
-  );
+  const checkIn = searchParams?.checkIn;
+  const checkOut = searchParams?.checkOut;
+  const cityQuery = cityQueryFromLocation(locationQuery);
 
-  const allListings = listingsRes?.data ?? [];
-  const hotelListings = allListings.filter(
-    (l) =>
-      (l.category?.type ?? null) !== 'package' &&
-      (l.category?.type ?? null) !== 'camping' &&
-      (l.category?.type ?? null) !== 'activity',
-  );
-  const apiPackageListings = allListings.filter((l) => l.category?.type === 'package');
-  const packageListings = apiPackageListings.length ? apiPackageListings : MOCK_PACKAGE_LISTINGS;
-  const apiGlampingListings = allListings.filter((l) => l.category?.type === 'camping');
-  const glampingListings = apiGlampingListings.length ? apiGlampingListings : MOCK_GLAMPING_LISTINGS;
-  const apiActivityListings = allListings.filter((l) => l.category?.type === 'activity');
-  const activityListings = apiActivityListings.length ? apiActivityListings : MOCK_ACTIVITY_LISTINGS;
+  const { listings: hotelListings, isLoading: hotelsLoading } = useHotelListings({
+    page: 1,
+    limit: 20,
+    city: searchMode ? cityQuery : isHotels ? undefined : cityQuery,
+    locationQuery: searchMode ? cityQuery ?? locationQuery : undefined,
+    checkIn: searchMode ? checkIn : undefined,
+    checkOut: searchMode ? checkOut : undefined,
+    enabled: searchMode ? searchTab === 'hotels' : isHotels,
+  });
 
-  const economicListings = (economicRes?.data ?? []).filter(
-    (l) => (l.category?.type ?? null) !== 'package',
-  );
-  const economicPackages = (economicRes?.data ?? []).filter((l) => l.category?.type === 'package');
-  const budgetPackages = economicPackages.length
-    ? economicPackages
-    : MOCK_PACKAGE_LISTINGS.slice(0, 2);
+  const { listings: varkalaHotels } = useHotelListings({
+    page: 1,
+    limit: 20,
+    city: 'Varkala',
+    enabled: isHotels,
+  });
 
-  const nearYouListings = (nearYouRes?.data ?? []).filter(
-    (l) => (l.category?.type ?? null) !== 'package',
+  const { listings: packageListings, isLoading: packagesLoading } = useCategoryListings('packages', {
+    page: 1,
+    limit: 20,
+    city: searchMode ? cityQuery : undefined,
+    enabled: searchMode ? searchTab === 'packages' : isPackages,
+  });
+
+  const { listings: glampingListings, isLoading: glampingLoading } = useCategoryListings('glamping', {
+    page: 1,
+    limit: 20,
+    city: searchMode ? cityQuery : undefined,
+    enabled: searchMode ? searchTab === 'glamping' : isGlamping,
+  });
+
+  const { listings: activityListings, isLoading: activitiesLoading } = useCategoryListings('activities', {
+    page: 1,
+    limit: 20,
+    city: searchMode ? cityQuery : undefined,
+    enabled: searchMode ? searchTab === 'activities' : isActivities,
+  });
+
+  const categorySearchLoading =
+    (searchTab === 'packages' && packagesLoading) ||
+    (searchTab === 'glamping' && glampingLoading) ||
+    (searchTab === 'activities' && activitiesLoading);
+
+  const nearYouListings = varkalaHotels.length ? varkalaHotels : hotelListings;
+  const budgetHotels = useMemo(
+    () => hotelListings.filter((_, index) => index < 4),
+    [hotelListings],
   );
-  const nearYouPackages = (nearYouRes?.data ?? []).filter((l) => l.category?.type === 'package');
-  const packageDestinations = nearYouPackages.length ? nearYouPackages : packageListings;
 
   const searchListings = useMemo(() => {
     const isPackageSearch = searchParams?.tab === 'packages';
     const isGlampingSearch = searchParams?.tab === 'glamping';
     const isActivitySearch = searchParams?.tab === 'activities';
-    const apiResults = searchRes?.data ?? [];
-    const pool = apiResults.length
-      ? apiResults
-      : isPackageSearch
-        ? packageListings
-        : isGlampingSearch
-          ? glampingListings
-          : isActivitySearch
-            ? activityListings
-            : hotelListings;
+    const isHotelSearch = searchParams?.tab === 'hotels' || !searchParams?.tab;
+
+    if (isHotelSearch) {
+      return hotelListings;
+    }
+
+    const pool = isPackageSearch
+      ? packageListings
+      : isGlampingSearch
+        ? glampingListings
+        : isActivitySearch
+          ? activityListings
+          : hotelListings;
+
     const typed = pool.filter((l) => {
       if (isPackageSearch) return l.category?.type === 'package';
       if (isGlampingSearch) return l.category?.type === 'camping';
@@ -102,13 +123,15 @@ function MobileHotelsHomeContent() {
         (l.category?.type ?? null) !== 'activity'
       );
     });
-    const filtered = filterListingsByLocation(typed, locationQuery);
-    if (filtered.length) return filtered;
-    if (isPackageSearch) return filterListingsByLocation(packageListings, '');
-    if (isGlampingSearch) return filterListingsByLocation(glampingListings, '');
-    if (isActivitySearch) return filterListingsByLocation(activityListings, '');
-    return filterListingsByLocation(typed, '');
-  }, [searchRes?.data, hotelListings, packageListings, glampingListings, activityListings, locationQuery, searchParams?.tab]);
+    return filterListingsByLocation(typed, locationQuery);
+  }, [
+    hotelListings,
+    packageListings,
+    glampingListings,
+    activityListings,
+    locationQuery,
+    searchParams?.tab,
+  ]);
 
   const listingVariant = isPackages ? 'packages' : isGlamping ? 'glamping' : isActivities ? 'activities' : 'hotels';
   const suggested = isPackages
@@ -119,27 +142,28 @@ function MobileHotelsHomeContent() {
         ? activityListings.slice(0, 8)
         : hotelListings.slice(0, 8);
   const destinations = isPackages
-    ? packageDestinations
+    ? packageListings
     : isGlamping
       ? glampingListings
       : isActivities
         ? activityListings
-        : nearYouListings.length
-          ? nearYouListings
-          : hotelListings;
+        : nearYouListings;
   const budgetItems = isPackages
-    ? budgetPackages
+    ? packageListings.slice(0, 2)
     : isGlamping
       ? glampingListings.slice(0, 2)
       : isActivities
         ? activityListings.slice(0, 2)
-        : economicListings;
+        : budgetHotels;
+
+  const searchDateLabel =
+    checkIn && checkOut ? formatStayDateLabel(checkIn, checkOut) : undefined;
 
   useEffect(() => {
     if (searchMode) {
       scrollRef.current?.scrollTo({ y: 0, animated: true });
     }
-  }, [searchMode, locationQuery]);
+  }, [searchMode, locationQuery, checkIn, checkOut]);
 
   const goToListing = (listing: Listing) => {
     const isPackageListing = listing.category?.type === 'package';
@@ -152,7 +176,7 @@ function MobileHotelsHomeContent() {
           ? '/glamping/[id]'
           : isActivityListing
             ? '/activity/[id]'
-            : '/resort/[id]',
+            : '/hotels/[id]',
       params: {
         id: listing.id,
         title: listing.title,
@@ -160,6 +184,8 @@ function MobileHotelsHomeContent() {
           ? `₹${Number(listing.price_start).toLocaleString('en-IN')}`
           : '',
         rating: '4.5',
+        ...(checkIn ? { checkIn } : {}),
+        ...(checkOut ? { checkOut } : {}),
       },
     });
   };
@@ -182,7 +208,11 @@ function MobileHotelsHomeContent() {
                 locationQuery ||
                 (isPackages ? 'Singapore' : isGlamping ? 'Wildlife safari camps' : isActivities ? 'Scuba Diving' : 'Varkala')
               }
-              loading={searchLoading}
+              dateLabel={searchDateLabel}
+              loading={
+                (searchTab === 'hotels' && hotelsLoading) ||
+                (searchMode && categorySearchLoading)
+              }
               variant={listingVariant}
               onListingPress={goToListing}
             />
@@ -196,7 +226,6 @@ function MobileHotelsHomeContent() {
               variant={listingVariant}
               onMoodPress={() => {
                 if (isPackages) router.push('/packages');
-                else if (isGlamping) router.push('/resorts');
                 else router.push('/resorts');
               }}
             />
@@ -220,14 +249,6 @@ function MobileHotelsHomeContent() {
         <View style={styles.bottomSpacer} />
       </ScrollView>
     </SafeAreaView>
-  );
-}
-
-export function MobileHotelsHome() {
-  return (
-    <HomeSearchProvider>
-      <MobileHotelsHomeContent />
-    </HomeSearchProvider>
   );
 }
 

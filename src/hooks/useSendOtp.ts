@@ -2,16 +2,16 @@
 // React Query mutation hook for requesting OTP.
 
 import { useMutation, type UseMutationResult } from '@tanstack/react-query';
-import { sendOtp } from '../api/auth.service';
-import type { APIError, SendOtpRequest, SendOtpResponse } from '../api/types';
+import { sendLoginOtp } from '../api/auth.service';
+import type { APIError, SendLoginOtpRequest, SendOtpResponse } from '../api/types';
 
 export const useSendOtp = (): UseMutationResult<
   SendOtpResponse,
   APIError,
-  SendOtpRequest
+  SendLoginOtpRequest
 > => {
-  return useMutation<SendOtpResponse, APIError, SendOtpRequest>({
-    mutationFn: sendOtp,
+  return useMutation<SendOtpResponse, APIError, SendLoginOtpRequest>({
+    mutationFn: sendLoginOtp,
   });
 };
 

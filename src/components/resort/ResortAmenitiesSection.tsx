@@ -7,13 +7,23 @@ import { StyleSheet, View } from 'react-native';
 import { RESORT_AMENITIES } from '@/src/components/resort/resortConstants';
 import { useHomeScale } from '@/src/components/home/useHomeScale';
 
-export function ResortAmenitiesSection() {
+export function ResortAmenitiesSection({ amenities }: { amenities?: string[] }) {
   const { s } = useHomeScale();
-  const items = [...RESORT_AMENITIES, ...RESORT_AMENITIES, ...RESORT_AMENITIES, ...RESORT_AMENITIES];
+  const uniqueAmenities = [...new Set((amenities ?? []).filter(Boolean))];
+  const fallbackItems = RESORT_AMENITIES;
+  const items =
+    uniqueAmenities.length > 0
+      ? uniqueAmenities.map((label, index) => ({
+          id: `amenity-${index}`,
+          label,
+          icon: 'checkmark-circle-outline' as const,
+        }))
+      : fallbackItems;
+  const displayItems = [...items, ...items, ...items, ...items];
 
   const rows: (typeof RESORT_AMENITIES)[] = [];
-  for (let i = 0; i < items.length; i += 2) {
-    rows.push(items.slice(i, i + 2) as typeof RESORT_AMENITIES);
+  for (let i = 0; i < displayItems.length; i += 2) {
+    rows.push(displayItems.slice(i, i + 2) as typeof RESORT_AMENITIES);
   }
 
   return (

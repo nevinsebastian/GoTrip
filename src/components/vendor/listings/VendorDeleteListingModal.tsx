@@ -1,191 +1,186 @@
 import { Text } from '@/components/ui';
-import { colors, spacing, typography } from '@/constants/DesignTokens';
-import { VENDOR_DASHBOARD_BTN_RED, VENDOR_DASHBOARD_CARD_BORDER } from '@/src/constants/vendorDashboardConstants';
+import { colors, typography } from '@/constants/DesignTokens';
 import {
   VENDOR_LISTINGS_COPY,
   type VendorListingCardData,
 } from '@/src/constants/vendorListingsConstants';
+import { VendorListingModalShell } from '@/src/components/vendor/listings/VendorListingModalShell';
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { Platform, Pressable, StyleSheet, View } from 'react-native';
 
+const FIGMA_TITLE = '#0F1A20';
+const FIGMA_RED = '#D72626';
+const FIGMA_DIVIDER = 'rgba(15, 26, 32, 0.2)';
+
 type VendorDeleteListingModalProps = {
   listing: VendorListingCardData;
-  bottomInset: number;
   onClose: () => void;
   onConfirm: () => void;
+  /** @deprecated Mobile tab bar inset; centered modal ignores this. */
+  bottomInset?: number;
+  variant?: 'centered' | 'sheet';
 };
 
 export function VendorDeleteListingModal({
   listing,
-  bottomInset,
   onClose,
   onConfirm,
+  variant = 'centered',
 }: VendorDeleteListingModalProps) {
+  if (variant === 'sheet') {
+    return (
+      <LegacySheetDeleteModal listing={listing} onClose={onClose} onConfirm={onConfirm} />
+    );
+  }
+
   return (
-    <View style={[styles.overlay, { bottom: bottomInset }]} pointerEvents="box-none">
-      <Pressable style={styles.scrim} onPress={onClose} accessibilityRole="button">
-        <View style={styles.backdropDim} />
-        <View
-          style={[
-            styles.backdropFrost,
-            Platform.OS === 'web'
-              ? ({
-                  backdropFilter: 'blur(20px)',
-                  WebkitBackdropFilter: 'blur(20px)',
-                } as object)
-              : null,
-          ]}
-        />
-      </Pressable>
+    <VendorListingModalShell onClose={onClose} cardStyle={styles.compactCard}>
+      <Text style={styles.refText}>
+        Property Number # : <Text style={styles.refBold}>{listing.listingRef}</Text>
+      </Text>
+      <Text style={styles.subtitle}>{listing.description}</Text>
 
-      <View style={styles.sheetWrap}>
-        <View style={styles.sheet}>
-          <Text style={styles.refText}>
-            Property Number # : <Text style={styles.refBold}>{listing.listingRef}</Text>
-          </Text>
-          <Text style={styles.subtitle}>{listing.cardTitle}</Text>
-          <View style={styles.divider} />
+      <View style={styles.separator} />
 
-          <Text style={styles.deleteTitle}>{VENDOR_LISTINGS_COPY.deletePropertyTitle}</Text>
-          <Text style={styles.deleteBody}>{VENDOR_LISTINGS_COPY.deletePropertyBody}</Text>
+      <Text style={styles.deleteTitle}>{VENDOR_LISTINGS_COPY.deletePropertyTitle}</Text>
+      <Text style={styles.deleteBody}>{VENDOR_LISTINGS_COPY.deletePropertyBody}</Text>
 
-          <View style={styles.actions}>
-            <Pressable style={styles.goBackBtn} onPress={onClose}>
-              <View style={styles.goBackIcon}>
-                <Ionicons name="chevron-back" size={14} color={colors.surface.white} />
-              </View>
-              <Text style={styles.goBackText}>{VENDOR_LISTINGS_COPY.goBack}</Text>
-            </Pressable>
-            <Pressable style={styles.deleteBtn} onPress={onConfirm}>
-              <Text style={styles.deleteBtnText}>{VENDOR_LISTINGS_COPY.deletePropertyCta}</Text>
-              <Ionicons name="trash" size={14} color={colors.surface.white} />
-            </Pressable>
-          </View>
-        </View>
+      <View style={styles.actions}>
+        <Pressable
+          style={({ pressed }) => [styles.goBackBtn, pressed && styles.pressed]}
+          onPress={onClose}
+          accessibilityRole="button"
+        >
+          <Ionicons name="arrow-back" size={18} color={FIGMA_TITLE} />
+          <Text style={styles.goBackText}>{VENDOR_LISTINGS_COPY.goBack}</Text>
+        </Pressable>
+
+        <Pressable
+          style={({ pressed }) => [styles.deleteBtn, pressed && styles.pressed]}
+          onPress={onConfirm}
+          accessibilityRole="button"
+        >
+          <Text style={styles.deleteBtnText}>{VENDOR_LISTINGS_COPY.confirmDeleteCta}</Text>
+        </Pressable>
       </View>
-    </View>
+    </VendorListingModalShell>
+  );
+}
+
+/** Bottom-sheet variant kept for narrow mobile layouts. */
+function LegacySheetDeleteModal({
+  listing,
+  onClose,
+  onConfirm,
+}: Pick<VendorDeleteListingModalProps, 'listing' | 'onClose' | 'onConfirm'>) {
+  return (
+    <VendorListingModalShell onClose={onClose} centered={false}>
+      <Text style={styles.refText}>
+        Property Number # : <Text style={styles.refBold}>{listing.listingRef}</Text>
+      </Text>
+      <Text style={styles.subtitle}>{listing.description}</Text>
+      <View style={styles.separator} />
+      <Text style={styles.deleteTitle}>{VENDOR_LISTINGS_COPY.deletePropertyTitle}</Text>
+      <Text style={styles.deleteBody}>{VENDOR_LISTINGS_COPY.deletePropertyBody}</Text>
+      <View style={styles.actions}>
+        <Pressable style={styles.goBackBtn} onPress={onClose}>
+          <Ionicons name="arrow-back" size={18} color={FIGMA_TITLE} />
+          <Text style={styles.goBackText}>{VENDOR_LISTINGS_COPY.goBack}</Text>
+        </Pressable>
+        <Pressable style={styles.deleteBtn} onPress={onConfirm}>
+          <Text style={styles.deleteBtnText}>{VENDOR_LISTINGS_COPY.confirmDeleteCta}</Text>
+        </Pressable>
+      </View>
+    </VendorListingModalShell>
   );
 }
 
 const styles = StyleSheet.create({
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    zIndex: 20,
-    justifyContent: 'flex-end',
-  },
-  backdropDim: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.12)',
-  },
-  backdropFrost: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(255, 255, 255, 0.72)',
-  },
-  scrim: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  sheetWrap: {
-    paddingHorizontal: spacing['4'],
-    paddingBottom: spacing['3'],
-  },
-  sheet: {
-    borderWidth: 1,
-    borderColor: VENDOR_DASHBOARD_CARD_BORDER,
-    borderRadius: 24,
-    padding: 16,
-    gap: 10,
-    backgroundColor: colors.surface.white,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.12,
-        shadowRadius: 12,
-      },
-      android: { elevation: 8 },
-    }),
+  compactCard: {
+    maxWidth: 624,
+    minHeight: 315,
+    justifyContent: 'space-between',
   },
   refText: {
     fontFamily: typography.fontFamily.text,
-    fontSize: 13,
-    color: colors.text.primary,
+    fontSize: 20,
+    lineHeight: 24,
+    color: FIGMA_TITLE,
+    textAlign: 'center',
   },
   refBold: {
     fontWeight: typography.fontWeight.bold,
   },
   subtitle: {
     fontFamily: typography.fontFamily.text,
-    fontSize: 12,
-    color: 'rgba(28, 32, 36, 0.55)',
+    fontSize: 16,
     lineHeight: 18,
+    color: '#1C2024',
+    textAlign: 'center',
   },
-  divider: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: VENDOR_DASHBOARD_CARD_BORDER,
-    marginVertical: 2,
+  separator: {
+    height: 1,
+    backgroundColor: FIGMA_DIVIDER,
+    alignSelf: 'stretch',
   },
   deleteTitle: {
     fontFamily: typography.fontFamily.text,
-    fontSize: 16,
-    fontWeight: typography.fontWeight.bold,
-    color: VENDOR_DASHBOARD_BTN_RED,
+    fontSize: 24,
+    fontWeight: typography.fontWeight.medium,
+    lineHeight: 24,
+    color: FIGMA_RED,
     textAlign: 'center',
-    marginTop: 4,
   },
   deleteBody: {
     fontFamily: typography.fontFamily.text,
-    fontSize: 12,
-    color: '#E57373',
+    fontSize: 14,
+    lineHeight: 16,
+    letterSpacing: 0.04,
+    color: FIGMA_RED,
     textAlign: 'center',
-    lineHeight: 18,
   },
   actions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    marginTop: 8,
+    gap: 18,
+    alignSelf: 'stretch',
   },
   goBackBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    borderWidth: 1,
-    borderColor: colors.text.primary,
-    borderRadius: 24,
-    paddingVertical: 10,
-    paddingHorizontal: 10,
-    backgroundColor: colors.surface.white,
-  },
-  goBackIcon: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: colors.text.primary,
-    alignItems: 'center',
     justifyContent: 'center',
+    gap: 8,
+    height: 44,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: FIGMA_TITLE,
+    borderRadius: 24,
+    backgroundColor: colors.surface.white,
+    ...Platform.select({ web: { cursor: 'pointer' as const } }),
   },
   goBackText: {
     fontFamily: typography.fontFamily.text,
-    fontSize: 11,
-    fontWeight: typography.fontWeight.medium,
-    color: colors.text.primary,
+    fontSize: 16,
+    lineHeight: 20,
+    color: FIGMA_TITLE,
   },
   deleteBtn: {
     flex: 1,
-    flexDirection: 'row',
+    height: 44,
+    borderRadius: 24,
+    backgroundColor: FIGMA_RED,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    backgroundColor: VENDOR_DASHBOARD_BTN_RED,
-    borderRadius: 24,
-    paddingVertical: 12,
     paddingHorizontal: 12,
+    ...Platform.select({ web: { cursor: 'pointer' as const } }),
   },
   deleteBtnText: {
     fontFamily: typography.fontFamily.text,
-    fontSize: 13,
-    fontWeight: typography.fontWeight.semibold,
+    fontSize: 16,
+    fontWeight: typography.fontWeight.medium,
+    lineHeight: 20,
     color: colors.surface.white,
   },
+  pressed: { opacity: 0.88 },
 });
