@@ -2,8 +2,11 @@ import { useResponsive } from '@/components/ui/useResponsive';
 import { CategoryDetailRouteShell } from '@/src/components/listing/CategoryDetailRouteShell';
 import { useActivityDetail } from '@/src/hooks/useCategoryListing';
 import { useDesktopBookingFocus } from '@/src/hooks/useDesktopBookingFocus';
+import { useIsAuthenticated } from '@/src/hooks/useIsAuthenticated';
 import { DesktopCategoryListingDetailScreen } from '@/src/screens/DesktopCategoryListingDetailScreen';
 import { MobileActivityDetailsScreen } from '@/src/screens/MobileActivityDetails';
+import { mapActivityDetailToBookingEntity } from '@/src/utils/mapBookingEntity';
+import type { ActivityDetail } from '@/src/api/types';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import React, { useCallback } from 'react';
 import { Platform, View } from 'react-native';
@@ -13,9 +16,11 @@ export default function ActivityDetailsRoute() {
   const isDesktopWeb = Platform.OS === 'web' && isDesktop;
   const params = useLocalSearchParams<{ id?: string; title?: string; price?: string }>();
   const listingId = typeof params.id === 'string' ? params.id : undefined;
+  const { data: isLoggedIn = false } = useIsAuthenticated();
 
   const { data, isLoading, isError, error, refetch } = useActivityDetail(listingId);
   const display = data?.display;
+  const activity = data?.detail as ActivityDetail | undefined;
 
   useFocusEffect(
     useCallback(() => {
@@ -23,8 +28,13 @@ export default function ActivityDetailsRoute() {
     }, [listingId, refetch]),
   );
 
-  const onGuestSave = useCallback(
-    (details: { checkIn: string | null; checkOut: string | null }) => {
+  const goToCheckout = useCallback(
+    (checkIn: string, checkOut: string) => {
+      if (!isLoggedIn) {
+        router.push('/login');
+        return;
+      }
+      const entity = activity ? mapActivityDetailToBookingEntity(activity) : null;
       router.push({
         pathname: '/booking/review',
         params: {
@@ -32,26 +42,28 @@ export default function ActivityDetailsRoute() {
           listingType: 'activity',
           title: display?.title ?? params.title ?? '',
           price: display?.priceLabel ?? params.price ?? '',
-          checkIn: details.checkIn ?? '',
-          checkOut: details.checkOut ?? '',
+          checkIn,
+          checkOut: checkOut || checkIn,
+          entityType: entity?.entityType ?? 'activity_slot',
+          entityId: entity?.entityId ?? '',
+          activitySlotId: entity?.activitySlotId ?? entity?.entityId ?? '',
         },
       });
     },
-    [display?.priceLabel, display?.title, listingId, params.price, params.title],
+    [activity, display?.priceLabel, display?.title, isLoggedIn, listingId, params.price, params.title],
+  );
+
+  const onGuestSave = useCallback(
+    (details: { checkIn: string | null; checkOut: string | null }) => {
+      goToCheckout(details.checkIn ?? '', details.checkOut ?? details.checkIn ?? '');
+    },
+    [goToCheckout],
   );
 
   const { openDateModal, bookingFocus } = useDesktopBookingFocus({ onGuestSave });
 
   const onBookNowMobile = () => {
-    router.push({
-      pathname: '/booking/review',
-      params: {
-        listingId: listingId ?? '',
-        listingType: 'activity',
-        title: display?.title ?? params.title ?? '',
-        price: display?.priceLabel ?? params.price ?? '',
-      },
-    });
+    goToCheckout('', '');
   };
 
   return (

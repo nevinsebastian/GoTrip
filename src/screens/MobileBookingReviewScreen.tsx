@@ -2,12 +2,12 @@ import { Text } from '@/components/ui';
 import { colors, typography } from '@/constants/DesignTokens';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import { Calendar, DateData } from 'react-native-calendars';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BookingSummaryCard } from '@/src/components/booking/BookingSummaryCard';
+import { AvailabilityCalendar } from '@/src/components/booking/AvailabilityCalendar';
 import { MobileBottomTabBar } from '@/src/components/navigation/MobileBottomTabBar';
 import { useMobileTabBarInset } from '@/src/components/navigation/MobileFloatingTabBar';
 import { FIGMA_PROPERTY } from '@/src/components/resort/resortConstants';
@@ -20,10 +20,13 @@ type GuestCounts = { adults: number; children: number; infants: number };
 
 type MobileBookingReviewScreenProps = {
   imageUri?: string | null;
-  listingType?: 'hotel' | 'package';
+  listingType?: 'hotel' | 'package' | 'activity' | 'glamping';
   propertyTitle?: string;
   fixedCheckIn?: string;
   fixedCheckOut?: string;
+  disabledDates?: Set<string>;
+  availabilityLoading?: boolean;
+  pricePreviewLabel?: string | null;
   onConfirm: (payload: {
     checkIn: string;
     checkOut: string;
@@ -159,6 +162,9 @@ export function MobileBookingReviewScreen({
   propertyTitle,
   fixedCheckIn,
   fixedCheckOut,
+  disabledDates,
+  availabilityLoading,
+  pricePreviewLabel,
   onConfirm,
   isSubmitting,
   errorMessage,
@@ -167,83 +173,45 @@ export function MobileBookingReviewScreen({
   const insets = useSafeAreaInsets();
   const tabBarInset = useMobileTabBarInset();
   const isPackage = listingType === 'package';
+  const isActivity = listingType === 'activity';
+  const datesLocked = isPackage;
 
   const packageCheckIn = fixedCheckIn ?? FIGMA_PACKAGE_DETAIL.fixedCheckIn;
   const packageCheckOut = fixedCheckOut ?? FIGMA_PACKAGE_DETAIL.fixedCheckOut;
 
   const [checkInDate, setCheckInDate] = useState(
-    isPackage ? packageCheckIn : FIGMA_BOOKING.checkIn.iso,
+    datesLocked
+      ? packageCheckIn
+      : fixedCheckIn || FIGMA_BOOKING.checkIn.iso,
   );
   const [checkOutDate, setCheckOutDate] = useState(
-    isPackage ? packageCheckOut : FIGMA_BOOKING.checkOut.iso,
+    datesLocked
+      ? packageCheckOut
+      : isActivity
+        ? fixedCheckIn || FIGMA_BOOKING.checkIn.iso
+        : fixedCheckOut || FIGMA_BOOKING.checkOut.iso,
   );
   const [calendarOpen, setCalendarOpen] = useState(false);
-  const [activeDateField, setActiveDateField] = useState<'checkIn' | 'checkOut'>('checkIn');
   const [guests, setGuests] = useState<GuestCounts>({
     adults: FIGMA_BOOKING.defaultAdults,
     children: FIGMA_BOOKING.defaultChildren,
     infants: FIGMA_BOOKING.defaultInfants,
   });
 
-  const markedDates = useMemo(() => {
-    const lightFill = colors.surface.lightPink ?? '#feebe7';
-    const primary = colors.accent.main;
-    const out: Record<string, { customStyles?: { container?: object; text?: object } }> = {};
-    if (!checkInDate) return out;
+  useEffect(() => {
+    if (fixedCheckIn) setCheckInDate(fixedCheckIn);
+    if (fixedCheckOut) setCheckOutDate(isActivity ? fixedCheckIn ?? fixedCheckOut : fixedCheckOut);
+  }, [fixedCheckIn, fixedCheckOut, isActivity]);
 
-    if (!checkOutDate) {
-      out[checkInDate] = {
-        customStyles: {
-          container: { backgroundColor: primary, borderRadius: 999 },
-          text: { color: colors.surface.white, fontWeight: '600' },
-        },
-      };
-      return out;
-    }
-
-    getDatesInRange(checkInDate, checkOutDate).forEach((d, idx, arr) => {
-      const isEdge = idx === 0 || idx === arr.length - 1;
-      out[d] = {
-        customStyles: {
-          container: { backgroundColor: isEdge ? primary : lightFill, borderRadius: 999 },
-          text: { color: isEdge ? colors.surface.white : colors.text.primary, fontWeight: '600' },
-        },
-      };
-    });
-    return out;
-  }, [checkInDate, checkOutDate]);
-
-  const handleDayPress = (day: DateData) => {
-    const date = day.dateString;
-    if (activeDateField === 'checkIn' || !checkInDate || (checkInDate && checkOutDate)) {
-      setCheckInDate(date);
-      setCheckOutDate('');
-      setActiveDateField('checkOut');
-      return;
-    }
-    if (new Date(date).getTime() < new Date(checkInDate).getTime()) {
-      setCheckInDate(date);
-      setCheckOutDate('');
-      setActiveDateField('checkOut');
-      return;
-    }
-    setCheckOutDate(date);
-  };
-
-  const openCalendar = (field: 'checkIn' | 'checkOut') => {
-    setActiveDateField(field);
+  const openCalendar = () => {
+    if (datesLocked) return;
     setCalendarOpen(true);
   };
 
-  const handleCalendarSelect = () => {
-    if (!checkInDate) return;
-    setCalendarOpen(false);
-  };
-
   const handleClearSelection = () => {
-    if (!isPackage) {
+    if (!datesLocked) {
       setCheckInDate(FIGMA_BOOKING.checkIn.iso);
-      setCheckOutDate(FIGMA_BOOKING.checkOut.iso);
+      setCheckOutDate(isActivity ? FIGMA_BOOKING.checkIn.iso : FIGMA_BOOKING.checkOut.iso);
     }
     setGuests({
       adults: FIGMA_BOOKING.defaultAdults,
@@ -253,20 +221,34 @@ export function MobileBookingReviewScreen({
     setCalendarOpen(false);
   };
 
-  const resolvedCheckIn = isPackage ? packageCheckIn : checkInDate;
-  const resolvedCheckOut = isPackage ? packageCheckOut : checkOutDate;
-  const checkInLabel = isPackage
+  const resolvedCheckIn = datesLocked ? packageCheckIn : checkInDate;
+  const resolvedCheckOut = datesLocked
+    ? packageCheckOut
+    : isActivity
+      ? checkInDate
+      : checkOutDate;
+  const checkInLabel = datesLocked
     ? formatPackageDayLabel(packageCheckIn)
     : checkInDate
       ? formatDayLabel(checkInDate)
       : FIGMA_BOOKING.checkIn.dayLabel;
-  const checkOutLabel = isPackage
+  const checkOutLabel = datesLocked
     ? formatPackageDayLabel(packageCheckOut)
-    : checkOutDate
-      ? formatDayLabel(checkOutDate)
-      : FIGMA_BOOKING.checkOut.dayLabel;
-  const checkInFieldLabel = isPackage ? FIGMA_PACKAGE_DETAIL.tripStartLabel : FIGMA_BOOKING.checkIn.label;
-  const checkOutFieldLabel = isPackage ? FIGMA_PACKAGE_DETAIL.tripEndLabel : FIGMA_BOOKING.checkOut.label;
+    : isActivity
+      ? checkInLabel
+      : checkOutDate
+        ? formatDayLabel(checkOutDate)
+        : FIGMA_BOOKING.checkOut.dayLabel;
+  const checkInFieldLabel = datesLocked
+    ? FIGMA_PACKAGE_DETAIL.tripStartLabel
+    : isActivity
+      ? 'Activity date'
+      : FIGMA_BOOKING.checkIn.label;
+  const checkOutFieldLabel = datesLocked
+    ? FIGMA_PACKAGE_DETAIL.tripEndLabel
+    : isActivity
+      ? 'Activity date'
+      : FIGMA_BOOKING.checkOut.label;
   const checkInTimeLabel = isPackage ? FIGMA_PACKAGE_DETAIL.tripStartTime : FIGMA_BOOKING.checkIn.timeLabel;
   const checkOutTimeLabel = isPackage ? FIGMA_PACKAGE_DETAIL.tripEndTime : FIGMA_BOOKING.checkOut.timeLabel;
   const summaryLine = `${formatSummaryDates(resolvedCheckIn, resolvedCheckOut)} | ${formatGuestsSummary(guests)}`;
@@ -325,60 +307,40 @@ export function MobileBookingReviewScreen({
               label={checkInFieldLabel}
               dayLabel={checkInLabel}
               timeLabel={checkInTimeLabel}
-              active={!isPackage && calendarOpen && activeDateField === 'checkIn'}
-              readOnly={isPackage}
-              onPress={() => openCalendar('checkIn')}
+              active={!datesLocked && calendarOpen}
+              readOnly={datesLocked}
+              onPress={openCalendar}
             />
-            <DateTile
-              label={checkOutFieldLabel}
-              dayLabel={checkOutLabel}
-              timeLabel={checkOutTimeLabel}
-              active={!isPackage && calendarOpen && activeDateField === 'checkOut'}
-              readOnly={isPackage}
-              onPress={() => openCalendar('checkOut')}
-            />
+            {!isActivity ? (
+              <DateTile
+                label={checkOutFieldLabel}
+                dayLabel={checkOutLabel}
+                timeLabel={checkOutTimeLabel}
+                active={!datesLocked && calendarOpen}
+                readOnly={datesLocked}
+                onPress={openCalendar}
+              />
+            ) : null}
           </View>
 
-          {isPackage ? (
+          {datesLocked ? (
             <Text style={[styles.fixedDatesNote, { fontSize: s(10), lineHeight: s(14) }]}>
               {FIGMA_PACKAGE_DETAIL.datesFixedNote}
             </Text>
           ) : null}
 
-          {!isPackage && calendarOpen ? (
+          {!datesLocked && calendarOpen ? (
             <View style={[styles.calendarCard, { borderRadius: s(18), padding: s(8) }]}>
-              <Calendar
-                current={checkInDate || undefined}
-                markingType="custom"
-                markedDates={markedDates}
-                onDayPress={handleDayPress}
-                hideExtraDays={false}
-                enableSwipeMonths
-                renderArrow={(direction) => (
-                  <View style={[styles.calendarArrow, { width: s(32), height: s(32), borderRadius: s(16) }]}>
-                    <Ionicons
-                      name={direction === 'left' ? 'chevron-back' : 'chevron-forward'}
-                      size={s(16)}
-                      color={colors.text.primary}
-                    />
-                  </View>
-                )}
-                theme={{
-                  textDayFontFamily: 'Poppins',
-                  textMonthFontFamily: 'Poppins',
-                  textDayHeaderFontFamily: 'Poppins',
-                  textMonthFontWeight: '500',
-                  textDayFontWeight: '500',
-                  monthTextColor: colors.text.primary,
-                  textSectionTitleColor: colors.text.caption,
-                  dayTextColor: '#4A5660',
-                  textDisabledColor: '#e0e0e0',
-                  arrowColor: colors.text.secondary,
-                  todayTextColor: colors.text.primary,
-                  textDayFontSize: 14,
-                  textMonthFontSize: 14,
-                  textDayHeaderFontSize: 12,
-                } as object}
+              <AvailabilityCalendar
+                checkIn={checkInDate || null}
+                checkOut={checkOutDate || null}
+                disabledDates={disabledDates}
+                singleDay={isActivity}
+                loading={availabilityLoading}
+                onChange={(nextIn, nextOut) => {
+                  setCheckInDate(nextIn ?? '');
+                  setCheckOutDate(nextOut ?? (isActivity ? nextIn ?? '' : ''));
+                }}
               />
               <View style={[styles.calendarActions, { gap: s(12), marginTop: s(12) }]}>
                 <Pressable
@@ -389,7 +351,11 @@ export function MobileBookingReviewScreen({
                 </Pressable>
                 <Pressable
                   style={[styles.calendarSelectBtn, { height: s(42), borderRadius: s(9999), flex: 1 }]}
-                  onPress={handleCalendarSelect}
+                  onPress={() => {
+                    if (!checkInDate) return;
+                    if (!isActivity && !checkOutDate) return;
+                    setCalendarOpen(false);
+                  }}
                 >
                   <Text style={[styles.calendarSelectText, { fontSize: s(14) }]}>Select</Text>
                 </Pressable>
@@ -397,14 +363,14 @@ export function MobileBookingReviewScreen({
             </View>
           ) : null}
 
-          <View style={!isPackage && calendarOpen ? styles.dimmed : undefined}>
+          <View style={!datesLocked && calendarOpen ? styles.dimmed : undefined}>
             <GuestStepper
               label="Adults"
               subLabel="Age 13+"
               value={guests.adults}
               min={1}
               max={10}
-              dimmed={!isPackage && calendarOpen}
+              dimmed={!datesLocked && calendarOpen}
               onChange={(adults) => setGuests((g) => ({ ...g, adults }))}
             />
             <GuestStepper
@@ -413,7 +379,7 @@ export function MobileBookingReviewScreen({
               value={guests.children}
               min={0}
               max={10}
-              dimmed={!isPackage && calendarOpen}
+              dimmed={!datesLocked && calendarOpen}
               onChange={(children) => setGuests((g) => ({ ...g, children }))}
             />
             <GuestStepper
@@ -422,16 +388,16 @@ export function MobileBookingReviewScreen({
               value={guests.infants}
               min={0}
               max={10}
-              dimmed={!isPackage && calendarOpen}
+              dimmed={!datesLocked && calendarOpen}
               onChange={(infants) => setGuests((g) => ({ ...g, infants }))}
             />
           </View>
 
-          <View style={[styles.summaryRow, !isPackage && calendarOpen && styles.dimmed]}>
+          <View style={[styles.summaryRow, !datesLocked && calendarOpen && styles.dimmed]}>
             <Text style={[styles.summaryText, { fontSize: s(12), flex: 1 }]} numberOfLines={1}>
               {summaryLine}
             </Text>
-            {!isPackage ? (
+            {!datesLocked ? (
               <Pressable onPress={handleClearSelection}>
                 <Text style={[styles.clearText, { fontSize: s(10) }]}>Clear Selection</Text>
               </Pressable>
@@ -442,7 +408,13 @@ export function MobileBookingReviewScreen({
             <Text style={[styles.errorText, { fontSize: s(12) }]}>{errorMessage}</Text>
           ) : null}
 
-          <View style={[styles.actionRow, { gap: s(12) }, !isPackage && calendarOpen && styles.dimmed]}>
+          {pricePreviewLabel ? (
+            <Text style={[styles.summaryText, { fontSize: s(13), color: colors.accent.main }]}>
+              {pricePreviewLabel}
+            </Text>
+          ) : null}
+
+          <View style={[styles.actionRow, { gap: s(12) }, !datesLocked && calendarOpen && styles.dimmed]}>
             <Pressable
               style={[styles.goBackBtn, { height: s(48), borderRadius: s(9999), flex: 1 }]}
               onPress={() => router.back()}
@@ -455,13 +427,13 @@ export function MobileBookingReviewScreen({
             <Pressable
               style={[styles.confirmBtn, { height: s(48), borderRadius: s(9999), flex: 1.4 }, isSubmitting && styles.btnDisabled]}
               onPress={() => {
-                if (!isPackage && (!checkInDate || !checkOutDate)) {
+                if (!datesLocked && (!resolvedCheckIn || (!isActivity && !resolvedCheckOut))) {
                   setCalendarOpen(true);
                   return;
                 }
                 onConfirm({
                   checkIn: resolvedCheckIn,
-                  checkOut: resolvedCheckOut,
+                  checkOut: resolvedCheckOut || resolvedCheckIn,
                   guests,
                 });
               }}

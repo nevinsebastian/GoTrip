@@ -2,8 +2,11 @@ import { useResponsive } from '@/components/ui/useResponsive';
 import { CategoryDetailRouteShell } from '@/src/components/listing/CategoryDetailRouteShell';
 import { useGlampingDetail } from '@/src/hooks/useCategoryListing';
 import { useDesktopBookingFocus } from '@/src/hooks/useDesktopBookingFocus';
+import { useIsAuthenticated } from '@/src/hooks/useIsAuthenticated';
 import { DesktopCategoryListingDetailScreen } from '@/src/screens/DesktopCategoryListingDetailScreen';
 import { MobileGlampingDetailsScreen } from '@/src/screens/MobileGlampingDetails';
+import { mapGlampingDetailToBookingEntity } from '@/src/utils/mapBookingEntity';
+import type { GlampingDetail } from '@/src/api/types';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import React, { useCallback } from 'react';
 import { Platform, View } from 'react-native';
@@ -13,9 +16,11 @@ export default function GlampingDetailsRoute() {
   const isDesktopWeb = Platform.OS === 'web' && isDesktop;
   const params = useLocalSearchParams<{ id?: string; title?: string; price?: string }>();
   const listingId = typeof params.id === 'string' ? params.id : undefined;
+  const { data: isLoggedIn = false } = useIsAuthenticated();
 
   const { data, isLoading, isError, error, refetch } = useGlampingDetail(listingId);
   const display = data?.display;
+  const glamping = data?.detail as GlampingDetail | undefined;
 
   useFocusEffect(
     useCallback(() => {
@@ -23,8 +28,13 @@ export default function GlampingDetailsRoute() {
     }, [listingId, refetch]),
   );
 
-  const onGuestSave = useCallback(
-    (details: { checkIn: string | null; checkOut: string | null }) => {
+  const goToCheckout = useCallback(
+    (checkIn: string, checkOut: string) => {
+      if (!isLoggedIn) {
+        router.push('/login');
+        return;
+      }
+      const entity = glamping ? mapGlampingDetailToBookingEntity(glamping) : null;
       router.push({
         pathname: '/booking/review',
         params: {
@@ -32,26 +42,28 @@ export default function GlampingDetailsRoute() {
           listingType: 'glamping',
           title: display?.title ?? params.title ?? '',
           price: display?.priceLabel ?? params.price ?? '',
-          checkIn: details.checkIn ?? '',
-          checkOut: details.checkOut ?? '',
+          checkIn,
+          checkOut,
+          entityType: entity?.entityType ?? 'glamping_site',
+          entityId: entity?.entityId ?? '',
+          unitsBooked: String(entity?.unitsBooked ?? 1),
         },
       });
     },
-    [display?.priceLabel, display?.title, listingId, params.price, params.title],
+    [display?.priceLabel, display?.title, glamping, isLoggedIn, listingId, params.price, params.title],
+  );
+
+  const onGuestSave = useCallback(
+    (details: { checkIn: string | null; checkOut: string | null }) => {
+      goToCheckout(details.checkIn ?? '', details.checkOut ?? '');
+    },
+    [goToCheckout],
   );
 
   const { openDateModal, bookingFocus } = useDesktopBookingFocus({ onGuestSave });
 
   const onBookNowMobile = () => {
-    router.push({
-      pathname: '/booking/review',
-      params: {
-        listingId: listingId ?? '',
-        listingType: 'glamping',
-        title: display?.title ?? params.title ?? '',
-        price: display?.priceLabel ?? params.price ?? '',
-      },
-    });
+    goToCheckout('', '');
   };
 
   return (

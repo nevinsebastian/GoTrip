@@ -1,23 +1,39 @@
 import { getStoredAuthToken } from '@/src/api/client';
 import { PaymentResultModal } from '@/src/components/PaymentResultModal';
 import { RazorpayCheckoutModal } from '@/src/components/RazorpayCheckoutModal';
-import { useCreateBooking } from '@/src/hooks/useCreateBooking';
-import { useCreateOrder } from '@/src/hooks/useCreateOrder';
 import { useHoldBooking } from '@/src/hooks/useHoldBooking';
 import { useInitiatePayment } from '@/src/hooks/useInitiatePayment';
-import { useListingDetails } from '@/src/hooks/useListingDetails';
+import { useCheckAvailability, useEntityAvailability } from '@/src/hooks/useEntityAvailability';
+import { useActivityDetail, useGlampingDetail } from '@/src/hooks/useCategoryListing';
+import { useHotelDetail } from '@/src/hooks/useHotelDetail';
 import { usePackageDetailData } from '@/src/hooks/usePackageUser';
 import { useVerifyPayment } from '@/src/hooks/useVerifyPayment';
 import { MobileBookingReviewScreen } from '@/src/screens/MobileBookingReviewScreen';
+import { formatPriceBreakdownTotal } from '@/src/utils/availabilityCalendar';
+import {
+  mapActivityDetailToBookingEntity,
+  mapGlampingDetailToBookingEntity,
+  mapHotelDetailToBookingEntity,
+  supportsAvailabilityCalendar,
+  supportsCheckAvailability,
+} from '@/src/utils/mapBookingEntity';
 import { getErrorMessage } from '@/src/utils/errorHandler';
 import { router, useLocalSearchParams } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View } from 'react-native';
 
 import { FIGMA_PROPERTY } from '@/src/components/resort/resortConstants';
 import { FIGMA_PACKAGE_DETAIL } from '@/src/constants/packageDetailConstants';
 import { RESORT_PLACEHOLDER_IMAGE } from '@/src/constants/placeholderImages';
 import { getPackageFixedDates } from '@/src/utils/packageDates';
+import type { AvailabilityEntityType, BookingPriceBreakdown } from '@/src/api/types';
+
+type ListingKind = 'hotel' | 'package' | 'activity' | 'glamping';
+
+function paramStr(v: string | string[] | undefined): string | undefined {
+  if (Array.isArray(v)) return v[0];
+  return typeof v === 'string' && v.length > 0 ? v : undefined;
+}
 
 export default function BookingReviewRoute() {
   const params = useLocalSearchParams<{
@@ -25,38 +41,106 @@ export default function BookingReviewRoute() {
     imageUri?: string;
     listingType?: string;
     packageEntityId?: string;
+    entityType?: string;
+    entityId?: string;
+    mealPlanId?: string;
+    activitySlotId?: string;
+    unitsBooked?: string;
     title?: string;
     checkIn?: string;
     checkOut?: string;
   }>();
-  const listingId = typeof params.listingId === 'string' ? params.listingId : undefined;
-  const imageUriParam = typeof params.imageUri === 'string' ? params.imageUri : undefined;
-  const listingTypeParam = typeof params.listingType === 'string' ? params.listingType : undefined;
-  const packageEntityIdParam =
-    typeof params.packageEntityId === 'string' ? params.packageEntityId : undefined;
 
-  const { data: listingRes } = useListingDetails(listingId);
-  const { data: packageDetail } = usePackageDetailData(
+  const listingId = paramStr(params.listingId);
+  const imageUriParam = paramStr(params.imageUri);
+  const listingTypeParam = (paramStr(params.listingType) ?? 'hotel') as ListingKind;
+  const packageEntityIdParam = paramStr(params.packageEntityId);
+  const entityTypeParam = paramStr(params.entityType) as AvailabilityEntityType | undefined;
+  const entityIdParam = paramStr(params.entityId);
+  const mealPlanIdParam = paramStr(params.mealPlanId);
+  const activitySlotIdParam = paramStr(params.activitySlotId);
+  const unitsBookedParam = Number(paramStr(params.unitsBooked) ?? '1') || 1;
+
+  const isPackageListing = listingTypeParam === 'package';
+  const isHotel = listingTypeParam === 'hotel';
+  const isActivity = listingTypeParam === 'activity';
+  const isGlamping = listingTypeParam === 'glamping';
+
+  const { data: hotelDetail } = useHotelDetail(listingId, isHotel);
+  const { data: activityDetail } = useActivityDetail(listingId, isActivity);
+  const { data: glampingDetail } = useGlampingDetail(listingId, isGlamping);
+  const { data: packageDetail } = usePackageDetailData(listingId, isPackageListing);
+
+  const hotel = hotelDetail?.hotel;
+  const activity = activityDetail?.detail as import('@/src/api/types').ActivityDetail | undefined;
+  const glamping = glampingDetail?.detail as import('@/src/api/types').GlampingDetail | undefined;
+
+  const resolvedEntity = useMemo(() => {
+    if (entityTypeParam && entityIdParam) {
+      return {
+        listingId: listingId ?? '',
+        entityType: entityTypeParam,
+        entityId: entityIdParam,
+        mealPlanId: mealPlanIdParam,
+        activitySlotId: activitySlotIdParam ?? (entityTypeParam === 'activity_slot' ? entityIdParam : undefined),
+        unitsBooked: unitsBookedParam,
+      };
+    }
+    if (isHotel && hotel) {
+      return mapHotelDetailToBookingEntity(hotel, entityIdParam, mealPlanIdParam);
+    }
+    if (isActivity && activity) {
+      return mapActivityDetailToBookingEntity(activity, activitySlotIdParam);
+    }
+    if (isGlamping && glamping) {
+      return mapGlampingDetailToBookingEntity(glamping, entityIdParam, unitsBookedParam);
+    }
+    if (isPackageListing) {
+      const id = packageEntityIdParam ?? packageDetail?.display?.packageEntityId;
+      if (!listingId || !id) return null;
+      return {
+        listingId,
+        entityType: 'package' as const,
+        entityId: id,
+        unitsBooked: 1,
+      };
+    }
+    return null;
+  }, [
+    entityTypeParam,
+    entityIdParam,
+    mealPlanIdParam,
+    activitySlotIdParam,
+    unitsBookedParam,
     listingId,
-    listingTypeParam === 'package' || Boolean(packageEntityIdParam),
-  );
-  const listing = listingRes?.data;
-  const isPackageListing =
-    listingTypeParam === 'package' || listing?.category?.type === 'package';
-  const packageEntityId =
-    packageEntityIdParam ?? packageDetail?.display?.packageEntityId ?? '';
+    isHotel,
+    hotel,
+    isActivity,
+    activity,
+    isGlamping,
+    glamping,
+    isPackageListing,
+    packageEntityIdParam,
+    packageDetail?.display?.packageEntityId,
+  ]);
+
   const packageDates = getPackageFixedDates(listingId);
   const fixedCheckIn =
-    typeof params.checkIn === 'string'
-      ? params.checkIn
-      : packageDetail?.display?.travelCheckIn ?? packageDates.startDate;
+    paramStr(params.checkIn) ??
+    (isPackageListing
+      ? packageDetail?.display?.travelCheckIn ?? packageDates.startDate
+      : undefined);
   const fixedCheckOut =
-    typeof params.checkOut === 'string'
-      ? params.checkOut
-      : packageDetail?.display?.travelCheckOut ?? packageDates.endDate;
+    paramStr(params.checkOut) ??
+    (isPackageListing
+      ? packageDetail?.display?.travelCheckOut ?? packageDates.endDate
+      : isActivity
+        ? fixedCheckIn
+        : undefined);
 
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [pricePreview, setPricePreview] = useState<BookingPriceBreakdown | null>(null);
   const [paymentVisible, setPaymentVisible] = useState(false);
   const [paymentOrder, setPaymentOrder] = useState<{
     order_id: string;
@@ -81,8 +165,20 @@ export default function BookingReviewRoute() {
     totalLabel: string;
   } | null>(null);
 
-  const { mutate: createBookingMut, isPending: isCreatingBooking } = useCreateBooking();
-  const { mutate: createOrderMut, isPending: isCreatingOrder } = useCreateOrder();
+  const calendarEntityType = resolvedEntity?.entityType;
+  const calendarEntityId = resolvedEntity?.entityId;
+  const canLoadCalendar =
+    Boolean(calendarEntityType && calendarEntityId) &&
+    supportsAvailabilityCalendar(calendarEntityType!);
+
+  const { disabledDates, isFetching: availabilityLoading } = useEntityAvailability(
+    canLoadCalendar ? calendarEntityType : undefined,
+    canLoadCalendar ? calendarEntityId : undefined,
+    fixedCheckIn,
+    canLoadCalendar,
+  );
+
+  const { mutate: checkAvailabilityMut, isPending: isChecking } = useCheckAvailability();
   const { mutate: holdBookingMut, isPending: isHoldingBooking } = useHoldBooking();
   const { mutate: initiatePaymentMut, isPending: isInitiatingPayment } = useInitiatePayment();
   const { mutate: verifyPaymentMut } = useVerifyPayment();
@@ -102,9 +198,21 @@ export default function BookingReviewRoute() {
     if (isPackageListing && packageDetail?.display?.carouselImages?.[0]) {
       return packageDetail.display.carouselImages[0];
     }
-    const media = listing?.media ?? [];
-    const img = media.find((m) => m.media_type === 'image')?.url;
-    return imageUriParam ?? img ?? null;
+    if (isHotel && hotelDetail?.hotel) {
+      const imgs = hotel?.images ?? [];
+      const cover = imgs.find((i) => i.isCover)?.url ?? imgs[0]?.url;
+      return imageUriParam ?? cover ?? null;
+    }
+    return imageUriParam ?? null;
+  })();
+
+  const title = (() => {
+    if (typeof params.title === 'string' && params.title) return params.title;
+    if (isPackageListing) return packageDetail?.display?.title ?? FIGMA_PACKAGE_DETAIL.title;
+    if (isHotel) return hotel?.title ?? FIGMA_PROPERTY.title;
+    if (isActivity) return activity?.title ?? 'Activity';
+    if (isGlamping) return glamping?.title ?? 'Glamping';
+    return FIGMA_PROPERTY.title;
   })();
 
   const openPayment = (
@@ -121,6 +229,85 @@ export default function BookingReviewRoute() {
       booking_id: bookingId,
     });
     setPaymentVisible(true);
+  };
+
+  const startHoldAndPay = (
+    checkIn: string,
+    checkOut: string,
+    guests: { adults: number; children: number; infants: number },
+    guestsLabel: string,
+    breakdown?: BookingPriceBreakdown | null,
+  ) => {
+    if (!listingId || !resolvedEntity) {
+      setErrorMessage('Booking details missing. Please go back and try again.');
+      return;
+    }
+
+    const totalLabel = formatPriceBreakdownTotal(
+      breakdown?.totalAmount,
+      breakdown?.currency ?? 'INR',
+    );
+    const meta = { checkIn, checkOut, guestsLabel, totalLabel };
+
+    holdBookingMut(
+      {
+        listingId: resolvedEntity.listingId || listingId,
+        entityType: resolvedEntity.entityType,
+        entityId: resolvedEntity.entityId,
+        checkIn,
+        checkOut: isActivity ? undefined : checkOut,
+        adults: Math.max(1, guests.adults),
+        children: guests.children || undefined,
+        infants: guests.infants || undefined,
+        unitsBooked: resolvedEntity.unitsBooked ?? 1,
+        mealPlanId: resolvedEntity.mealPlanId,
+        activitySlotId: resolvedEntity.activitySlotId,
+        guests: [
+          {
+            fullName: 'Guest',
+            age: 30,
+            isPrimary: true,
+          },
+        ],
+      },
+      {
+        onSuccess: (holdRes) => {
+          const bookingId = holdRes.bookingId ?? holdRes.booking?.id;
+          if (!holdRes.success || !bookingId) {
+            setErrorMessage('Failed to hold booking.');
+            return;
+          }
+          const paidLabel = formatPriceBreakdownTotal(
+            holdRes.priceBreakdown?.totalAmount ?? breakdown?.totalAmount,
+            holdRes.priceBreakdown?.currency ?? breakdown?.currency,
+          );
+          const nextMeta = { ...meta, totalLabel: paidLabel };
+
+          initiatePaymentMut(
+            { bookingId },
+            {
+              onSuccess: (payRes) => {
+                const d = payRes?.data;
+                if (!payRes?.success || !d?.order_id || !d?.key_id) {
+                  setErrorMessage(payRes?.message ?? 'Failed to initiate payment.');
+                  return;
+                }
+                openPayment(bookingId, d, nextMeta);
+              },
+              onError: (err) => setErrorMessage(getErrorMessage(err)),
+            },
+          );
+        },
+        onError: (err) => {
+          const status = (err as { status?: number })?.status;
+          if (status === 409) {
+            setErrorMessage('Dates are no longer available. Please pick different dates.');
+            return;
+          }
+          setErrorMessage(getErrorMessage(err));
+        },
+      },
+    );
   };
 
   const handleConfirm = ({
@@ -140,9 +327,12 @@ export default function BookingReviewRoute() {
       setErrorMessage('Listing id missing. Please go back and try again.');
       return;
     }
+    if (!resolvedEntity) {
+      setErrorMessage('Could not resolve booking entity. Please go back and try again.');
+      return;
+    }
 
     setErrorMessage(null);
-    const guestCount = Math.max(1, guests.adults + guests.children + guests.infants);
     const guestsLabel = [
       `${guests.adults} adult${guests.adults === 1 ? '' : 's'}`,
       guests.children ? `${guests.children} child${guests.children === 1 ? '' : 'ren'}` : null,
@@ -151,115 +341,43 @@ export default function BookingReviewRoute() {
       .filter(Boolean)
       .join(', ');
 
-    if (isPackageListing) {
-      if (!packageEntityId) {
-        setErrorMessage('Package details missing. Please go back and try again.');
-        return;
-      }
-
-      holdBookingMut(
-        {
-          listingId,
-          entityType: 'package',
-          entityId: packageEntityId,
-          checkIn,
-          checkOut,
-          adults: Math.max(1, guests.adults),
-          children: guests.children || undefined,
-          infants: guests.infants || undefined,
-          unitsBooked: 1,
-          guests: [
-            {
-              fullName: 'Guest',
-              age: guests.adults >= 1 ? 30 : undefined,
-              isPrimary: true,
-            },
-          ],
-        },
-        {
-          onSuccess: (holdRes) => {
-            const bookingId = holdRes.bookingId ?? holdRes.booking?.id;
-            if (!holdRes.success || !bookingId) {
-              setErrorMessage('Failed to hold booking.');
-              return;
-            }
-            const totalAmount = holdRes.priceBreakdown?.totalAmount;
-            const totalLabel =
-              totalAmount != null
-                ? `₹ ${totalAmount.toLocaleString('en-IN')} including tax`
-                : '—';
-            const meta = { checkIn, checkOut, guestsLabel, totalLabel };
-
-            initiatePaymentMut(
-              { bookingId },
-              {
-                onSuccess: (payRes) => {
-                  const d = payRes?.data;
-                  if (!payRes?.success || !d?.order_id || !d?.key_id) {
-                    setErrorMessage(payRes?.message ?? 'Failed to initiate payment.');
-                    return;
-                  }
-                  openPayment(bookingId, d, meta);
-                },
-                onError: (err) => setErrorMessage(getErrorMessage(err)),
-              },
-            );
-          },
-          onError: (err) => setErrorMessage(getErrorMessage(err)),
-        },
-      );
+    // Packages (direct): skip check-availability → hold → pay
+    if (isPackageListing || !supportsCheckAvailability(resolvedEntity.entityType)) {
+      startHoldAndPay(checkIn, checkOut, guests, guestsLabel, pricePreview);
       return;
     }
 
-    const totalLabel = '₹ 2,420 including tax';
-
-    createBookingMut(
+    checkAvailabilityMut(
       {
-        listing_id: listingId,
-        start_date: checkIn,
-        end_date: checkOut,
-        guests: guestCount,
+        entityType: resolvedEntity.entityType as Exclude<AvailabilityEntityType, 'package'>,
+        entityId: resolvedEntity.entityId,
+        checkIn,
+        checkOut: isActivity ? undefined : checkOut,
+        adults: Math.max(1, guests.adults),
+        infants: guests.infants || undefined,
+        unitsBooked: resolvedEntity.unitsBooked ?? 1,
+        mealPlanId: resolvedEntity.mealPlanId,
       },
       {
         onSuccess: (res) => {
-          const bookingId = res?.data?.id;
-          if (!res?.success || !bookingId) {
-            setErrorMessage(res?.message ?? 'Failed to create booking.');
+          if (!res.available) {
+            const dates = res.unavailableDates?.join(', ') ?? 'selected dates';
+            setErrorMessage(`Not available for ${dates}. Please choose different dates.`);
+            setPricePreview(null);
             return;
           }
-          createOrderMut(
-            {
-              booking_id: bookingId,
-              receipt: bookingId.slice(0, 40),
-            },
-            {
-              onSuccess: (orderRes) => {
-                const d = orderRes?.data;
-                if (!orderRes?.success || !d?.order_id || !d?.key_id) {
-                  setErrorMessage(orderRes?.message ?? 'Failed to create payment order.');
-                  return;
-                }
-                openPayment(
-                  bookingId,
-                  d,
-                  { checkIn, checkOut, guestsLabel, totalLabel },
-                );
-              },
-              onError: (err) => setErrorMessage(getErrorMessage(err)),
-            },
-          );
+          setPricePreview(res.priceBreakdown ?? null);
+          startHoldAndPay(checkIn, checkOut, guests, guestsLabel, res.priceBreakdown);
         },
         onError: (err) => setErrorMessage(getErrorMessage(err)),
       },
     );
   };
 
-  const title = isPackageListing
-    ? (typeof params.title === 'string' ? params.title : packageDetail?.display?.title ?? FIGMA_PACKAGE_DETAIL.title)
-    : FIGMA_PROPERTY.title;
-
-  const isSubmitting =
-    isCreatingBooking || isCreatingOrder || isHoldingBooking || isInitiatingPayment;
+  const isSubmitting = isChecking || isHoldingBooking || isInitiatingPayment;
+  const pricePreviewLabel = pricePreview?.totalAmount != null
+    ? formatPriceBreakdownTotal(pricePreview.totalAmount, pricePreview.currency)
+    : null;
 
   return (
     <View style={{ flex: 1 }}>
@@ -324,35 +442,39 @@ export default function BookingReviewRoute() {
                     bookingId: paymentOrder?.booking_id,
                     title,
                     datesLabel:
-                      lastBookingMeta ? `${lastBookingMeta.checkIn} to ${lastBookingMeta.checkOut}` : undefined,
+                      lastBookingMeta
+                        ? `${lastBookingMeta.checkIn} to ${lastBookingMeta.checkOut}`
+                        : undefined,
                     guestsLabel: lastBookingMeta?.guestsLabel,
                     totalLabel: lastBookingMeta?.totalLabel,
                   });
                   return;
                 }
-                const msg = res?.message ?? 'Payment verification failed.';
                 setPaymentResult({
                   status: 'failed',
                   bookingId: paymentOrder?.booking_id,
                   title,
                   datesLabel:
-                    lastBookingMeta ? `${lastBookingMeta.checkIn} to ${lastBookingMeta.checkOut}` : undefined,
+                    lastBookingMeta
+                      ? `${lastBookingMeta.checkIn} to ${lastBookingMeta.checkOut}`
+                      : undefined,
                   guestsLabel: lastBookingMeta?.guestsLabel,
                   totalLabel: lastBookingMeta?.totalLabel,
-                  errorMessage: msg,
+                  errorMessage: res?.message ?? 'Payment verification failed.',
                 });
               },
               onError: (err) => {
-                const msg = getErrorMessage(err);
                 setPaymentResult({
                   status: 'failed',
                   bookingId: paymentOrder?.booking_id,
                   title,
                   datesLabel:
-                    lastBookingMeta ? `${lastBookingMeta.checkIn} to ${lastBookingMeta.checkOut}` : undefined,
+                    lastBookingMeta
+                      ? `${lastBookingMeta.checkIn} to ${lastBookingMeta.checkOut}`
+                      : undefined,
                   guestsLabel: lastBookingMeta?.guestsLabel,
                   totalLabel: lastBookingMeta?.totalLabel,
-                  errorMessage: msg,
+                  errorMessage: getErrorMessage(err),
                 });
               },
             },
@@ -362,10 +484,13 @@ export default function BookingReviewRoute() {
 
       <MobileBookingReviewScreen
         imageUri={carouselImage}
-        listingType={isPackageListing ? 'package' : 'hotel'}
+        listingType={listingTypeParam}
         propertyTitle={title}
         fixedCheckIn={fixedCheckIn}
         fixedCheckOut={fixedCheckOut}
+        disabledDates={disabledDates}
+        availabilityLoading={availabilityLoading}
+        pricePreviewLabel={pricePreviewLabel}
         onConfirm={handleConfirm}
         isSubmitting={isSubmitting}
         errorMessage={errorMessage}

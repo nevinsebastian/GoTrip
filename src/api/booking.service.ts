@@ -61,7 +61,32 @@ export async function initiatePayment(
     ENDPOINTS.payments.initiate,
     payload,
   );
-  return response.data;
+  const raw = response.data;
+  const razorpay = raw?.razorpayOrder;
+  const data =
+    raw?.data ??
+    (razorpay?.id && razorpay.key
+      ? {
+          order_id: razorpay.id,
+          amount: razorpay.amount,
+          currency: razorpay.currency ?? 'INR',
+          key_id: razorpay.key,
+          booking_id: payload.bookingId,
+        }
+      : undefined);
+
+  return {
+    ...raw,
+    data: data
+      ? {
+          order_id: data.order_id,
+          amount: data.amount,
+          currency: data.currency ?? 'INR',
+          key_id: data.key_id,
+          booking_id: data.booking_id ?? payload.bookingId,
+        }
+      : undefined,
+  };
 }
 
 export async function fetchMyBookings(

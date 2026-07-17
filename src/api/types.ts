@@ -913,6 +913,8 @@ export interface BookingHoldGuest {
   fullName: string;
   age?: number;
   isPrimary?: boolean;
+  idType?: string;
+  idNumber?: string;
 }
 
 export interface BookingHoldRequest {
@@ -920,12 +922,14 @@ export interface BookingHoldRequest {
   entityType: AvailabilityEntityType;
   entityId: string;
   checkIn: string;
-  checkOut: string;
+  checkOut?: string;
   adults: number;
   children?: number;
   infants?: number;
   unitsBooked?: number;
   mealPlanId?: string;
+  /** Activity bookings — same as slot entityId */
+  activitySlotId?: string;
   slotId?: string;
   glampingSiteId?: string;
   roomTypeId?: string;
@@ -951,12 +955,25 @@ export interface InitiatePaymentRequest {
 export interface InitiatePaymentResponse {
   success?: boolean;
   message?: string;
+  /** Normalized client shape used by checkout UI */
   data?: {
     order_id: string;
     amount: number;
     currency: string;
     key_id: string;
     booking_id?: string;
+  };
+  /** Backend may return this shape instead of `data` */
+  razorpayOrder?: {
+    id: string;
+    amount: number;
+    currency: string;
+    key?: string;
+  };
+  payment?: {
+    id?: string;
+    gatewayOrderId?: string;
+    amount?: number;
   };
 }
 
@@ -995,10 +1012,11 @@ export interface CancellationPoliciesResponse {
 }
 
 export interface CheckAvailabilityRequest {
-  entityType: AvailabilityEntityType;
+  entityType: Exclude<AvailabilityEntityType, 'package'>;
   entityId: string;
   checkIn: string;
-  checkOut: string;
+  /** Required for hotel/glamping; optional for activity (defaults to 1 night on backend) */
+  checkOut?: string;
   adults: number;
   children?: number;
   infants?: number;
@@ -1014,10 +1032,16 @@ export interface BookingPriceBreakdown {
   nights?: number;
   basePrice?: number;
   extraPersonCharge?: number;
+  mealCharge?: number;
   subtotal?: number;
+  discountAmount?: number;
+  taxableAmount?: number;
+  taxRatePct?: number;
   taxAmount?: number;
   platformFee?: number;
+  platformFeePct?: number;
   totalAmount?: number;
+  currency?: string;
 }
 
 export interface CheckAvailabilityResponse {

@@ -62,7 +62,17 @@ function buildMarkedDates(
   > = {};
 
   disabledDates?.forEach((d) => {
-    out[d] = { disabled: true, disableTouchEvent: true };
+    out[d] = {
+      disabled: true,
+      disableTouchEvent: true,
+      customStyles: {
+        container: { backgroundColor: 'transparent' },
+        text: {
+          color: '#c8c8c8',
+          textDecorationLine: 'line-through',
+        },
+      },
+    };
   });
 
   if (!checkIn) return out;

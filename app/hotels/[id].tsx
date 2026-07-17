@@ -191,19 +191,50 @@ export default function HotelDetailScreen() {
       setCheckOutDate(searchParams.checkOut ?? null);
     }
     if (!isDesktopWeb) {
+      const entity = hotel ? getBookingEntity(hotel, selectedRoomTypeId) : null;
       router.push({
         pathname: '/booking/review',
         params: {
           listingId: hotelId ?? '',
+          listingType: 'hotel',
           imageUri: carouselImages[0] ?? '',
+          title: hotel?.title ?? '',
           checkIn: checkInDate ?? '',
           checkOut: checkOutDate ?? '',
+          entityType: entity?.entityType ?? 'room_type',
+          entityId: entity?.entityId ?? '',
+          mealPlanId: selectedMealPlanId ?? '',
         },
       });
       return;
     }
     setDateModalStep('dates');
     setDateModalVisible(true);
+  };
+
+  const continueToCheckout = () => {
+    if (!hotel || !hotelId || !checkInDate || !checkOutDate) return;
+    const { entityType, entityId } = getBookingEntity(hotel, selectedRoomTypeId);
+    if (!entityId) {
+      setBookingError('Please select a room type.');
+      return;
+    }
+    closeDateModal();
+    router.push({
+      pathname: '/booking/review',
+      params: {
+        listingId: hotelId,
+        listingType: 'hotel',
+        imageUri: carouselImages[0] ?? '',
+        title: hotel.title,
+        checkIn: checkInDate,
+        checkOut: checkOutDate,
+        entityType,
+        entityId,
+        mealPlanId: selectedMealPlanId ?? '',
+        adults: String(adultsCount),
+      },
+    });
   };
 
   const handleCheckAvailability = async () => {
@@ -227,7 +258,7 @@ export default function HotelDetailScreen() {
     setBookingError(null);
     try {
       const res = await checkHotelAvailability({
-        entityType,
+        entityType: entityType as 'room_type' | 'full_property',
         entityId,
         checkIn: checkInDate,
         checkOut: checkOutDate,
@@ -449,11 +480,15 @@ export default function HotelDetailScreen() {
 
             <Pressable
               style={styles.primaryBtn}
-              onPress={handleCheckAvailability}
+              onPress={priceBreakdown && !bookingError ? continueToCheckout : handleCheckAvailability}
               disabled={checkingAvailability}
             >
               <Text style={styles.primaryBtnText}>
-                {checkingAvailability ? 'Checking…' : 'Check availability'}
+                {checkingAvailability
+                  ? 'Checking…'
+                  : priceBreakdown && !bookingError
+                    ? 'Continue to book'
+                    : 'Check availability'}
               </Text>
             </Pressable>
           </Pressable>
