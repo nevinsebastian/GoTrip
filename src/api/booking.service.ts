@@ -12,6 +12,12 @@ import type {
   InitiatePaymentRequest,
   InitiatePaymentResponse,
 } from './types';
+import {
+  buildHoldPayload,
+  normalizeHoldResponse,
+  normalizeInitiateResponse,
+  sleep,
+} from '@/src/utils/bookingPayment';
 
 export async function createBooking(
   payload: CreateBookingRequest,
@@ -39,9 +45,26 @@ function resolveBookingOffset(params: BrowseBookingsParams, limit: number): numb
 export async function checkAvailability(
   payload: CheckAvailabilityRequest,
 ): Promise<CheckAvailabilityResponse> {
+  const body: Record<string, unknown> = {
+    entityType: payload.entityType,
+    entityId: payload.entityId,
+    checkIn: payload.checkIn,
+    adults: Math.max(1, payload.adults),
+  };
+  if (payload.checkOut) body.checkOut = payload.checkOut;
+  if (payload.infants != null && payload.infants > 0) body.infants = payload.infants;
+  if (payload.unitsBooked != null && payload.unitsBooked > 0) {
+    body.unitsBooked = payload.unitsBooked;
+  }
+  if (payload.mealPlanId) body.mealPlanId = payload.mealPlanId;
+  if (payload.couponCode?.trim()) body.couponCode = payload.couponCode.trim();
+  if (payload.slotId) body.slotId = payload.slotId;
+  if (payload.glampingSiteId) body.glampingSiteId = payload.glampingSiteId;
+  if (payload.roomTypeId) body.roomTypeId = payload.roomTypeId;
+
   const response = await apiClient.post<CheckAvailabilityResponse>(
     ENDPOINTS.bookings.checkAvailability,
-    payload,
+    body,
   );
   return response.data;
 }
@@ -50,43 +73,55 @@ export async function checkAvailability(
 export const checkHotelAvailability = checkAvailability;
 
 export async function holdBooking(payload: BookingHoldRequest): Promise<BookingHoldResponse> {
-  const response = await apiClient.post<BookingHoldResponse>(ENDPOINTS.bookings.hold, payload);
-  return response.data;
+  const response = await apiClient.post(ENDPOINTS.bookings.hold, buildHoldPayload(payload));
+  return normalizeHoldResponse(response.data);
 }
 
 export async function initiatePayment(
   payload: InitiatePaymentRequest,
 ): Promise<InitiatePaymentResponse> {
-  const response = await apiClient.post<InitiatePaymentResponse>(
-    ENDPOINTS.payments.initiate,
-    payload,
-  );
-  const raw = response.data;
-  const razorpay = raw?.razorpayOrder;
-  const data =
-    raw?.data ??
-    (razorpay?.id && razorpay.key
-      ? {
-          order_id: razorpay.id,
-          amount: razorpay.amount,
-          currency: razorpay.currency ?? 'INR',
-          key_id: razorpay.key,
-          booking_id: payload.bookingId,
-        }
-      : undefined);
+  const response = await apiClient.post(ENDPOINTS.payments.initiate, {
+    bookingId: payload.bookingId,
+  });
+  return normalizeInitiateResponse(response.data, payload.bookingId);
+}
 
-  return {
-    ...raw,
-    data: data
-      ? {
-          order_id: data.order_id,
-          amount: data.amount,
-          currency: data.currency ?? 'INR',
-          key_id: data.key_id,
-          booking_id: data.booking_id ?? payload.bookingId,
-        }
-      : undefined,
-  };
+/**
+ * Confirmation is webhook-driven — poll GET /bookings/my/{id} until confirmed
+ * (or timeout / failed / cancelled).
+ */
+export async function waitForBookingConfirmation(
+  bookingId: string,
+  options?: { timeoutMs?: number; intervalMs?: number },
+): Promise<Booking> {
+  const timeoutMs = options?.timeoutMs ?? 45_000;
+  const intervalMs = options?.intervalMs ?? 2_000;
+  const started = Date.now();
+  let last: Booking | null = null;
+
+  while (Date.now() - started < timeoutMs) {
+    last = await fetchBookingById(bookingId);
+    const status = (last.status ?? '').toLowerCase();
+    if (status === 'confirmed' || status === 'completed' || status === 'checked_in') {
+      return last;
+    }
+    if (
+      status === 'cancelled' ||
+      status === 'failed' ||
+      status === 'expired' ||
+      status === 'no_show'
+    ) {
+      throw Object.assign(new Error(`Booking ${status}`), {
+        statusCode: 400,
+        details: last,
+      });
+    }
+    await sleep(intervalMs);
+  }
+
+  // Soft success: payment captured client-side; webhook may still be catching up.
+  if (last) return last;
+  return fetchBookingById(bookingId);
 }
 
 export async function fetchMyBookings(
@@ -108,8 +143,8 @@ export async function fetchMyBookings(
     message: payload?.message ?? '',
     data: data.map((b) => ({
       ...b,
-      start_date: b.start_date ?? b.check_in ?? '',
-      end_date: b.end_date ?? b.check_out ?? '',
+      start_date: b.start_date ?? b.check_in ?? b.checkIn ?? '',
+      end_date: b.end_date ?? b.check_out ?? b.checkOut ?? '',
       guests: b.guests ?? b.adults ?? 1,
     })),
     meta: payload?.meta ?? { limit, total: data.length, offset },
@@ -121,7 +156,7 @@ export async function fetchBookingById(id: string): Promise<Booking> {
     ENDPOINTS.bookings.detail(id),
   );
   const payload = response.data;
-  const booking = payload?.data ?? payload?.booking;
+  const booking = payload?.data ?? payload?.booking ?? (payload as unknown as Booking);
   if (!booking?.id) throw new Error('Booking not found');
   return booking;
 }

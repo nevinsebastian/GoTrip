@@ -7,9 +7,10 @@ import { useCheckAvailability, useEntityAvailability } from '@/src/hooks/useEnti
 import { useActivityDetail, useGlampingDetail } from '@/src/hooks/useCategoryListing';
 import { useHotelDetail } from '@/src/hooks/useHotelDetail';
 import { usePackageDetailData } from '@/src/hooks/usePackageUser';
-import { useVerifyPayment } from '@/src/hooks/useVerifyPayment';
+import { useConfirmBookingPayment } from '@/src/hooks/useConfirmBookingPayment';
 import { MobileBookingReviewScreen } from '@/src/screens/MobileBookingReviewScreen';
 import { formatPriceBreakdownTotal } from '@/src/utils/availabilityCalendar';
+import { isUuid } from '@/src/utils/bookingPayment';
 import {
   mapActivityDetailToBookingEntity,
   mapGlampingDetailToBookingEntity,
@@ -18,9 +19,11 @@ import {
   supportsCheckAvailability,
 } from '@/src/utils/mapBookingEntity';
 import { getErrorMessage } from '@/src/utils/errorHandler';
+import { useResponsive } from '@/components/ui/useResponsive';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
-import { View } from 'react-native';
+import { ActivityIndicator, Platform, View } from 'react-native';
+import { colors } from '@/constants/DesignTokens';
 
 import { FIGMA_PROPERTY } from '@/src/components/resort/resortConstants';
 import { FIGMA_PACKAGE_DETAIL } from '@/src/constants/packageDetailConstants';
@@ -36,6 +39,9 @@ function paramStr(v: string | string[] | undefined): string | undefined {
 }
 
 export default function BookingReviewRoute() {
+  const { isDesktop } = useResponsive();
+  const isDesktopWeb = Platform.OS === 'web' && isDesktop;
+
   const params = useLocalSearchParams<{
     listingId?: string;
     imageUri?: string;
@@ -49,8 +55,71 @@ export default function BookingReviewRoute() {
     title?: string;
     checkIn?: string;
     checkOut?: string;
+    adults?: string;
+    children?: string;
+    infants?: string;
+    roomName?: string;
   }>();
 
+  const listingId = paramStr(params.listingId);
+  const imageUriParam = paramStr(params.imageUri);
+  const listingTypeParam = (paramStr(params.listingType) ?? 'hotel') as ListingKind;
+
+  // Desktop hotels use /booking/confirm (Figma) — never the mobile review sheet.
+  useEffect(() => {
+    if (!isDesktopWeb || !listingId) return;
+    if (listingTypeParam !== 'hotel') return;
+    router.replace({
+      pathname: '/booking/confirm',
+      params: {
+        listingId,
+        listingType: 'hotel',
+        imageUri: imageUriParam ?? '',
+        title: paramStr(params.title) ?? '',
+        roomName: paramStr(params.roomName) ?? '',
+        checkIn: paramStr(params.checkIn) ?? '',
+        checkOut: paramStr(params.checkOut) ?? '',
+        entityType: paramStr(params.entityType) ?? 'room_type',
+        entityId: paramStr(params.entityId) ?? '',
+        mealPlanId: paramStr(params.mealPlanId) ?? '',
+        adults: paramStr(params.adults) ?? '2',
+        children: paramStr(params.children) ?? '0',
+        infants: paramStr(params.infants) ?? '0',
+      },
+    });
+  }, [
+    isDesktopWeb,
+    listingId,
+    listingTypeParam,
+    imageUriParam,
+    params.title,
+    params.roomName,
+    params.checkIn,
+    params.checkOut,
+    params.entityType,
+    params.entityId,
+    params.mealPlanId,
+    params.adults,
+    params.children,
+    params.infants,
+  ]);
+
+  if (isDesktopWeb && listingTypeParam === 'hotel') {
+    return (
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+        <ActivityIndicator color={colors.accent.main} />
+      </View>
+    );
+  }
+
+  return <BookingReviewMobileContent params={params} />;
+}
+
+function BookingReviewMobileContent({
+  params,
+}: {
+  params: Record<string, string | string[] | undefined>;
+}) {
   const listingId = paramStr(params.listingId);
   const imageUriParam = paramStr(params.imageUri);
   const listingTypeParam = (paramStr(params.listingType) ?? 'hotel') as ListingKind;
@@ -181,7 +250,7 @@ export default function BookingReviewRoute() {
   const { mutate: checkAvailabilityMut, isPending: isChecking } = useCheckAvailability();
   const { mutate: holdBookingMut, isPending: isHoldingBooking } = useHoldBooking();
   const { mutate: initiatePaymentMut, isPending: isInitiatingPayment } = useInitiatePayment();
-  const { mutate: verifyPaymentMut } = useVerifyPayment();
+  const { mutate: confirmBookingMut } = useConfirmBookingPayment();
 
   useEffect(() => {
     let mounted = true;
@@ -257,24 +326,28 @@ export default function BookingReviewRoute() {
         checkIn,
         checkOut: isActivity ? undefined : checkOut,
         adults: Math.max(1, guests.adults),
-        children: guests.children || undefined,
         infants: guests.infants || undefined,
         unitsBooked: resolvedEntity.unitsBooked ?? 1,
-        mealPlanId: resolvedEntity.mealPlanId,
-        activitySlotId: resolvedEntity.activitySlotId,
+        mealPlanId:
+          resolvedEntity.mealPlanId && isUuid(resolvedEntity.mealPlanId)
+            ? resolvedEntity.mealPlanId
+            : undefined,
+        activitySlotId:
+          resolvedEntity.activitySlotId && isUuid(resolvedEntity.activitySlotId)
+            ? resolvedEntity.activitySlotId
+            : undefined,
         guests: [
           {
             fullName: 'Guest',
             age: 30,
-            isPrimary: true,
           },
         ],
       },
       {
         onSuccess: (holdRes) => {
           const bookingId = holdRes.bookingId ?? holdRes.booking?.id;
-          if (!holdRes.success || !bookingId) {
-            setErrorMessage('Failed to hold booking.');
+          if (!bookingId || !isUuid(bookingId)) {
+            setErrorMessage('Failed to hold booking — missing booking id.');
             return;
           }
           const paidLabel = formatPriceBreakdownTotal(
@@ -288,7 +361,7 @@ export default function BookingReviewRoute() {
             {
               onSuccess: (payRes) => {
                 const d = payRes?.data;
-                if (!payRes?.success || !d?.order_id || !d?.key_id) {
+                if (!d?.order_id || !d?.key_id) {
                   setErrorMessage(payRes?.message ?? 'Failed to initiate payment.');
                   return;
                 }
@@ -299,7 +372,9 @@ export default function BookingReviewRoute() {
           );
         },
         onError: (err) => {
-          const status = (err as { status?: number })?.status;
+          const status =
+            (err as { statusCode?: number; status?: number })?.statusCode ??
+            (err as { status?: number })?.status;
           if (status === 409) {
             setErrorMessage('Dates are no longer available. Please pick different dates.');
             return;
@@ -427,54 +502,64 @@ export default function BookingReviewRoute() {
           });
         }}
         onSuccess={(payload) => {
-          verifyPaymentMut(
+          const bookingId = paymentOrder?.booking_id;
+          if (!bookingId) {
+            setPaymentVisible(false);
+            setPaymentResult({
+              status: 'failed',
+              title,
+              errorMessage: 'Missing booking id after payment.',
+            });
+            return;
+          }
+
+          confirmBookingMut(
+            { bookingId },
             {
-              razorpay_order_id: payload.razorpay_order_id,
-              razorpay_payment_id: payload.razorpay_payment_id,
-              razorpay_signature: payload.razorpay_signature,
-            },
-            {
-              onSuccess: (res) => {
+              onSuccess: () => {
                 setPaymentVisible(false);
-                if (res?.success) {
-                  setPaymentResult({
-                    status: 'success',
-                    bookingId: paymentOrder?.booking_id,
-                    title,
-                    datesLabel:
-                      lastBookingMeta
-                        ? `${lastBookingMeta.checkIn} to ${lastBookingMeta.checkOut}`
-                        : undefined,
-                    guestsLabel: lastBookingMeta?.guestsLabel,
-                    totalLabel: lastBookingMeta?.totalLabel,
-                  });
-                  return;
-                }
                 setPaymentResult({
-                  status: 'failed',
-                  bookingId: paymentOrder?.booking_id,
+                  status: 'success',
+                  bookingId,
                   title,
-                  datesLabel:
-                    lastBookingMeta
-                      ? `${lastBookingMeta.checkIn} to ${lastBookingMeta.checkOut}`
-                      : undefined,
+                  datesLabel: lastBookingMeta
+                    ? `${lastBookingMeta.checkIn} to ${lastBookingMeta.checkOut}`
+                    : undefined,
                   guestsLabel: lastBookingMeta?.guestsLabel,
                   totalLabel: lastBookingMeta?.totalLabel,
-                  errorMessage: res?.message ?? 'Payment verification failed.',
                 });
               },
               onError: (err) => {
-                setPaymentResult({
-                  status: 'failed',
-                  bookingId: paymentOrder?.booking_id,
-                  title,
-                  datesLabel:
-                    lastBookingMeta
+                const msg = getErrorMessage(err);
+                setPaymentVisible(false);
+                if (
+                  msg.toLowerCase().includes('cancelled') ||
+                  msg.toLowerCase().includes('failed') ||
+                  msg.toLowerCase().includes('expired')
+                ) {
+                  setPaymentResult({
+                    status: 'failed',
+                    bookingId,
+                    title,
+                    datesLabel: lastBookingMeta
                       ? `${lastBookingMeta.checkIn} to ${lastBookingMeta.checkOut}`
                       : undefined,
+                    guestsLabel: lastBookingMeta?.guestsLabel,
+                    totalLabel: lastBookingMeta?.totalLabel,
+                    errorMessage: msg,
+                  });
+                  return;
+                }
+                // Webhook may still be processing — show success with booking id.
+                setPaymentResult({
+                  status: 'success',
+                  bookingId,
+                  title,
+                  datesLabel: lastBookingMeta
+                    ? `${lastBookingMeta.checkIn} to ${lastBookingMeta.checkOut}`
+                    : undefined,
                   guestsLabel: lastBookingMeta?.guestsLabel,
                   totalLabel: lastBookingMeta?.totalLabel,
-                  errorMessage: getErrorMessage(err),
                 });
               },
             },
@@ -482,19 +567,31 @@ export default function BookingReviewRoute() {
         }}
       />
 
-      <MobileBookingReviewScreen
-        imageUri={carouselImage}
-        listingType={listingTypeParam}
-        propertyTitle={title}
-        fixedCheckIn={fixedCheckIn}
-        fixedCheckOut={fixedCheckOut}
-        disabledDates={disabledDates}
-        availabilityLoading={availabilityLoading}
-        pricePreviewLabel={pricePreviewLabel}
-        onConfirm={handleConfirm}
-        isSubmitting={isSubmitting}
-        errorMessage={errorMessage}
-      />
+      <View
+        style={{
+          flex: 1,
+          maxWidth: Platform.OS === 'web' ? 480 : undefined,
+          width: '100%',
+          alignSelf: 'center',
+        }}
+      >
+        <MobileBookingReviewScreen
+          imageUri={carouselImage}
+          listingType={listingTypeParam}
+          propertyTitle={title}
+          fixedCheckIn={fixedCheckIn}
+          fixedCheckOut={fixedCheckOut}
+          disabledDates={disabledDates}
+          availabilityLoading={availabilityLoading}
+          pricePreviewLabel={pricePreviewLabel}
+          initialAdults={Number(paramStr(params.adults)) || undefined}
+          initialChildren={Number(paramStr(params.children)) || undefined}
+          initialInfants={Number(paramStr(params.infants)) || undefined}
+          onConfirm={handleConfirm}
+          isSubmitting={isSubmitting}
+          errorMessage={errorMessage}
+        />
+      </View>
     </View>
   );
 }

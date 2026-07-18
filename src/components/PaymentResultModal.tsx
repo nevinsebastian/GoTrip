@@ -4,7 +4,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@/components/ui';
 import { borderRadius, colors, spacing } from '@/constants/DesignTokens';
 import { useResponsive } from '@/components/ui/useResponsive';
-import { useListings } from '@/src/hooks/useListings';
+import { browseHotels } from '@/src/api/hotel.service';
+import { mapHotelToListing } from '@/src/utils/mapHotelToListing';
+import { useQuery } from '@tanstack/react-query';
 import type { ListingMedia } from '@/src/api/types';
 import { router } from 'expo-router';
 import TicketsIcon from '@/assets/images/tickets.svg';
@@ -45,8 +47,13 @@ export function PaymentResultModal({
   const { width, isMobile, isTablet } = useResponsive();
   const contentPadding = isMobile ? spacing['4'] : isTablet ? spacing['5'] : spacing['6'];
 
-  const { data: exploreRes } = useListings({ page: 1, limit: 20 }, visible);
-  const exploreListings = (exploreRes?.data ?? []).slice(0, 6);
+  const { data: hotelsRes } = useQuery({
+    queryKey: ['payment-result-hotels'],
+    queryFn: () => browseHotels({ limit: 20, offset: 0 }),
+    enabled: visible,
+    staleTime: 60_000,
+  });
+  const exploreListings = (hotelsRes?.data ?? []).map(mapHotelToListing).slice(0, 6);
 
   const getPrimaryImage = (media?: ListingMedia[]) => {
     if (!media?.length) return null;

@@ -1133,13 +1133,17 @@ export type BookingStatus =
 
 export interface Booking {
   id: string;
+  bookingRef?: string;
   user_id?: string;
-  listing_id: string;
-  start_date: string;
-  end_date: string;
+  listing_id?: string;
+  listingId?: string;
+  start_date?: string;
+  end_date?: string;
   check_in?: string;
   check_out?: string;
-  guests: number;
+  checkIn?: string;
+  checkOut?: string;
+  guests?: number;
   adults?: number;
   infants?: number;
   rooms?: number;

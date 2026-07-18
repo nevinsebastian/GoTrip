@@ -65,15 +65,40 @@ export function DesktopSearchListingDetail({
       checkOut: string | null;
     }) => {
       const packageDates = tab === 'packages' ? getPackageFixedDates(listing.id) : null;
+      const checkIn = details.checkIn ?? packageDates?.startDate ?? searchParams?.checkIn ?? '';
+      const checkOut = details.checkOut ?? packageDates?.endDate ?? searchParams?.checkOut ?? '';
+
+      // Desktop hotels use confirm-dates flow (not mobile review).
+      if (tab === 'hotels') {
+        router.push({
+          pathname: '/booking/confirm',
+          params: {
+            listingId: listing.id,
+            listingType: 'hotel',
+            title: listing.title,
+            checkIn,
+            checkOut,
+          },
+        });
+        return;
+      }
+
       router.push({
         pathname: '/booking/review',
         params: {
           listingId: listing.id,
-          ...(tab === 'packages' ? { listingType: 'package' } : {}),
+          listingType:
+            tab === 'packages'
+              ? 'package'
+              : tab === 'glamping'
+                ? 'glamping'
+                : tab === 'activities'
+                  ? 'activity'
+                  : 'hotel',
           title: listing.title,
           price: priceFromMeta,
-          checkIn: details.checkIn ?? packageDates?.startDate ?? searchParams?.checkIn ?? '',
-          checkOut: details.checkOut ?? packageDates?.endDate ?? searchParams?.checkOut ?? '',
+          checkIn,
+          checkOut,
         },
       });
     },

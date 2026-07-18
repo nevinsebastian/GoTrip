@@ -20,8 +20,9 @@ export const ENDPOINTS = {
     details: (id: string) => `/api/v1/trips/${id}`,
   },
   user: {
-    profile: '/api/v1/users/me',
-    updateProfile: '/api/v1/users/me',
+    /** Current user — GET /auth/me (OpenAPI). Legacy /users/me returns 403. */
+    profile: '/api/v1/auth/me',
+    updateProfile: '/api/v1/users/me/profile',
   },
   categories: {
     root: '/api/v1/categories',

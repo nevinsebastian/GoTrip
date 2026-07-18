@@ -27,6 +27,9 @@ type MobileBookingReviewScreenProps = {
   disabledDates?: Set<string>;
   availabilityLoading?: boolean;
   pricePreviewLabel?: string | null;
+  initialAdults?: number;
+  initialChildren?: number;
+  initialInfants?: number;
   onConfirm: (payload: {
     checkIn: string;
     checkOut: string;
@@ -168,6 +171,9 @@ export function MobileBookingReviewScreen({
   onConfirm,
   isSubmitting,
   errorMessage,
+  initialAdults,
+  initialChildren,
+  initialInfants,
 }: MobileBookingReviewScreenProps) {
   const { s } = useHomeScale();
   const insets = useSafeAreaInsets();
@@ -193,9 +199,9 @@ export function MobileBookingReviewScreen({
   );
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [guests, setGuests] = useState<GuestCounts>({
-    adults: FIGMA_BOOKING.defaultAdults,
-    children: FIGMA_BOOKING.defaultChildren,
-    infants: FIGMA_BOOKING.defaultInfants,
+    adults: initialAdults ?? FIGMA_BOOKING.defaultAdults,
+    children: initialChildren ?? FIGMA_BOOKING.defaultChildren,
+    infants: initialInfants ?? FIGMA_BOOKING.defaultInfants,
   });
 
   useEffect(() => {

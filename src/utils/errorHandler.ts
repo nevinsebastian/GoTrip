@@ -20,15 +20,32 @@ export const normalizeApiError = (error: unknown): APIError => {
 
     const fieldDetails = Array.isArray(data?.details) ? data.details : null;
     const firstFieldError = fieldDetails?.find(
-      (item) => item && typeof item === 'object' && 'msg' in item,
+      (item: unknown) => item && typeof item === 'object' && 'msg' in (item as object),
     ) as { path?: string; msg?: string } | undefined;
+
+    const detailsMessage =
+      typeof data?.details === 'string'
+        ? data.details
+        : Array.isArray(data?.errors) && data.errors.length
+          ? data.errors
+              .map((e: unknown) =>
+                typeof e === 'string'
+                  ? e
+                  : e && typeof e === 'object' && 'message' in e
+                    ? String((e as { message: unknown }).message)
+                    : null,
+              )
+              .filter(Boolean)
+              .join('; ')
+          : undefined;
 
     const apiError: APIError = {
       message:
         (data?.message as string) ||
         (firstFieldError?.path && firstFieldError?.msg
           ? `${firstFieldError.path}: ${firstFieldError.msg}`
-          : undefined) ||
+          : firstFieldError?.msg) ||
+        detailsMessage ||
         (data?.error as string) ||
         `Request failed with status ${status}`,
       statusCode: status,

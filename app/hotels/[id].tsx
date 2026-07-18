@@ -186,12 +186,12 @@ export default function HotelDetailScreen() {
       router.push('/login');
       return;
     }
-    if (searchParams?.checkIn && !checkInDate) {
-      setCheckInDate(searchParams.checkIn);
-      setCheckOutDate(searchParams.checkOut ?? null);
-    }
+    const entity = hotel ? getBookingEntity(hotel, selectedRoomTypeId) : null;
+    const checkIn = checkInDate ?? searchParams?.checkIn ?? '';
+    const checkOut = checkOutDate ?? searchParams?.checkOut ?? '';
+    const room = roomTypes.find((r) => r.id === (selectedRoomTypeId ?? entity?.entityId));
+
     if (!isDesktopWeb) {
-      const entity = hotel ? getBookingEntity(hotel, selectedRoomTypeId) : null;
       router.push({
         pathname: '/booking/review',
         params: {
@@ -199,8 +199,8 @@ export default function HotelDetailScreen() {
           listingType: 'hotel',
           imageUri: carouselImages[0] ?? '',
           title: hotel?.title ?? '',
-          checkIn: checkInDate ?? '',
-          checkOut: checkOutDate ?? '',
+          checkIn,
+          checkOut,
           entityType: entity?.entityType ?? 'room_type',
           entityId: entity?.entityId ?? '',
           mealPlanId: selectedMealPlanId ?? '',
@@ -208,8 +208,25 @@ export default function HotelDetailScreen() {
       });
       return;
     }
-    setDateModalStep('dates');
-    setDateModalVisible(true);
+
+    router.push({
+      pathname: '/booking/confirm',
+      params: {
+        listingId: hotelId ?? '',
+        listingType: 'hotel',
+        imageUri: carouselImages[0] ?? '',
+        title: hotel?.title ?? '',
+        roomName: room?.name ?? '',
+        checkIn,
+        checkOut,
+        entityType: entity?.entityType ?? 'room_type',
+        entityId: entity?.entityId ?? '',
+        mealPlanId: selectedMealPlanId ?? '',
+        adults: String(adultsCount),
+        children: String(childrenCount),
+        infants: String(infantsCount),
+      },
+    });
   };
 
   const continueToCheckout = () => {
@@ -220,19 +237,23 @@ export default function HotelDetailScreen() {
       return;
     }
     closeDateModal();
+    const room = roomTypes.find((r) => r.id === (selectedRoomTypeId ?? entityId));
     router.push({
-      pathname: '/booking/review',
+      pathname: isDesktopWeb ? '/booking/confirm' : '/booking/review',
       params: {
         listingId: hotelId,
         listingType: 'hotel',
         imageUri: carouselImages[0] ?? '',
         title: hotel.title,
+        roomName: room?.name ?? '',
         checkIn: checkInDate,
         checkOut: checkOutDate,
         entityType,
         entityId,
         mealPlanId: selectedMealPlanId ?? '',
         adults: String(adultsCount),
+        children: String(childrenCount),
+        infants: String(infantsCount),
       },
     });
   };
