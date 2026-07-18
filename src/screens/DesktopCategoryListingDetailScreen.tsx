@@ -135,6 +135,7 @@ export function DesktopCategoryListingDetailScreen({
   bookingFocus,
 }: DesktopCategoryListingDetailScreenProps) {
   const copy = copyForTab(tab, title, priceLabel, display);
+  const bookLabel = isLoggedIn === false ? 'Login' : copy.primaryButtons.book;
 
   return (
     <View style={styles.pageRoot}>
@@ -237,7 +238,7 @@ export function DesktopCategoryListingDetailScreen({
                   <Text style={styles.outlineBtnText}>{copy.primaryButtons.contact}</Text>
                 </Pressable>
                 <Pressable style={styles.bookBtn} onPress={onBookNow}>
-                  <Text style={styles.bookBtnText}>{copy.primaryButtons.book}</Text>
+                  <Text style={styles.bookBtnText}>{bookLabel}</Text>
                 </Pressable>
               </View>
             </View>

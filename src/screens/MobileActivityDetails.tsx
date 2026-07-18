@@ -48,11 +48,17 @@ const ACTIVITY_REVIEWS = [
 export type MobileActivityDetailsProps = {
   onBookNow: () => void;
   display?: CategoryDetailDisplay;
+  bookCtaLabel?: string;
 };
 
-export function MobileActivityDetailsScreen({ onBookNow, display }: MobileActivityDetailsProps) {
+export function MobileActivityDetailsScreen({
+  onBookNow,
+  display,
+  bookCtaLabel,
+}: MobileActivityDetailsProps) {
   const { s } = useHomeScale();
   const detailContent = mergeActivityDetailContent(display);
+  const bookLabel = bookCtaLabel ?? detailContent.primaryButtons.book;
   const apiReviews = reviewsFromDisplay(display);
   const reviewItems = apiReviews ?? ACTIVITY_REVIEWS;
   const [carouselIndex, setCarouselIndex] = useState(0);
@@ -241,7 +247,7 @@ export function MobileActivityDetailsScreen({ onBookNow, display }: MobileActivi
                 style={[styles.bookBtn, { height: s(36), borderRadius: s(100), paddingHorizontal: s(12) }]}
                 onPress={onBookNow}
               >
-                <Text style={[styles.bookText, { fontSize: s(12) }]}>{detailContent.primaryButtons.book}</Text>
+                <Text style={[styles.bookText, { fontSize: s(12) }]}>{bookLabel}</Text>
               </Pressable>
             </View>
           </View>
@@ -450,7 +456,7 @@ export function MobileActivityDetailsScreen({ onBookNow, display }: MobileActivi
                 style={[styles.bookBtn, { height: s(36), borderRadius: s(100), paddingHorizontal: s(12) }]}
                 onPress={onBookNow}
               >
-                <Text style={[styles.bookText, { fontSize: s(12) }]}>{detailContent.primaryButtons.book}</Text>
+                <Text style={[styles.bookText, { fontSize: s(12) }]}>{bookLabel}</Text>
               </Pressable>
             </View>
           </View>

@@ -37,6 +37,10 @@ export default function PackageDetailsScreen() {
 
   const goToBooking = useCallback(
     (checkIn: string, checkOut: string) => {
+      if (!isLoggedIn) {
+        router.push('/login');
+        return;
+      }
       router.push({
         pathname: '/booking/review',
         params: {
@@ -50,7 +54,15 @@ export default function PackageDetailsScreen() {
         },
       });
     },
-    [display?.packageEntityId, display?.priceLabel, display?.title, listingId, params.price, params.title],
+    [
+      display?.packageEntityId,
+      display?.priceLabel,
+      display?.title,
+      isLoggedIn,
+      listingId,
+      params.price,
+      params.title,
+    ],
   );
 
   const openEnquiry = useCallback(() => {
@@ -123,7 +135,18 @@ export default function PackageDetailsScreen() {
             title={display?.title ?? params.title}
             priceLabel={display?.priceLabel ?? params.price}
             display={display}
-            onBookNow={isEnquiryOnly ? openEnquiry : openDateModal}
+            onBookNow={() => {
+              if (!isLoggedIn) {
+                router.push('/login');
+                return;
+              }
+              if (isEnquiryOnly) {
+                openEnquiry();
+                return;
+              }
+              openDateModal();
+            }}
+            isLoggedIn={isLoggedIn}
             bookingFocus={bookingFocus}
           />
         </View>
@@ -133,6 +156,13 @@ export default function PackageDetailsScreen() {
             listingId={listingId}
             display={display}
             onBookNow={onBookNowMobile}
+            bookCtaLabel={
+              isLoggedIn
+                ? isEnquiryOnly
+                  ? 'Send Enquiry'
+                  : 'Book Now'
+                : 'Login'
+            }
           />
         </View>
       )}

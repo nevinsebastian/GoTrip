@@ -25,6 +25,7 @@ type ResortRoomCardProps = {
   selected?: boolean;
   onBookNow: () => void;
   onWishlist?: () => void;
+  bookCtaLabel?: string;
 };
 
 export function ResortRoomCard({
@@ -39,6 +40,7 @@ export function ResortRoomCard({
   selected = false,
   onBookNow,
   onWishlist,
+  bookCtaLabel = 'Book Now',
 }: ResortRoomCardProps) {
   const { s } = useHomeScale();
   const showAmenities = variant !== 'compact';
@@ -183,7 +185,7 @@ export function ResortRoomCard({
           style={[styles.bookBtn, { height: s(42), borderRadius: s(9999), flex: 1 }]}
           onPress={onBookNow}
         >
-          <Text style={[styles.bookBtnText, { fontSize: s(14) }]}>Book Now</Text>
+          <Text style={[styles.bookBtnText, { fontSize: s(14) }]}>{bookCtaLabel}</Text>
         </Pressable>
       </View>
     </View>

@@ -233,6 +233,7 @@ function BookingReviewMobileContent({
     totalLabel: string;
   } | null>(null);
   const paymentInFlight = useRef(false);
+  const paymentOutcomeRef = useRef<'idle' | 'success' | 'failed'>('idle');
 
   const calendarEntityType = resolvedEntity?.entityType;
   const calendarEntityId = resolvedEntity?.entityId;
@@ -289,6 +290,7 @@ function BookingReviewMobileContent({
     meta: { checkIn: string; checkOut: string; guestsLabel: string; totalLabel: string },
   ) => {
     setLastBookingMeta(meta);
+    paymentOutcomeRef.current = 'idle';
     setPaymentOrder({
       order_id: orderData.order_id,
       amount: orderData.amount,
@@ -364,11 +366,20 @@ function BookingReviewMobileContent({
         const status =
           (err as { statusCode?: number; status?: number })?.statusCode ??
           (err as { status?: number })?.status;
-        if (status === 409) {
-          setErrorMessage('Dates are no longer available. Please pick different dates.');
-        } else {
-          setErrorMessage(friendlyPaymentError(getErrorMessage(err)));
-        }
+        const msg =
+          status === 409
+            ? 'Dates are no longer available. Please pick different dates.'
+            : friendlyPaymentError(getErrorMessage(err));
+        setErrorMessage(msg);
+        setLastBookingMeta(meta);
+        setPaymentResult({
+          status: 'failed',
+          title,
+          datesLabel: `${meta.checkIn} to ${meta.checkOut}`,
+          guestsLabel: meta.guestsLabel,
+          totalLabel: meta.totalLabel,
+          errorMessage: msg,
+        });
       } finally {
         paymentInFlight.current = false;
         setIsHoldingAndPaying(false);
@@ -474,7 +485,22 @@ function BookingReviewMobileContent({
         visible={paymentVisible && Boolean(paymentOrder)}
         onClose={() => {
           setPaymentVisible(false);
-          setPaymentOrder(null);
+          // Razorpay also calls onClose after success/error — don't overwrite those.
+          if (paymentOutcomeRef.current !== 'idle') return;
+          paymentOutcomeRef.current = 'failed';
+          const order = paymentOrder;
+          setPaymentResult({
+            status: 'failed',
+            bookingId: order?.booking_id,
+            title,
+            datesLabel: lastBookingMeta
+              ? `${lastBookingMeta.checkIn} to ${lastBookingMeta.checkOut}`
+              : undefined,
+            guestsLabel: lastBookingMeta?.guestsLabel,
+            totalLabel: lastBookingMeta?.totalLabel,
+            errorMessage:
+              'Your payment transaction was unsuccessful. Please contact our help center for further assistance, or retry payment. You can also return to the homepage.',
+          });
         }}
         keyId={paymentOrder?.key_id ?? ''}
         orderId={paymentOrder?.order_id ?? ''}
@@ -483,6 +509,7 @@ function BookingReviewMobileContent({
         name="GoTrip"
         description={title}
         onError={(msg) => {
+          paymentOutcomeRef.current = 'failed';
           setPaymentVisible(false);
           setPaymentResult({
             status: 'failed',
@@ -495,10 +522,14 @@ function BookingReviewMobileContent({
             errorMessage: msg,
           });
         }}
-        onSuccess={(payload) => {
+        onSuccess={() => {
           const bookingId = paymentOrder?.booking_id;
+          // Mark success immediately so Razorpay's follow-up onClose doesn't show fail.
+          paymentOutcomeRef.current = 'success';
+          setPaymentVisible(false);
+
           if (!bookingId) {
-            setPaymentVisible(false);
+            paymentOutcomeRef.current = 'failed';
             setPaymentResult({
               status: 'failed',
               title,
@@ -507,30 +538,29 @@ function BookingReviewMobileContent({
             return;
           }
 
+          setPaymentResult({
+            status: 'success',
+            bookingId,
+            title,
+            datesLabel: lastBookingMeta
+              ? `${lastBookingMeta.checkIn} to ${lastBookingMeta.checkOut}`
+              : undefined,
+            guestsLabel: lastBookingMeta?.guestsLabel,
+            totalLabel: lastBookingMeta?.totalLabel,
+          });
+
+          // Confirm in background; only flip to fail on hard booking failure.
           confirmBookingMut(
             { bookingId },
             {
-              onSuccess: () => {
-                setPaymentVisible(false);
-                setPaymentResult({
-                  status: 'success',
-                  bookingId,
-                  title,
-                  datesLabel: lastBookingMeta
-                    ? `${lastBookingMeta.checkIn} to ${lastBookingMeta.checkOut}`
-                    : undefined,
-                  guestsLabel: lastBookingMeta?.guestsLabel,
-                  totalLabel: lastBookingMeta?.totalLabel,
-                });
-              },
               onError: (err) => {
                 const msg = getErrorMessage(err);
-                setPaymentVisible(false);
                 if (
                   msg.toLowerCase().includes('cancelled') ||
                   msg.toLowerCase().includes('failed') ||
                   msg.toLowerCase().includes('expired')
                 ) {
+                  paymentOutcomeRef.current = 'failed';
                   setPaymentResult({
                     status: 'failed',
                     bookingId,
@@ -542,19 +572,7 @@ function BookingReviewMobileContent({
                     totalLabel: lastBookingMeta?.totalLabel,
                     errorMessage: msg,
                   });
-                  return;
                 }
-                // Webhook may still be processing — show success with booking id.
-                setPaymentResult({
-                  status: 'success',
-                  bookingId,
-                  title,
-                  datesLabel: lastBookingMeta
-                    ? `${lastBookingMeta.checkIn} to ${lastBookingMeta.checkOut}`
-                    : undefined,
-                  guestsLabel: lastBookingMeta?.guestsLabel,
-                  totalLabel: lastBookingMeta?.totalLabel,
-                });
               },
             },
           );

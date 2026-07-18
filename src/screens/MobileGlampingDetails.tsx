@@ -48,11 +48,17 @@ const GLAMPING_REVIEWS = [
 export type MobileGlampingDetailsProps = {
   onBookNow: () => void;
   display?: CategoryDetailDisplay;
+  bookCtaLabel?: string;
 };
 
-export function MobileGlampingDetailsScreen({ onBookNow, display }: MobileGlampingDetailsProps) {
+export function MobileGlampingDetailsScreen({
+  onBookNow,
+  display,
+  bookCtaLabel,
+}: MobileGlampingDetailsProps) {
   const { s } = useHomeScale();
   const detailContent = mergeGlampingDetailContent(display);
+  const bookLabel = bookCtaLabel ?? detailContent.primaryButtons.book;
   const reviewItems = reviewsFromDisplay(display) ?? GLAMPING_REVIEWS;
   const slides = carouselImagesFromDisplay(display);
   const [carouselIndex, setCarouselIndex] = useState(0);
@@ -238,7 +244,7 @@ export function MobileGlampingDetailsScreen({ onBookNow, display }: MobileGlampi
                 style={[styles.bookBtn, { height: s(36), borderRadius: s(100), paddingHorizontal: s(12) }]}
                 onPress={onBookNow}
               >
-                <Text style={[styles.bookText, { fontSize: s(12) }]}>{detailContent.primaryButtons.book}</Text>
+                <Text style={[styles.bookText, { fontSize: s(12) }]}>{bookLabel}</Text>
               </Pressable>
             </View>
           </View>

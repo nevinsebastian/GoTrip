@@ -82,13 +82,24 @@ export default function ActivityDetailsRoute() {
             title={display?.title ?? params.title}
             priceLabel={display?.priceLabel ?? params.price}
             display={display}
-            onBookNow={openDateModal}
+            onBookNow={() => {
+              if (!isLoggedIn) {
+                router.push('/login');
+                return;
+              }
+              openDateModal();
+            }}
+            isLoggedIn={isLoggedIn}
             bookingFocus={bookingFocus}
           />
         </View>
       ) : (
         <View style={{ flex: 1 }}>
-          <MobileActivityDetailsScreen display={display} onBookNow={onBookNowMobile} />
+          <MobileActivityDetailsScreen
+            display={display}
+            onBookNow={onBookNowMobile}
+            bookCtaLabel={isLoggedIn ? 'Book Now' : 'Login'}
+          />
         </View>
       )}
     </CategoryDetailRouteShell>

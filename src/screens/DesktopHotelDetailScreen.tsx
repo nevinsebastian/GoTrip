@@ -93,6 +93,7 @@ function DesktopRoomRow({
   variant,
   cancellationText,
   onBookNow,
+  bookCtaLabel = 'Book Now',
 }: {
   name: string;
   guests: number;
@@ -102,6 +103,7 @@ function DesktopRoomRow({
   variant: 'featured' | 'special' | 'breakfast' | 'compact';
   cancellationText?: string;
   onBookNow: () => void;
+  bookCtaLabel?: string;
 }) {
   const imgA = images[0];
   const imgB = images[1] ?? images[0];
@@ -183,7 +185,7 @@ function DesktopRoomRow({
             <Text style={styles.wishlistText}>Wishlist</Text>
           </Pressable>
           <Pressable style={styles.bookBtn} onPress={onBookNow}>
-            <Text style={styles.bookBtnText}>Book Now</Text>
+            <Text style={styles.bookBtnText}>{bookCtaLabel}</Text>
           </Pressable>
         </View>
       </View>
@@ -425,7 +427,7 @@ export function DesktopHotelDetailScreen({
                   onBookNow();
                 }}
               >
-                <Text style={styles.bookBtnText}>Book Now</Text>
+                <Text style={styles.bookBtnText}>{isLoggedIn ? 'Book Now' : 'Login'}</Text>
               </Pressable>
             </View>
           </View>
@@ -493,6 +495,7 @@ export function DesktopHotelDetailScreen({
                 onSelectRoom?.(room.id);
                 onBookNow();
               }}
+              bookCtaLabel={isLoggedIn ? 'Book Now' : 'Login'}
             />
           ))}
         </View>

@@ -60,6 +60,7 @@ export type MobilePackageDetailsProps = {
   priceLabel?: string;
   display?: CategoryDetailDisplay;
   onBookNow: () => void;
+  bookCtaLabel?: string;
 };
 
 function PriceActionBlock({
@@ -150,9 +151,14 @@ function PriceActionBlock({
   );
 }
 
-export function MobilePackageDetailsScreen({ listingId, onBookNow, display }: MobilePackageDetailsProps) {
+export function MobilePackageDetailsScreen({
+  listingId,
+  onBookNow,
+  display,
+  bookCtaLabel: bookCtaLabelProp,
+}: MobilePackageDetailsProps) {
   const detailContent = mergePackageDetailContent(display);
-  const bookCtaLabel = display?.bookCtaLabel ?? 'Book Now';
+  const bookCtaLabel = bookCtaLabelProp ?? display?.bookCtaLabel ?? 'Book Now';
   const carouselSlides = carouselImagesFromDisplay(display);
   const apiReviews = reviewsFromDisplay(display);
   const itineraryDays = display?.itineraries?.length

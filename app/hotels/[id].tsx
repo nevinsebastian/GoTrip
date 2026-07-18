@@ -368,6 +368,7 @@ export default function HotelDetailScreen() {
     reviews,
     relatedListings: related,
     onBookNow: openBookingFlow,
+    bookCtaLabel: isLoggedIn ? 'Book Now' : 'Login',
     onSelectRoom: (roomTypeId: string) => {
       setSelectedRoomTypeId(roomTypeId);
       const room = roomTypes.find((r) => r.id === roomTypeId);

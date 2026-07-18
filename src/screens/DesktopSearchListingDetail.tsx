@@ -107,6 +107,15 @@ export function DesktopSearchListingDetail({
 
   const { openDateModal, bookingFocus } = useDesktopBookingFocus({ onGuestSave });
 
+  const handleBookNow = useCallback(() => {
+    if (!isLoggedIn) {
+      onLoginPress?.();
+      if (!onLoginPress) router.push('/login');
+      return;
+    }
+    openDateModal();
+  }, [isLoggedIn, onLoginPress, openDateModal]);
+
   if (!isHotels) {
     return (
       <DesktopCategoryListingDetailScreen
@@ -116,7 +125,7 @@ export function DesktopSearchListingDetail({
         display={categoryDisplay}
         onBack={onBack}
         onTabChange={onTabChange}
-        onBookNow={openDateModal}
+        onBookNow={handleBookNow}
         bookingFocus={bookingFocus}
         isLoggedIn={isLoggedIn}
         onMenuPress={onMenuPress}
@@ -150,7 +159,7 @@ export function DesktopSearchListingDetail({
       carouselImages={carouselImages}
       displayPrice={displayPrice}
       onBack={onBack}
-      onBookNow={openDateModal}
+      onBookNow={handleBookNow}
       onTabChange={onTabChange}
       activeTab="hotels"
       isLoggedIn={isLoggedIn}

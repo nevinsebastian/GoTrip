@@ -52,6 +52,7 @@ export type MobileResortDetailsProps = {
   onBookNow: () => void;
   onSelectRoom?: (roomTypeId: string) => void;
   selectedRoomTypeId?: string;
+  bookCtaLabel?: string;
 };
 
 export function MobileResortDetailsScreen({
@@ -73,6 +74,7 @@ export function MobileResortDetailsScreen({
   onBookNow,
   onSelectRoom,
   selectedRoomTypeId,
+  bookCtaLabel = 'Book Now',
 }: MobileResortDetailsProps) {
   const { s } = useHomeScale();
   const [carouselIndex, setCarouselIndex] = useState(0);
@@ -275,6 +277,7 @@ export function MobileResortDetailsScreen({
                 onSelectRoom?.(featuredRoom.id);
                 onBookNow();
               }}
+              bookCtaLabel={bookCtaLabel}
               selected={selectedRoomTypeId === featuredRoom.id}
             />
           ) : null}
@@ -296,6 +299,7 @@ export function MobileResortDetailsScreen({
                 onSelectRoom?.(room.id);
                 onBookNow();
               }}
+              bookCtaLabel={bookCtaLabel}
               selected={selectedRoomTypeId === room.id}
             />
           ))}
