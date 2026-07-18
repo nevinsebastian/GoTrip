@@ -63,6 +63,15 @@ export const normalizeApiError = (error: unknown): APIError => {
     } else if (status === 403) {
       apiError.message =
         'You do not have permission to perform this action.';
+    } else if (
+      !apiError.message ||
+      apiError.message === 'undefined' ||
+      apiError.message.toLowerCase() === 'internal server error'
+    ) {
+      apiError.message =
+        status === 400
+          ? 'Payment could not be started (server payment error). Please try again shortly.'
+          : 'Something went wrong. Please try again.';
     }
 
     return apiError;

@@ -17,6 +17,7 @@ import {
   normalizeHoldResponse,
   normalizeInitiateResponse,
   sleep,
+  toDateOnly,
 } from '@/src/utils/bookingPayment';
 
 export async function createBooking(
@@ -48,10 +49,10 @@ export async function checkAvailability(
   const body: Record<string, unknown> = {
     entityType: payload.entityType,
     entityId: payload.entityId,
-    checkIn: payload.checkIn,
+    checkIn: toDateOnly(payload.checkIn) ?? payload.checkIn,
     adults: Math.max(1, payload.adults),
   };
-  if (payload.checkOut) body.checkOut = payload.checkOut;
+  if (payload.checkOut) body.checkOut = toDateOnly(payload.checkOut) ?? payload.checkOut;
   if (payload.infants != null && payload.infants > 0) body.infants = payload.infants;
   if (payload.unitsBooked != null && payload.unitsBooked > 0) {
     body.unitsBooked = payload.unitsBooked;
@@ -73,17 +74,48 @@ export async function checkAvailability(
 export const checkHotelAvailability = checkAvailability;
 
 export async function holdBooking(payload: BookingHoldRequest): Promise<BookingHoldResponse> {
-  const response = await apiClient.post(ENDPOINTS.bookings.hold, buildHoldPayload(payload));
+  const body = buildHoldPayload(payload);
+  if (__DEV__) {
+    // eslint-disable-next-line no-console
+    console.log('[bookings/hold] request', body);
+  }
+  const response = await apiClient.post(ENDPOINTS.bookings.hold, body);
+  if (__DEV__) {
+    // eslint-disable-next-line no-console
+    console.log('[bookings/hold] response', response.data);
+  }
   return normalizeHoldResponse(response.data);
 }
 
 export async function initiatePayment(
   payload: InitiatePaymentRequest,
 ): Promise<InitiatePaymentResponse> {
-  const response = await apiClient.post(ENDPOINTS.payments.initiate, {
-    bookingId: payload.bookingId,
-  });
-  return normalizeInitiateResponse(response.data, payload.bookingId);
+  const bookingId = payload.bookingId?.trim();
+  if (!bookingId) {
+    throw Object.assign(new Error('Missing bookingId for payment.'), { statusCode: 400 });
+  }
+
+  // Same body as working web/desktop flow — OpenAPI only accepts `bookingId`.
+  const body = { bookingId };
+  if (__DEV__) {
+    // eslint-disable-next-line no-console
+    console.log('[payments/initiate] request', body);
+  }
+
+  try {
+    const response = await apiClient.post(ENDPOINTS.payments.initiate, body);
+    if (__DEV__) {
+      // eslint-disable-next-line no-console
+      console.log('[payments/initiate] response', response.data);
+    }
+    return normalizeInitiateResponse(response.data, bookingId);
+  } catch (err) {
+    if (__DEV__) {
+      // eslint-disable-next-line no-console
+      console.log('[payments/initiate] error', err);
+    }
+    throw err;
+  }
 }
 
 /**

@@ -15,6 +15,7 @@ import { FIGMA_BOOKING } from '@/src/constants/bookingConstants';
 import { FIGMA_PACKAGE_DETAIL } from '@/src/constants/packageDetailConstants';
 import { useHomeScale } from '@/src/components/home/useHomeScale';
 import { formatPackageDayLabel } from '@/src/utils/packageDates';
+import { defaultHotelStayDates } from '@/src/utils/bookingPayment';
 
 type GuestCounts = { adults: number; children: number; infants: number };
 
@@ -184,18 +185,19 @@ export function MobileBookingReviewScreen({
 
   const packageCheckIn = fixedCheckIn ?? FIGMA_PACKAGE_DETAIL.fixedCheckIn;
   const packageCheckOut = fixedCheckOut ?? FIGMA_PACKAGE_DETAIL.fixedCheckOut;
+  const fallbackStay = defaultHotelStayDates();
 
   const [checkInDate, setCheckInDate] = useState(
     datesLocked
       ? packageCheckIn
-      : fixedCheckIn || FIGMA_BOOKING.checkIn.iso,
+      : fixedCheckIn || fallbackStay.checkIn,
   );
   const [checkOutDate, setCheckOutDate] = useState(
     datesLocked
       ? packageCheckOut
       : isActivity
-        ? fixedCheckIn || FIGMA_BOOKING.checkIn.iso
-        : fixedCheckOut || FIGMA_BOOKING.checkOut.iso,
+        ? fixedCheckIn || fallbackStay.checkIn
+        : fixedCheckOut || fallbackStay.checkOut,
   );
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [guests, setGuests] = useState<GuestCounts>({
@@ -216,8 +218,9 @@ export function MobileBookingReviewScreen({
 
   const handleClearSelection = () => {
     if (!datesLocked) {
-      setCheckInDate(FIGMA_BOOKING.checkIn.iso);
-      setCheckOutDate(isActivity ? FIGMA_BOOKING.checkIn.iso : FIGMA_BOOKING.checkOut.iso);
+      const next = defaultHotelStayDates();
+      setCheckInDate(next.checkIn);
+      setCheckOutDate(isActivity ? next.checkIn : next.checkOut);
     }
     setGuests({
       adults: FIGMA_BOOKING.defaultAdults,

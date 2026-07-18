@@ -1,8 +1,6 @@
 import { getStoredAuthToken } from '@/src/api/client';
 import { PaymentResultModal } from '@/src/components/PaymentResultModal';
 import { RazorpayCheckoutModal } from '@/src/components/RazorpayCheckoutModal';
-import { useHoldBooking } from '@/src/hooks/useHoldBooking';
-import { useInitiatePayment } from '@/src/hooks/useInitiatePayment';
 import { useCheckAvailability, useEntityAvailability } from '@/src/hooks/useEntityAvailability';
 import { useActivityDetail, useGlampingDetail } from '@/src/hooks/useCategoryListing';
 import { useHotelDetail } from '@/src/hooks/useHotelDetail';
@@ -10,7 +8,8 @@ import { usePackageDetailData } from '@/src/hooks/usePackageUser';
 import { useConfirmBookingPayment } from '@/src/hooks/useConfirmBookingPayment';
 import { MobileBookingReviewScreen } from '@/src/screens/MobileBookingReviewScreen';
 import { formatPriceBreakdownTotal } from '@/src/utils/availabilityCalendar';
-import { isUuid } from '@/src/utils/bookingPayment';
+import { friendlyPaymentError, isUuid, toDateOnly } from '@/src/utils/bookingPayment';
+import { runHoldAndPay } from '@/src/utils/runHoldAndPay';
 import {
   mapActivityDetailToBookingEntity,
   mapGlampingDetailToBookingEntity,
@@ -21,7 +20,7 @@ import {
 import { getErrorMessage } from '@/src/utils/errorHandler';
 import { useResponsive } from '@/components/ui/useResponsive';
 import { router, useLocalSearchParams } from 'expo-router';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Platform, View } from 'react-native';
 import { colors } from '@/constants/DesignTokens';
 
@@ -233,6 +232,7 @@ function BookingReviewMobileContent({
     guestsLabel: string;
     totalLabel: string;
   } | null>(null);
+  const paymentInFlight = useRef(false);
 
   const calendarEntityType = resolvedEntity?.entityType;
   const calendarEntityId = resolvedEntity?.entityId;
@@ -248,9 +248,8 @@ function BookingReviewMobileContent({
   );
 
   const { mutate: checkAvailabilityMut, isPending: isChecking } = useCheckAvailability();
-  const { mutate: holdBookingMut, isPending: isHoldingBooking } = useHoldBooking();
-  const { mutate: initiatePaymentMut, isPending: isInitiatingPayment } = useInitiatePayment();
   const { mutate: confirmBookingMut } = useConfirmBookingPayment();
+  const [isHoldingAndPaying, setIsHoldingAndPaying] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -311,78 +310,70 @@ function BookingReviewMobileContent({
       setErrorMessage('Booking details missing. Please go back and try again.');
       return;
     }
+    if (paymentInFlight.current) return;
+
+    const checkInDate = toDateOnly(checkIn);
+    const checkOutDate = toDateOnly(checkOut) ?? checkInDate;
+    if (!checkInDate) {
+      setErrorMessage('Please select valid check-in and check-out dates.');
+      return;
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const inDate = new Date(`${checkInDate}T12:00:00`);
+    if (inDate < today) {
+      setErrorMessage('Please select future check-in dates.');
+      return;
+    }
 
     const totalLabel = formatPriceBreakdownTotal(
       breakdown?.totalAmount,
       breakdown?.currency ?? 'INR',
     );
-    const meta = { checkIn, checkOut, guestsLabel, totalLabel };
+    const meta = { checkIn: checkInDate, checkOut: checkOutDate ?? checkInDate, guestsLabel, totalLabel };
 
-    holdBookingMut(
-      {
-        listingId: resolvedEntity.listingId || listingId,
-        entityType: resolvedEntity.entityType,
-        entityId: resolvedEntity.entityId,
-        checkIn,
-        checkOut: isActivity ? undefined : checkOut,
-        adults: Math.max(1, guests.adults),
-        infants: guests.infants || undefined,
-        unitsBooked: resolvedEntity.unitsBooked ?? 1,
-        mealPlanId:
-          resolvedEntity.mealPlanId && isUuid(resolvedEntity.mealPlanId)
-            ? resolvedEntity.mealPlanId
-            : undefined,
-        activitySlotId:
-          resolvedEntity.activitySlotId && isUuid(resolvedEntity.activitySlotId)
-            ? resolvedEntity.activitySlotId
-            : undefined,
-        guests: [
-          {
-            fullName: 'Guest',
-            age: 30,
+    paymentInFlight.current = true;
+    setIsHoldingAndPaying(true);
+
+    void (async () => {
+      try {
+        const { bookingId, hold, payment, payableTotal } = await runHoldAndPay({
+          listingId: resolvedEntity.listingId || listingId,
+          entityType: resolvedEntity.entityType,
+          entityId: resolvedEntity.entityId,
+          checkIn: checkInDate,
+          checkOut: isActivity ? undefined : checkOutDate,
+          guests: {
+            adults: Math.max(1, guests.adults),
+            children: guests.children,
+            infants: guests.infants,
           },
-        ],
-      },
-      {
-        onSuccess: (holdRes) => {
-          const bookingId = holdRes.bookingId ?? holdRes.booking?.id;
-          if (!bookingId || !isUuid(bookingId)) {
-            setErrorMessage('Failed to hold booking — missing booking id.');
-            return;
-          }
-          const paidLabel = formatPriceBreakdownTotal(
-            holdRes.priceBreakdown?.totalAmount ?? breakdown?.totalAmount,
-            holdRes.priceBreakdown?.currency ?? breakdown?.currency,
-          );
-          const nextMeta = { ...meta, totalLabel: paidLabel };
+          unitsBooked: resolvedEntity.unitsBooked ?? 1,
+          mealPlanId: resolvedEntity.mealPlanId,
+          activitySlotId: resolvedEntity.activitySlotId,
+          pricePreview: breakdown,
+        });
 
-          initiatePaymentMut(
-            { bookingId },
-            {
-              onSuccess: (payRes) => {
-                const d = payRes?.data;
-                if (!d?.order_id || !d?.key_id) {
-                  setErrorMessage(payRes?.message ?? 'Failed to initiate payment.');
-                  return;
-                }
-                openPayment(bookingId, d, nextMeta);
-              },
-              onError: (err) => setErrorMessage(getErrorMessage(err)),
-            },
-          );
-        },
-        onError: (err) => {
-          const status =
-            (err as { statusCode?: number; status?: number })?.statusCode ??
-            (err as { status?: number })?.status;
-          if (status === 409) {
-            setErrorMessage('Dates are no longer available. Please pick different dates.');
-            return;
-          }
-          setErrorMessage(getErrorMessage(err));
-        },
-      },
-    );
+        const paidLabel = formatPriceBreakdownTotal(
+          payableTotal,
+          hold.priceBreakdown?.currency ?? breakdown?.currency,
+        );
+        openPayment(bookingId, payment.data!, { ...meta, totalLabel: paidLabel });
+      } catch (err) {
+        const status =
+          (err as { statusCode?: number; status?: number })?.statusCode ??
+          (err as { status?: number })?.status;
+        if (status === 409) {
+          setErrorMessage('Dates are no longer available. Please pick different dates.');
+        } else {
+          setErrorMessage(friendlyPaymentError(getErrorMessage(err)));
+        }
+      } finally {
+        paymentInFlight.current = false;
+        setIsHoldingAndPaying(false);
+      }
+    })();
   };
 
   const handleConfirm = ({
@@ -426,12 +417,15 @@ function BookingReviewMobileContent({
       {
         entityType: resolvedEntity.entityType as Exclude<AvailabilityEntityType, 'package'>,
         entityId: resolvedEntity.entityId,
-        checkIn,
-        checkOut: isActivity ? undefined : checkOut,
+        checkIn: toDateOnly(checkIn) ?? checkIn,
+        checkOut: isActivity ? undefined : toDateOnly(checkOut) ?? checkOut,
         adults: Math.max(1, guests.adults),
         infants: guests.infants || undefined,
         unitsBooked: resolvedEntity.unitsBooked ?? 1,
-        mealPlanId: resolvedEntity.mealPlanId,
+        mealPlanId:
+          resolvedEntity.mealPlanId && isUuid(resolvedEntity.mealPlanId)
+            ? resolvedEntity.mealPlanId
+            : undefined,
       },
       {
         onSuccess: (res) => {
@@ -444,12 +438,12 @@ function BookingReviewMobileContent({
           setPricePreview(res.priceBreakdown ?? null);
           startHoldAndPay(checkIn, checkOut, guests, guestsLabel, res.priceBreakdown);
         },
-        onError: (err) => setErrorMessage(getErrorMessage(err)),
+        onError: (err) => setErrorMessage(friendlyPaymentError(getErrorMessage(err))),
       },
     );
   };
 
-  const isSubmitting = isChecking || isHoldingBooking || isInitiatingPayment;
+  const isSubmitting = isChecking || isHoldingAndPaying;
   const pricePreviewLabel = pricePreview?.totalAmount != null
     ? formatPriceBreakdownTotal(pricePreview.totalAmount, pricePreview.currency)
     : null;

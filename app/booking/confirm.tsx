@@ -6,9 +6,7 @@ import type { HomeCategoryTab } from '@/src/components/home/homeSearchConfig';
 import { useHomeSearch } from '@/src/components/home/HomeSearchContext';
 import { CANCELLATION_TEXT, FIGMA_PROPERTY } from '@/src/components/resort/resortConstants';
 import { useCheckAvailability } from '@/src/hooks/useEntityAvailability';
-import { useHoldBooking } from '@/src/hooks/useHoldBooking';
 import { useHotelDetail } from '@/src/hooks/useHotelDetail';
-import { useInitiatePayment } from '@/src/hooks/useInitiatePayment';
 import { useConfirmBookingPayment } from '@/src/hooks/useConfirmBookingPayment';
 import { useIsAuthenticated } from '@/src/hooks/useIsAuthenticated';
 import { DesktopBookingPriceSummaryScreen } from '@/src/screens/DesktopBookingPriceSummaryScreen';
@@ -17,7 +15,8 @@ import { DesktopConfirmDatesGuestScreen } from '@/src/screens/DesktopConfirmDate
 import type { AvailabilityEntityType, BookingPriceBreakdown } from '@/src/api/types';
 import { formatPriceBreakdownTotal } from '@/src/utils/availabilityCalendar';
 import { getErrorMessage } from '@/src/utils/errorHandler';
-import { isUuid } from '@/src/utils/bookingPayment';
+import { friendlyPaymentError, isUuid, toDateOnly } from '@/src/utils/bookingPayment';
+import { runHoldAndPay } from '@/src/utils/runHoldAndPay';
 import {
   formatCheckTime,
   formatHotelPricePerNight,
@@ -156,9 +155,8 @@ export default function BookingConfirmRoute() {
   const [result, setResult] = useState<ResultState | null>(null);
 
   const { mutate: checkAvailabilityMut, isPending: isChecking } = useCheckAvailability();
-  const { mutate: holdBookingMut, isPending: isHolding } = useHoldBooking();
-  const { mutate: initiatePaymentMut, isPending: isInitiating } = useInitiatePayment();
   const { mutate: confirmBookingMut } = useConfirmBookingPayment();
+  const [isHoldingAndPaying, setIsHoldingAndPaying] = useState(false);
 
   // Mobile / non-desktop: keep existing review flow
   useEffect(() => {
@@ -241,91 +239,76 @@ export default function BookingConfirmRoute() {
         return;
       }
 
+      const checkIn = toDateOnly(sel.checkIn);
+      const checkOut = toDateOnly(sel.checkOut);
+      if (!checkIn || !checkOut) {
+        setErrorMessage('Please select valid check-in and check-out dates.');
+        return;
+      }
+
       const guestsLabel = formatGuestsLabel(sel.adults, sel.children, sel.infants);
-      const datesLabel = formatDatesLabel(sel.checkIn, sel.checkOut);
+      const datesLabel = formatDatesLabel(checkIn, checkOut);
       const totalLabel = formatPriceBreakdownTotal(
         breakdown?.totalAmount,
         breakdown?.currency ?? 'INR',
       );
 
-      holdBookingMut(
-        {
-          listingId,
-          entityType: bookingEntity.entityType,
-          entityId: bookingEntity.entityId,
-          checkIn: sel.checkIn,
-          checkOut: sel.checkOut,
-          adults: Math.max(1, sel.adults),
-          infants: sel.infants || undefined,
-          unitsBooked: 1,
-          mealPlanId: mealPlanId && isUuid(mealPlanId) ? mealPlanId : undefined,
-          guests: [{ fullName: 'Guest', age: 30 }],
-        },
-        {
-          onSuccess: (holdRes) => {
-            const bookingId = holdRes.bookingId ?? holdRes.booking?.id;
-            if (!bookingId || !isUuid(bookingId)) {
-              setErrorMessage('Failed to hold booking — missing booking id.');
-              return;
-            }
-            const paidLabel = formatPriceBreakdownTotal(
-              holdRes.priceBreakdown?.totalAmount ?? breakdown?.totalAmount,
-              holdRes.priceBreakdown?.currency ?? breakdown?.currency,
-            );
-            if (holdRes.priceBreakdown) setPriceBreakdown(holdRes.priceBreakdown);
+      setIsHoldingAndPaying(true);
+      void (async () => {
+        try {
+          const { bookingId, hold, payment, payableTotal } = await runHoldAndPay({
+            listingId,
+            entityType: bookingEntity.entityType,
+            entityId: bookingEntity.entityId,
+            checkIn,
+            checkOut,
+            guests: {
+              adults: Math.max(1, sel.adults),
+              children: sel.children,
+              infants: sel.infants,
+            },
+            unitsBooked: 1,
+            mealPlanId,
+            pricePreview: breakdown,
+          });
 
-            const resultMeta = {
-              bookingId,
-              datesLabel,
-              guestsLabel,
-              totalLabel: paidLabel,
-            };
+          const paidLabel = formatPriceBreakdownTotal(
+            payableTotal,
+            hold.priceBreakdown?.currency ?? breakdown?.currency,
+          );
+          if (hold.priceBreakdown) setPriceBreakdown(hold.priceBreakdown);
 
-            initiatePaymentMut(
-              { bookingId },
-              {
-                onSuccess: (payRes) => {
-                  const d = payRes?.data;
-                  if (!d?.order_id || !d?.key_id) {
-                    const msg = payRes?.message ?? 'Failed to initiate payment.';
-                    setErrorMessage(msg);
-                    setResult({ status: 'failed', ...resultMeta, errorMessage: msg });
-                    setStep('result');
-                    return;
-                  }
-                  setResult({ status: 'failed', ...resultMeta });
-                  openPayment(bookingId, d);
-                },
-                onError: (err) => {
-                  const msg = getErrorMessage(err);
-                  setErrorMessage(msg);
-                  setResult({ status: 'failed', ...resultMeta, errorMessage: msg });
-                  setStep('result');
-                },
-              },
-            );
-          },
-          onError: (err) => {
-            const status = (err as { statusCode?: number; status?: number })?.statusCode
-              ?? (err as { status?: number })?.status;
-            const msg =
-              status === 409
-                ? 'Dates are no longer available. Please pick different dates.'
-                : getErrorMessage(err);
-            setErrorMessage(msg);
-            setResult({
-              status: 'failed',
-              datesLabel,
-              guestsLabel,
-              totalLabel,
-              errorMessage: msg,
-            });
-            setStep('result');
-          },
-        },
-      );
+          setResult({
+            status: 'failed',
+            bookingId,
+            datesLabel,
+            guestsLabel,
+            totalLabel: paidLabel,
+          });
+          openPayment(bookingId, payment.data!);
+        } catch (err) {
+          const status =
+            (err as { statusCode?: number; status?: number })?.statusCode ??
+            (err as { status?: number })?.status;
+          const msg =
+            status === 409
+              ? 'Dates are no longer available. Please pick different dates.'
+              : friendlyPaymentError(getErrorMessage(err));
+          setErrorMessage(msg);
+          setResult({
+            status: 'failed',
+            datesLabel,
+            guestsLabel,
+            totalLabel,
+            errorMessage: msg,
+          });
+          setStep('result');
+        } finally {
+          setIsHoldingAndPaying(false);
+        }
+      })();
     },
-    [listingId, bookingEntity, mealPlanId, holdBookingMut, initiatePaymentMut, openPayment],
+    [listingId, bookingEntity, mealPlanId, openPayment],
   );
 
   const handleConfirmDates = useCallback(
@@ -531,7 +514,7 @@ export default function BookingConfirmRoute() {
       : DEFAULT_AMENITIES;
 
   const confirming = isChecking;
-  const paying = isHolding || isInitiating;
+  const paying = isHoldingAndPaying;
 
   return (
     <View style={styles.root}>
