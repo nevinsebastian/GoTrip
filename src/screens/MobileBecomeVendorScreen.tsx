@@ -317,6 +317,7 @@ export function MobileBecomeVendorScreen({
   const [propertyDocument, setPropertyDocument] = useState<VendorLocalDocument | null>(null);
   const [pickerField, setPickerField] = useState<VendorDocumentField | null>(null);
   const [uploadField, setUploadField] = useState<VendorDocumentField | null>(null);
+  const uploadFieldRef = useRef<VendorDocumentField | null>(null);
   const [uploadingField, setUploadingField] = useState<VendorDocumentField | null>(null);
   const [isUploadingKyc, setIsUploadingKyc] = useState(false);
   const [listingCategory, setListingCategory] = useState<VendorListingCategoryId>('property');
@@ -515,8 +516,10 @@ export function MobileBecomeVendorScreen({
   };
 
   const handleUploadOption = async (source: 'camera' | 'gallery' | 'files') => {
-    if (!uploadField) return;
-    const field = uploadField;
+    // Sheet closes before picker opens (Android Modal race). Keep field in a ref.
+    const field = uploadFieldRef.current ?? uploadField;
+    if (!field) return;
+    uploadFieldRef.current = null;
     setUploadField(null);
     setUploadingField(field);
     setSubmitError(null);
@@ -793,7 +796,10 @@ export function MobileBecomeVendorScreen({
                   onPropertyDocTypeChange={setPropertyDocType}
                   onOpenIdPicker={() => setPickerField('id')}
                   onOpenPropertyPicker={() => setPickerField('property')}
-                  onUpload={setUploadField}
+                  onUpload={(field) => {
+                    uploadFieldRef.current = field;
+                    setUploadField(field);
+                  }}
                   uploadingField={uploadingField}
                   error={submitError}
                 />

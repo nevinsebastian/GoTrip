@@ -1,7 +1,7 @@
 import { colors, spacing, typography } from '@/constants/DesignTokens';
 import { VENDOR_ONBOARDING } from '@/src/constants/vendorOnboardingConstants';
 import { Ionicons } from '@expo/vector-icons';
-import React from 'react';
+import React, { useRef } from 'react';
 import { Modal, Platform, Pressable, StyleSheet, View } from 'react-native';
 
 import { Text } from '@/components/ui';
@@ -14,6 +14,9 @@ type VendorUploadOptionsSheetProps = {
   subtitle?: string;
 };
 
+/** Android fails to show gallery/files if the system picker opens while this Modal is still dismissing. */
+const PICKER_OPEN_DELAY_MS = Platform.OS === 'android' ? 400 : 50;
+
 export function VendorUploadOptionsSheet({
   visible,
   onClose,
@@ -21,8 +24,28 @@ export function VendorUploadOptionsSheet({
   title = 'Upload document',
   subtitle = 'Choose how you want to add your file',
 }: VendorUploadOptionsSheetProps) {
+  const pendingSource = useRef<'camera' | 'gallery' | 'files' | null>(null);
+  const openTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleSelect = (source: 'camera' | 'gallery' | 'files') => {
+    pendingSource.current = source;
+    onClose();
+    if (openTimer.current) clearTimeout(openTimer.current);
+    openTimer.current = setTimeout(() => {
+      const next = pendingSource.current;
+      pendingSource.current = null;
+      openTimer.current = null;
+      if (next) onSelect(next);
+    }, PICKER_OPEN_DELAY_MS);
+  };
+
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType={Platform.OS === 'android' ? 'fade' : 'slide'}
+      onRequestClose={onClose}
+    >
       <Pressable style={styles.overlay} onPress={onClose}>
         <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
           <View style={styles.handle} />
@@ -33,7 +56,7 @@ export function VendorUploadOptionsSheet({
               <Pressable
                 key={option.id}
                 style={({ pressed }) => [styles.optionRow, pressed && styles.optionPressed]}
-                onPress={() => onSelect(option.id as 'camera' | 'gallery' | 'files')}
+                onPress={() => handleSelect(option.id as 'camera' | 'gallery' | 'files')}
                 accessibilityRole="button"
               >
                 <View style={styles.optionIcon}>

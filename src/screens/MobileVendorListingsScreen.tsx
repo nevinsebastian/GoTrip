@@ -18,16 +18,20 @@ import {
   type VendorListingStatusFilter,
 } from '@/src/constants/vendorListingsConstants';
 import type { VendorListingCategoryId } from '@/src/constants/vendorOnboardingConstants';
+import { VENDOR_WORKSPACE_COPY } from '@/src/constants/vendorWorkspaceConstants';
 import { useUserProfile } from '@/src/hooks/useUserProfile';
 import { useVendorMyListings } from '@/src/hooks/useVendorMyListings';
 import { useVendorWorkspaceAuthGuard } from '@/src/hooks/useVendorWorkspaceAuthGuard';
 import { useVendorListingCategory } from '@/src/hooks/useVendorListingCategory';
+import { goToVendorNewListing } from '@/src/utils/vendorNavigation';
 import { getStoredVendorListingCategory } from '@/src/utils/vendorSession';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+const ADD_LISTING_BLUE = '#2C6F9C';
 
 const DESIGN_WIDTH = 402;
 
@@ -101,6 +105,16 @@ export function MobileVendorListingsScreen() {
               <Ionicons name="chevron-down" size={14} color={colors.surface.white} />
             </Pressable>
           </View>
+
+          <Pressable
+            style={styles.addListingBtn}
+            onPress={() => void goToVendorNewListing()}
+            accessibilityRole="button"
+            accessibilityLabel={VENDOR_WORKSPACE_COPY.addListing}
+          >
+            <Ionicons name="add-circle-outline" size={18} color={colors.surface.white} />
+            <Text style={styles.addListingBtnText}>{VENDOR_WORKSPACE_COPY.addListing}</Text>
+          </Pressable>
 
           {showList ? (
             <View style={styles.list}>
@@ -217,6 +231,22 @@ const styles = StyleSheet.create({
     fontFamily: typography.fontFamily.text,
     fontSize: 10,
     fontWeight: typography.fontWeight.medium,
+    color: colors.surface.white,
+  },
+  addListingBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: ADD_LISTING_BLUE,
+    borderRadius: 24,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  addListingBtnText: {
+    fontFamily: typography.fontFamily.text,
+    fontSize: 14,
+    fontWeight: typography.fontWeight.semibold,
     color: colors.surface.white,
   },
   list: { gap: 14 },

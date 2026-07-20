@@ -95,6 +95,7 @@ export function DesktopBecomeVendorScreen({
   const [idDocument, setIdDocument] = useState<VendorLocalDocument | null>(null);
   const [propertyDocument, setPropertyDocument] = useState<VendorLocalDocument | null>(null);
   const [uploadField, setUploadField] = useState<VendorDocumentField | null>(null);
+  const uploadFieldRef = useRef<VendorDocumentField | null>(null);
   const [uploadingField, setUploadingField] = useState<VendorDocumentField | null>(null);
   const [isUploadingKyc, setIsUploadingKyc] = useState(false);
   const [listingCategory, setListingCategory] = useState<VendorListingCategoryId>('property');
@@ -263,8 +264,9 @@ export function DesktopBecomeVendorScreen({
   };
 
   const handleUploadOption = async (source: 'camera' | 'gallery' | 'files') => {
-    if (!uploadField) return;
-    const field = uploadField;
+    const field = uploadFieldRef.current ?? uploadField;
+    if (!field) return;
+    uploadFieldRef.current = null;
     setUploadField(null);
     setUploadingField(field);
     setSubmitError(null);
@@ -478,7 +480,10 @@ export function DesktopBecomeVendorScreen({
           propertyDocument={propertyDocument}
           onIdTypeChange={setIdType}
           onPropertyDocTypeChange={setPropertyDocType}
-          onUpload={setUploadField}
+          onUpload={(field) => {
+            uploadFieldRef.current = field;
+            setUploadField(field);
+          }}
           uploadingField={uploadingField}
           error={submitError}
         />

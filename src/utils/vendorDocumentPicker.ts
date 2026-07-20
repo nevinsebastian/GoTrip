@@ -109,6 +109,18 @@ async function loadDocumentPickerModule(): Promise<DocumentPickerModule> {
   return module;
 }
 
+function isAllowedDocumentMime(mimeType: string | undefined, name: string): boolean {
+  const mime = (mimeType ?? '').toLowerCase();
+  const lowerName = name.toLowerCase();
+  if (mime.startsWith('image/')) return true;
+  if (mime === 'application/pdf') return true;
+  if (lowerName.endsWith('.pdf')) return true;
+  if (/\.(jpe?g|png|gif|webp|heic|heif|bmp)$/i.test(lowerName)) return true;
+  // Android file managers sometimes omit mimeType — allow unknown so selection isn't blocked
+  if (!mime || mime === 'application/octet-stream') return true;
+  return false;
+}
+
 export async function pickVendorDocument(
   source: VendorDocumentPickSource,
 ): Promise<VendorLocalDocument | null> {
@@ -120,8 +132,10 @@ export async function pickVendorDocument(
   try {
     if (source === 'files') {
       const DocumentPicker = await loadDocumentPickerModule();
+      // Android often returns an empty list when multiple MIME types are passed.
+      // Prefer a broad filter and validate the selected file client-side.
       const result = await DocumentPicker.getDocumentAsync({
-        type: ['image/*', 'application/pdf'],
+        type: Platform.OS === 'android' ? '*/*' : ['image/*', 'application/pdf'],
         multiple: false,
         copyToCacheDirectory: true,
       });
@@ -129,6 +143,10 @@ export async function pickVendorDocument(
       if (result.canceled || !result.assets?.[0]) return null;
 
       const asset = result.assets[0];
+      if (!isAllowedDocumentMime(asset.mimeType, asset.name)) {
+        throw new VendorDocumentPickerError('Please choose an image or PDF file.');
+      }
+
       return {
         id: makeId(),
         name: asset.name,
@@ -154,8 +172,10 @@ export async function pickVendorDocument(
       return fromImageAsset(result.assets[0]);
     }
 
+    // Gallery — request permission, but on Android 13+ the system photo picker
+    // can still open without a legacy grant if the permission dialog is denied.
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
+    if (!permission.granted && Platform.OS !== 'android') {
       throw new VendorDocumentPickerError('Photo library permission is required to choose a file.');
     }
 
@@ -163,6 +183,8 @@ export async function pickVendorDocument(
       mediaTypes: ['images'],
       quality: 0.85,
       allowsMultipleSelection: false,
+      // Prefer the Android system photo picker when available
+      ...(Platform.OS === 'android' ? { legacy: false } : null),
     });
 
     if (result.canceled || !result.assets?.[0]) return null;
