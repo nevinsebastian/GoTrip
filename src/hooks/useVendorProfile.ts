@@ -12,11 +12,11 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 export const VENDOR_PROFILE_QUERY_KEY = ['vendor', 'profile'] as const;
 
 export function useVendorProfile() {
-  const query = useQuery<VendorProfileFull | undefined, APIError>({
+  const query = useQuery<VendorProfileFull | null, APIError>({
     queryKey: VENDOR_PROFILE_QUERY_KEY,
     queryFn: async () => {
       const res = await fetchVendorProfile();
-      return res.data;
+      return res.data ?? null;
     },
     retry: (count, error) => {
       const apiError = error as APIError;

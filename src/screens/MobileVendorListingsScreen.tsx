@@ -5,7 +5,6 @@ import { VendorDashboardTopBar } from '@/src/components/vendor/dashboard/VendorD
 import { VendorDeleteListingModal } from '@/src/components/vendor/listings/VendorDeleteListingModal';
 import { VendorListingCard } from '@/src/components/vendor/listings/VendorListingCard';
 import { VendorListingsStateViews } from '@/src/components/vendor/listings/VendorListingsStateViews';
-import { VendorUpdatePricingModal } from '@/src/components/vendor/listings/VendorUpdatePricingModal';
 import { VendorPropertyOptionSheet } from '@/src/components/vendor/VendorPropertyOptionSheet';
 import {
   useVendorTabBarInset,
@@ -24,7 +23,6 @@ import { useVendorMyListings } from '@/src/hooks/useVendorMyListings';
 import { useVendorWorkspaceAuthGuard } from '@/src/hooks/useVendorWorkspaceAuthGuard';
 import { useVendorListingCategory } from '@/src/hooks/useVendorListingCategory';
 import { getStoredVendorListingCategory } from '@/src/utils/vendorSession';
-import { applyListingPriceOverrides } from '@/src/utils/vendorListingPriceOverrides';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
@@ -40,10 +38,7 @@ export function MobileVendorListingsScreen() {
   const [categoryId, setCategoryId] = useState<VendorListingCategoryId>(storedCategory);
   const [statusFilter, setStatusFilter] = useState<VendorListingStatusFilter>('all');
   const [statusOpen, setStatusOpen] = useState(false);
-  const [hiddenIds, setHiddenIds] = useState<string[]>([]);
-  const [priceOverrides, setPriceOverrides] = useState<Record<string, number>>({});
   const [deleteTarget, setDeleteTarget] = useState<VendorListingCardData | null>(null);
-  const [pricingTarget, setPricingTarget] = useState<VendorListingCardData | null>(null);
   const tabInset = useVendorTabBarInset();
   const { data: profile } = useUserProfile();
 
@@ -71,14 +66,7 @@ export function MobileVendorListingsScreen() {
     hostName,
   });
 
-  const listings = useMemo(
-    () =>
-      applyListingPriceOverrides(
-        apiListings.filter((listing) => !hiddenIds.includes(listing.id)),
-        priceOverrides,
-      ),
-    [apiListings, hiddenIds, priceOverrides],
-  );
+  const listings = useMemo(() => apiListings, [apiListings]);
 
   const activeStatus =
     VENDOR_LISTINGS_STATUS_OPTIONS.find((item) => item.id === statusFilter) ??
@@ -87,16 +75,7 @@ export function MobileVendorListingsScreen() {
   const showList = !isLoading && !isError && listings.length > 0;
   const showEmpty = !isLoading && !isError && listings.length === 0;
 
-  const handleConfirmDelete = () => {
-    if (!deleteTarget) return;
-    setHiddenIds((prev) => [...prev, deleteTarget.id]);
-    setDeleteTarget(null);
-  };
-
-  const handleConfirmPricing = (price: number) => {
-    if (!pricingTarget) return;
-    setPriceOverrides((prev) => ({ ...prev, [pricingTarget.id]: price }));
-  };
+  const handleConfirmDelete = () => setDeleteTarget(null);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -129,7 +108,12 @@ export function MobileVendorListingsScreen() {
                 <VendorListingCard
                   key={listing.id}
                   listing={listing}
-                  onPricing={() => setPricingTarget(listing)}
+                  onPricing={() =>
+                    router.push({
+                      pathname: '/vendor/edit-listing',
+                      params: { listingId: listing.id, categoryId: listing.categoryId, mode: 'pricing' },
+                    })
+                  }
                   onDelete={() => setDeleteTarget(listing)}
                 />
               ))}
@@ -186,13 +170,6 @@ export function MobileVendorListingsScreen() {
         />
       ) : null}
 
-      {pricingTarget ? (
-        <VendorUpdatePricingModal
-          listing={pricingTarget}
-          onClose={() => setPricingTarget(null)}
-          onConfirm={handleConfirmPricing}
-        />
-      ) : null}
     </SafeAreaView>
   );
 }

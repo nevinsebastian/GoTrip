@@ -1,77 +1,331 @@
 import { Text } from '@/components/ui';
 import { colors, spacing, typography } from '@/constants/DesignTokens';
-import { VendorDashboardCategoryTabs } from '@/src/components/vendor/dashboard/VendorDashboardCategoryTabs';
 import { VendorDashboardTopBar } from '@/src/components/vendor/dashboard/VendorDashboardTopBar';
 import {
   useVendorTabBarInset,
   VendorWorkspaceFloatingTabBar,
 } from '@/src/components/vendor/workspace/VendorWorkspaceTabBar';
+import { VENDOR_EDIT_LISTING_COPY } from '@/src/constants/vendorEditListingConstants';
+import { useVendorWorkspaceAuthGuard } from '@/src/hooks/useVendorWorkspaceAuthGuard';
 import {
-  VENDOR_EDIT_LISTING_AMENITIES,
-  VENDOR_EDIT_LISTING_COPY,
-  VENDOR_EDIT_LISTING_DEFAULT,
-  VENDOR_EDIT_LISTING_HIGHLIGHTS,
-} from '@/src/constants/vendorEditListingConstants';
-import { VENDOR_DASHBOARD_CARD_BORDER, VENDOR_DASHBOARD_CARD_RADIUS } from '@/src/constants/vendorDashboardConstants';
-import type { VendorListingCategoryId } from '@/src/constants/vendorOnboardingConstants';
-import { useVendorListingCategory } from '@/src/hooks/useVendorListingCategory';
-import { getStoredVendorListingCategory } from '@/src/utils/vendorSession';
+  createActivitySlotForListing,
+  fetchVendorEditableListing,
+  updateActivityHighlights,
+  updateActivityListing,
+  updateActivitySlot,
+  updateAvailabilityPriceOverride,
+  updateGlampingListing,
+  updateHotelListing,
+  updateHotelRoomType,
+  updatePackageListing,
+  upsertGlampingMealPlan,
+  upsertHotelPropertyDetails,
+  upsertPackageItinerary,
+  type VendorEditableCategory,
+} from '@/src/api/vendorListingEdit.service';
+import { getErrorMessage } from '@/src/utils/errorHandler';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
-import React, { useEffect, useState } from 'react';
-import {
-  Image,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  TextInput,
-  View,
-} from 'react-native';
+import { router, useLocalSearchParams } from 'expo-router';
+import { useQuery } from '@tanstack/react-query';
+import React, { useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const DESIGN_WIDTH = 402;
+const DESIGN_WIDTH = 860;
 const MAROON = '#9F1239';
 const SAVE_GREEN = '#22C55E';
 const TITLE_BG = '#F4F8FA';
 const NAME_BANNER_BG = '#F9E8EE';
+const VENDOR_DASHBOARD_CARD_RADIUS = 12;
+const VENDOR_DASHBOARD_CARD_BORDER = '#E5E7EB';
+
+function parseNumber(value: string): number | undefined {
+  const cleaned = value.replace(/[^\d.]/g, '');
+  if (!cleaned.trim()) return undefined;
+  const parsed = Number(cleaned);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function inferCategory(value: string | string[] | undefined): VendorEditableCategory {
+  const raw = Array.isArray(value) ? value[0] : value;
+  if (raw === 'packages' || raw === 'glamping' || raw === 'activities') return raw;
+  return 'property';
+}
 
 export function MobileVendorEditListingScreen() {
-  const storedCategory = useVendorListingCategory();
-  const [categoryId, setCategoryId] = useState<VendorListingCategoryId>(storedCategory);
-  const tabInset = useVendorTabBarInset();
+  useVendorWorkspaceAuthGuard();
 
-  const [photos, setPhotos] = useState(VENDOR_EDIT_LISTING_DEFAULT.photos);
-  const [title, setTitle] = useState(VENDOR_EDIT_LISTING_DEFAULT.title);
-  const [description, setDescription] = useState(VENDOR_EDIT_LISTING_DEFAULT.description);
-  const [highlights, setHighlights] = useState<string[]>(VENDOR_EDIT_LISTING_DEFAULT.defaultHighlights);
-  const [amenities, setAmenities] = useState(VENDOR_EDIT_LISTING_AMENITIES);
-  const [price, setPrice] = useState(VENDOR_EDIT_LISTING_DEFAULT.price);
+  const tabInset = useVendorTabBarInset();
+  const params = useLocalSearchParams<{
+    listingId?: string;
+    categoryId?: string;
+    mode?: string;
+  }>();
+  const listingId = Array.isArray(params.listingId) ? params.listingId[0] : params.listingId;
+  const categoryId = inferCategory(params.categoryId);
+  const mode = Array.isArray(params.mode) ? params.mode[0] : params.mode;
+
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [city, setCity] = useState('');
+  const [price, setPrice] = useState('');
+  const [calendarDate, setCalendarDate] = useState('');
+  const [calendarPrice, setCalendarPrice] = useState('');
+  const [itineraryTitle, setItineraryTitle] = useState('');
+  const [itineraryDescription, setItineraryDescription] = useState('');
+  const [mealPlanPrice, setMealPlanPrice] = useState('');
+  const [slotLabel, setSlotLabel] = useState('');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isApplyingCalendar, setIsApplyingCalendar] = useState(false);
+  const [isSoftDisabling, setIsSoftDisabling] = useState(false);
+
+  const query = useQuery({
+    queryKey: ['vendor', 'editable-listing', categoryId, listingId],
+    enabled: Boolean(listingId),
+    queryFn: async () => fetchVendorEditableListing(categoryId, listingId!),
+    staleTime: 30_000,
+    retry: false,
+  });
+
+  const detailData = query.data;
+
+  const headerRef = useMemo(() => {
+    if (!detailData) return listingId ?? 'Listing';
+    if (detailData.categoryId === 'property') return detailData.detail.hotel.id;
+    if (detailData.categoryId === 'packages') return detailData.detail.package.id;
+    if (detailData.categoryId === 'glamping') return detailData.detail.glamping.id;
+    return detailData.detail.activity.id;
+  }, [detailData, listingId]);
+
+  const displayName = useMemo(() => {
+    if (!detailData) return 'Edit listing';
+    if (detailData.categoryId === 'property') return detailData.detail.hotel.title;
+    if (detailData.categoryId === 'packages') return detailData.detail.package.title;
+    if (detailData.categoryId === 'glamping') return detailData.detail.glamping.title;
+    return detailData.detail.activity.title;
+  }, [detailData]);
+
+  const primaryEntity = useMemo(() => {
+    if (!detailData) return null;
+    if (detailData.categoryId === 'property') {
+      const roomType = detailData.roomTypes.roomTypes?.[0];
+      const listingType = detailData.detail.hotel.hotelProperty?.listingType;
+      return roomType
+        ? {
+            entityType: listingType === 'full_property' ? 'full_property' : 'room_type',
+            entityId: roomType.id,
+            roomType,
+            listingType,
+          }
+        : null;
+    }
+    if (detailData.categoryId === 'glamping') {
+      const site = detailData.detail.glamping.glampingSite ?? detailData.detail.glamping.sites?.[0];
+      return site ? { entityType: 'glamping_site' as const, entityId: site.id, site } : null;
+    }
+    if (detailData.categoryId === 'activities') {
+      const slot = detailData.detail.activity.slots?.[0];
+      return slot ? { entityType: 'activity_slot' as const, entityId: slot.id, slot } : null;
+    }
+    return null;
+  }, [detailData]);
 
   useEffect(() => {
-    getStoredVendorListingCategory().then((stored) => {
-      if (stored) setCategoryId(stored);
-    });
-  }, []);
+    if (!detailData) return;
+    setErrorMessage(null);
+    setSuccessMessage(null);
+    if (detailData.categoryId === 'property') {
+      const hotel = detailData.detail.hotel;
+      const roomType = detailData.roomTypes.roomTypes?.[0];
+      setTitle(hotel.title ?? '');
+      setDescription(hotel.description ?? '');
+      setCity(hotel.locationJson?.city ?? '');
+      setPrice(
+        String(
+          hotel.hotelProperty?.listingType === 'full_property'
+            ? hotel.hotelProperty?.pricePerNight ?? roomType?.basePricePerNight ?? ''
+            : roomType?.basePricePerNight ?? '',
+        ),
+      );
+      return;
+    }
+    if (detailData.categoryId === 'packages') {
+      const listing = detailData.detail.package;
+      setTitle(listing.title ?? '');
+      setDescription(listing.description ?? '');
+      setCity(listing.locationJson?.city ?? '');
+      setPrice(String(listing.pricePerPerson ?? ''));
+      setItineraryTitle(listing.itineraries?.[0]?.title ?? '');
+      setItineraryDescription(listing.itineraries?.[0]?.description ?? '');
+      return;
+    }
+    if (detailData.categoryId === 'glamping') {
+      const listing = detailData.detail.glamping;
+      setTitle(listing.title ?? '');
+      setDescription(listing.description ?? '');
+      setCity(listing.locationJson?.city ?? '');
+      setPrice(String(listing.pricePerCampNight ?? ''));
+      const cpPlan = listing.mealPlans?.find((plan) => plan.planCode === 'CP');
+      setMealPlanPrice(String(cpPlan?.includesBreakfast ? cpPlan?.breakfastPricePp ?? '' : ''));
+      return;
+    }
+    const listing = detailData.detail.activity;
+    setTitle(listing.title ?? '');
+    setDescription(listing.description ?? '');
+    setCity(listing.locationJson?.city ?? '');
+    setPrice(String(listing.basePriceAdult ?? ''));
+    setSlotLabel(listing.slots?.[0]?.label ?? '');
+  }, [detailData]);
 
-  const toggleHighlight = (id: string) => {
-    setHighlights((prev) => {
-      if (prev.includes(id)) return prev.filter((h) => h !== id);
-      if (prev.length >= 2) return prev;
-      return [...prev, id];
-    });
+  const handleSave = async () => {
+    if (!listingId || !detailData) return;
+    setIsSaving(true);
+    setErrorMessage(null);
+    setSuccessMessage(null);
+    try {
+      const numericPrice = parseNumber(price);
+      if (detailData.categoryId === 'property') {
+        await updateHotelListing(listingId, {
+          title,
+          description,
+          locationJson: city.trim() ? { city: city.trim() } : undefined,
+        });
+        const roomType = detailData.roomTypes.roomTypes?.[0];
+        if (roomType && numericPrice != null) {
+          if (detailData.detail.hotel.hotelProperty?.listingType === 'full_property') {
+            await upsertHotelPropertyDetails(listingId, { pricePerNight: numericPrice });
+          } else {
+            await updateHotelRoomType(listingId, roomType.id, { basePricePerNight: numericPrice });
+          }
+        }
+      } else if (detailData.categoryId === 'packages') {
+        await updatePackageListing(listingId, {
+          title,
+          description,
+          pricePerPerson: numericPrice,
+        });
+        if (itineraryTitle.trim()) {
+          await upsertPackageItinerary(listingId, {
+            dayNumber: 1,
+            title: itineraryTitle.trim(),
+            description: itineraryDescription.trim() || undefined,
+          });
+        }
+      } else if (detailData.categoryId === 'glamping') {
+        await updateGlampingListing(listingId, {
+          title,
+          description,
+          locationJson: city.trim() ? { city: city.trim() } : undefined,
+          pricePerCampNight: numericPrice,
+        });
+        const breakfastPrice = parseNumber(mealPlanPrice);
+        if (breakfastPrice != null) {
+          await upsertGlampingMealPlan(listingId, {
+            planCode: 'CP',
+            label: 'With Breakfast',
+            includesBreakfast: true,
+            breakfastPricePp: breakfastPrice,
+            isDefault: true,
+          });
+        }
+      } else {
+        await updateActivityListing(listingId, {
+          title,
+          description,
+          locationJson: city.trim() ? { city: city.trim() } : undefined,
+          basePriceAdult: numericPrice,
+        });
+        if (slotLabel.trim() && primaryEntity?.entityType === 'activity_slot') {
+          await updateActivitySlot(listingId, primaryEntity.entityId, { label: slotLabel.trim() });
+        }
+      }
+      await query.refetch();
+      setSuccessMessage('Changes saved successfully.');
+    } catch (error) {
+      setErrorMessage(getErrorMessage(error));
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const removePhoto = (index: number) => {
-    setPhotos((prev) => prev.filter((_, i) => i !== index));
+  const handleCalendarPricing = async () => {
+    if (!primaryEntity || !calendarDate.trim()) {
+      setErrorMessage('Enter a date and ensure this listing supports calendar pricing.');
+      return;
+    }
+    const numericPrice = parseNumber(calendarPrice);
+    if (numericPrice == null) {
+      setErrorMessage('Enter a valid override price.');
+      return;
+    }
+    setIsApplyingCalendar(true);
+    setErrorMessage(null);
+    setSuccessMessage(null);
+    try {
+      await updateAvailabilityPriceOverride(primaryEntity.entityType, primaryEntity.entityId, {
+        overrides: [{ date: calendarDate.trim(), price: numericPrice }],
+      });
+      setSuccessMessage('Calendar price updated.');
+    } catch (error) {
+      setErrorMessage(getErrorMessage(error));
+    } finally {
+      setIsApplyingCalendar(false);
+    }
   };
 
-  const removeAmenity = (id: string) => {
-    setAmenities((prev) => prev.filter((a) => a.id !== id));
+  const handleSoftDisable = async () => {
+    if (!listingId || !detailData || !primaryEntity) return;
+    setIsSoftDisabling(true);
+    setErrorMessage(null);
+    setSuccessMessage(null);
+    try {
+      if (detailData.categoryId === 'property' && 'roomType' in primaryEntity) {
+        await updateHotelRoomType(listingId, primaryEntity.roomType.id, { isActive: false });
+        setSuccessMessage('Room type disabled.');
+      } else if (detailData.categoryId === 'activities' && 'slot' in primaryEntity) {
+        await updateActivitySlot(listingId, primaryEntity.slot.id, { isActive: false });
+        setSuccessMessage('Activity slot disabled.');
+      } else {
+        setErrorMessage('Soft disable is not supported for this listing type.');
+      }
+      await query.refetch();
+    } catch (error) {
+      setErrorMessage(getErrorMessage(error));
+    } finally {
+      setIsSoftDisabling(false);
+    }
   };
 
-  const adjustPrice = (delta: number) => {
-    setPrice((prev) => Math.max(0, prev + delta));
+  const handleCreateSlot = async () => {
+    if (!listingId || categoryId !== 'activities' || !slotLabel.trim()) return;
+    setIsSaving(true);
+    setErrorMessage(null);
+    setSuccessMessage(null);
+    try {
+      await createActivitySlotForListing(listingId, { label: slotLabel.trim() });
+      await query.refetch();
+      setSuccessMessage('Activity slot created.');
+    } catch (error) {
+      setErrorMessage(getErrorMessage(error));
+    } finally {
+      setIsSaving(false);
+    }
   };
+
+  if (!listingId) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <View style={styles.page}>
+          <VendorDashboardTopBar />
+          <View style={styles.centerState}>
+            <Text style={styles.errorText}>No listing selected.</Text>
+          </View>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -82,148 +336,218 @@ export function MobileVendorEditListingScreen() {
           contentContainerStyle={[styles.scrollContent, { paddingBottom: tabInset + 72 }]}
           showsVerticalScrollIndicator={false}
         >
-          <VendorDashboardCategoryTabs selectedId={categoryId} onSelect={setCategoryId} />
-
           <View style={styles.screenHeader}>
             <Pressable style={styles.backCircle} onPress={() => router.back()} hitSlop={8}>
               <Ionicons name="chevron-back" size={18} color={colors.surface.white} />
             </Pressable>
             <Text style={styles.screenTitle}>
-              {VENDOR_EDIT_LISTING_COPY.propertyNumber(VENDOR_EDIT_LISTING_DEFAULT.listingRef)}
+              {VENDOR_EDIT_LISTING_COPY.propertyNumber(headerRef)}
             </Text>
           </View>
 
           <View style={styles.nameBanner}>
-            <Text style={styles.nameBannerText}>{VENDOR_EDIT_LISTING_DEFAULT.propertyName}</Text>
+            <Text style={styles.nameBannerText}>
+              {mode === 'pricing' ? `Pricing: ${displayName}` : displayName}
+            </Text>
             <Ionicons name="create-outline" size={16} color={MAROON} />
           </View>
 
-          <View style={styles.photoSection}>
-            <View style={styles.photoGrid}>
-              {photos[0] ? (
-                <View style={styles.photoLargeWrap}>
-                  <Image source={photos[0]} style={styles.photoLarge} resizeMode="cover" />
-                  <Pressable style={styles.deletePhotoBtn} onPress={() => removePhoto(0)}>
-                    <Ionicons name="trash" size={10} color={colors.surface.white} />
-                  </Pressable>
-                </View>
-              ) : null}
-              {photos[1] ? (
-                <View style={styles.photoLargeWrap}>
-                  <Image source={photos[1]} style={styles.photoLarge} resizeMode="cover" />
-                  <Pressable style={styles.deletePhotoBtn} onPress={() => removePhoto(1)}>
-                    <Ionicons name="trash" size={10} color={colors.surface.white} />
-                  </Pressable>
-                </View>
-              ) : null}
+          {query.isLoading ? (
+            <View style={styles.centerState}>
+              <ActivityIndicator color={MAROON} />
             </View>
-            <View style={styles.photoRowSmall}>
-              {photos.slice(2, 5).map((photo, index) => {
-                const photoIndex = index + 2;
-                return (
-                  <View key={photoIndex} style={styles.photoSmallWrap}>
-                    <Image source={photo} style={styles.photoSmall} resizeMode="cover" />
-                    <Pressable style={styles.deletePhotoBtn} onPress={() => removePhoto(photoIndex)}>
-                      <Ionicons name="trash" size={10} color={colors.surface.white} />
+          ) : null}
+
+          {query.error ? (
+            <View style={styles.sectionCard}>
+              <Text style={styles.errorText}>{getErrorMessage(query.error)}</Text>
+            </View>
+          ) : null}
+
+          {!query.isLoading && detailData ? (
+            <>
+              <View style={styles.sectionCard}>
+                <Text style={styles.sectionNote}>
+                  Delete is not supported by backend for listings or images. Use this screen for edits,
+                  price updates, and soft-disable where supported.
+                </Text>
+              </View>
+
+              <View style={styles.sectionCard}>
+                <Text style={styles.fieldLabel}>{VENDOR_EDIT_LISTING_COPY.titleLabel}</Text>
+                <View style={styles.titleField}>
+                  <TextInput style={styles.titleInput} value={title} onChangeText={setTitle} multiline />
+                </View>
+
+                <Text style={styles.fieldLabel}>{VENDOR_EDIT_LISTING_COPY.descriptionLabel}</Text>
+                <View style={styles.descriptionBox}>
+                  <TextInput
+                    style={styles.descriptionInput}
+                    value={description}
+                    onChangeText={setDescription}
+                    multiline
+                    textAlignVertical="top"
+                  />
+                </View>
+
+                <Text style={styles.fieldLabel}>City</Text>
+                <View style={styles.titleField}>
+                  <TextInput style={styles.titleInput} value={city} onChangeText={setCity} />
+                </View>
+              </View>
+
+              <View style={styles.sectionCard}>
+                <Text style={styles.fieldLabel}>
+                  {categoryId === 'packages'
+                    ? 'Price per person'
+                    : categoryId === 'glamping'
+                      ? 'Price per camp night'
+                      : categoryId === 'activities'
+                        ? 'Base adult price'
+                        : 'Base price'}
+                </Text>
+                <View style={styles.titleField}>
+                  <TextInput
+                    style={styles.titleInput}
+                    value={price}
+                    onChangeText={setPrice}
+                    keyboardType="numeric"
+                    placeholder="Enter amount"
+                  />
+                </View>
+                <Text style={styles.priceHint}>{VENDOR_EDIT_LISTING_COPY.priceHint}</Text>
+              </View>
+
+              {categoryId === 'packages' ? (
+                <View style={styles.sectionCard}>
+                  <Text style={styles.fieldLabel}>Day 1 itinerary</Text>
+                  <View style={styles.titleField}>
+                    <TextInput
+                      style={styles.titleInput}
+                      value={itineraryTitle}
+                      onChangeText={setItineraryTitle}
+                      placeholder="Itinerary title"
+                    />
+                  </View>
+                  <View style={styles.descriptionBox}>
+                    <TextInput
+                      style={styles.descriptionInput}
+                      value={itineraryDescription}
+                      onChangeText={setItineraryDescription}
+                      multiline
+                      placeholder="Itinerary description"
+                    />
+                  </View>
+                  <Text style={styles.sectionNote}>
+                    Package API only supports editing `title`, `description`, `pricePerPerson`, and
+                    itinerary day upserts. Other package fields are read-only until backend adds them.
+                  </Text>
+                </View>
+              ) : null}
+
+              {categoryId === 'glamping' ? (
+                <View style={styles.sectionCard}>
+                  <Text style={styles.fieldLabel}>Meal plan breakfast price (CP)</Text>
+                  <View style={styles.titleField}>
+                    <TextInput
+                      style={styles.titleInput}
+                      value={mealPlanPrice}
+                      onChangeText={setMealPlanPrice}
+                      keyboardType="numeric"
+                      placeholder="Breakfast price per person"
+                    />
+                  </View>
+                </View>
+              ) : null}
+
+              {categoryId === 'activities' ? (
+                <View style={styles.sectionCard}>
+                  <Text style={styles.fieldLabel}>Primary slot label</Text>
+                  <View style={styles.titleField}>
+                    <TextInput
+                      style={styles.titleInput}
+                      value={slotLabel}
+                      onChangeText={setSlotLabel}
+                      placeholder="Morning Batch"
+                    />
+                  </View>
+                  <View style={styles.inlineActions}>
+                    <Pressable style={styles.secondaryBtn} onPress={handleCreateSlot}>
+                      <Text style={styles.secondaryBtnText}>Add slot</Text>
+                    </Pressable>
+                    <Pressable
+                      style={[styles.secondaryBtn, styles.softDeleteBtn]}
+                      onPress={handleSoftDisable}
+                      disabled={isSoftDisabling}
+                    >
+                      <Text style={styles.softDeleteText}>Disable slot</Text>
                     </Pressable>
                   </View>
-                );
-              })}
-            </View>
-            <View style={styles.uploadRow}>
-              <Text style={styles.addPhotosLabel}>{VENDOR_EDIT_LISTING_COPY.addNewPhotos}</Text>
-              <Pressable style={styles.uploadBtn}>
-                <Ionicons name="cloud-upload-outline" size={14} color={colors.surface.white} />
-                <Text style={styles.uploadBtnText}>{VENDOR_EDIT_LISTING_COPY.uploadFromDevice}</Text>
-              </Pressable>
-            </View>
-          </View>
+                </View>
+              ) : null}
 
-          <View style={styles.sectionCard}>
-            <Text style={styles.fieldLabel}>{VENDOR_EDIT_LISTING_COPY.titleLabel}</Text>
-            <View style={styles.titleField}>
-              <TextInput
-                style={styles.titleInput}
-                value={title}
-                onChangeText={setTitle}
-                multiline
-              />
-              <Ionicons name="create-outline" size={16} color="rgba(28, 32, 36, 0.45)" />
-            </View>
-
-            <Text style={styles.fieldLabel}>{VENDOR_EDIT_LISTING_COPY.descriptionLabel}</Text>
-            <View style={styles.descriptionBox}>
-              <TextInput
-                style={styles.descriptionInput}
-                value={description}
-                onChangeText={(text) =>
-                  setDescription(text.slice(0, VENDOR_EDIT_LISTING_DEFAULT.descriptionMax))
-                }
-                multiline
-                textAlignVertical="top"
-              />
-              <Text style={styles.charCount}>
-                {description.length}/{VENDOR_EDIT_LISTING_DEFAULT.descriptionMax}
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.sectionCard}>
-            <Text style={styles.fieldLabel}>{VENDOR_EDIT_LISTING_COPY.highlightsLabel}</Text>
-            <View style={styles.highlightRow}>
-              {VENDOR_EDIT_LISTING_HIGHLIGHTS.map((item) => {
-                const selected = highlights.includes(item.id);
-                return (
+              {categoryId === 'property' ? (
+                <View style={styles.sectionCard}>
+                  <Text style={styles.fieldLabel}>Room management</Text>
+                  <Text style={styles.sectionNote}>
+                    Whole hotel delete is not supported. If needed, you can soft-disable the first room
+                    type from here.
+                  </Text>
                   <Pressable
-                    key={item.id}
-                    style={[styles.highlightPill, selected && styles.highlightPillSelected]}
-                    onPress={() => toggleHighlight(item.id)}
+                    style={[styles.secondaryBtn, styles.softDeleteBtn]}
+                    onPress={handleSoftDisable}
+                    disabled={isSoftDisabling}
                   >
-                    <Text style={[styles.highlightText, selected && styles.highlightTextSelected]}>
-                      {item.label}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-
-            <View style={styles.amenitiesHeader}>
-              <Text style={styles.fieldLabel}>{VENDOR_EDIT_LISTING_COPY.amenitiesLabel}</Text>
-              <Pressable style={styles.addNewBtn}>
-                <Text style={styles.addNewText}>{VENDOR_EDIT_LISTING_COPY.addNew}</Text>
-              </Pressable>
-            </View>
-            <View style={styles.amenityList}>
-              {amenities.map((amenity) => (
-                <View key={amenity.id} style={styles.amenityRow}>
-                  <View style={styles.amenityLeft}>
-                    <Ionicons name={amenity.icon} size={14} color="rgba(28, 32, 36, 0.55)" />
-                    <Text style={styles.amenityName}>{amenity.label}</Text>
-                  </View>
-                  <Pressable onPress={() => removeAmenity(amenity.id)} hitSlop={8}>
-                    <Ionicons name="trash-outline" size={16} color={MAROON} />
+                    <Text style={styles.softDeleteText}>Disable room type</Text>
                   </Pressable>
                 </View>
-              ))}
-            </View>
-          </View>
+              ) : null}
 
-          <View style={styles.sectionCard}>
-            <Text style={styles.fieldLabel}>{VENDOR_EDIT_LISTING_COPY.priceLabel}</Text>
-            <View style={styles.priceRow}>
-              <Pressable style={styles.priceAdjustBtn} onPress={() => adjustPrice(-100)}>
-                <Text style={styles.priceAdjustText}>−</Text>
-              </Pressable>
-              <View style={styles.priceInputBox}>
-                <Text style={styles.priceCurrency}>₹</Text>
-                <Text style={styles.priceValue}>{price.toLocaleString('en-IN')}</Text>
-              </View>
-              <Pressable style={styles.priceAdjustBtn} onPress={() => adjustPrice(100)}>
-                <Text style={styles.priceAdjustText}>+</Text>
-              </Pressable>
-            </View>
-            <Text style={styles.priceHint}>{VENDOR_EDIT_LISTING_COPY.priceHint}</Text>
-          </View>
+              {primaryEntity ? (
+                <View style={styles.sectionCard}>
+                  <Text style={styles.fieldLabel}>Calendar pricing</Text>
+                  <View style={styles.titleField}>
+                    <TextInput
+                      style={styles.titleInput}
+                      value={calendarDate}
+                      onChangeText={setCalendarDate}
+                      placeholder="YYYY-MM-DD"
+                    />
+                  </View>
+                  <View style={styles.titleField}>
+                    <TextInput
+                      style={styles.titleInput}
+                      value={calendarPrice}
+                      onChangeText={setCalendarPrice}
+                      keyboardType="numeric"
+                      placeholder="Override price"
+                    />
+                  </View>
+                  <Pressable
+                    style={styles.secondaryBtn}
+                    onPress={handleCalendarPricing}
+                    disabled={isApplyingCalendar}
+                  >
+                    <Text style={styles.secondaryBtnText}>
+                      {isApplyingCalendar ? 'Applying…' : 'Apply calendar price'}
+                    </Text>
+                  </Pressable>
+                </View>
+              ) : null}
+
+              {errorMessage ? (
+                <View style={styles.sectionCard}>
+                  <Text style={styles.errorText}>{errorMessage}</Text>
+                </View>
+              ) : null}
+
+              {successMessage ? (
+                <View style={styles.sectionCard}>
+                  <Text style={styles.successText}>{successMessage}</Text>
+                </View>
+              ) : null}
+            </>
+          ) : null}
         </ScrollView>
 
         <View style={[styles.footer, { bottom: tabInset }]}>
@@ -233,8 +557,8 @@ export function MobileVendorEditListingScreen() {
             </View>
             <Text style={styles.goBackText}>{VENDOR_EDIT_LISTING_COPY.goBack}</Text>
           </Pressable>
-          <Pressable style={styles.saveBtn} onPress={() => router.back()}>
-            <Text style={styles.saveBtnText}>{VENDOR_EDIT_LISTING_COPY.saveChanges}</Text>
+          <Pressable style={styles.saveBtn} onPress={handleSave} disabled={isSaving || query.isLoading}>
+            <Text style={styles.saveBtnText}>{isSaving ? 'Saving…' : VENDOR_EDIT_LISTING_COPY.saveChanges}</Text>
             <View style={styles.saveIcon}>
               <Ionicons name="save-outline" size={14} color={SAVE_GREEN} />
             </View>

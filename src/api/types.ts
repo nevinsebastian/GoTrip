@@ -310,6 +310,8 @@ export interface CreateActivitySlotRequest {
   startTime?: string;
   durationMinutes?: number;
   maxParticipants?: number;
+  priceOverrideAdult?: number;
+  isActive?: boolean;
 }
 
 export interface CreateActivitySlotResponse {
@@ -382,6 +384,8 @@ export interface UpsertPackageItineraryRequest {
   hotelDescription?: string;
   activityName?: string;
   activityDescription?: string;
+  activitiesJson?: string[];
+  mealsCovered?: string[];
 }
 
 export interface UpsertPackageItineraryResponse {
@@ -591,6 +595,7 @@ export interface HotelRoomType {
   basePricePerNight?: number;
   maxAdultOccupancy?: number;
   maxChildOccupancy?: number;
+  isActive?: boolean;
   mealPlans?: HotelMealPlan[];
   amenities?: HotelRoomAmenity[];
 }

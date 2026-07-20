@@ -77,12 +77,27 @@ export const ENDPOINTS = {
     browse: '/api/v1/hotels',
     detail: (id: string) => `/api/v1/hotels/${id}`,
     create: '/api/v1/hotels',
+    update: (id: string) => `/api/v1/hotels/${id}`,
     roomTypes: (hotelId: string) => `/api/v1/hotels/${hotelId}/room-types`,
+    roomType: (hotelId: string, roomTypeId: string) =>
+      `/api/v1/hotels/${hotelId}/room-types/${roomTypeId}`,
+    roomAmenities: (hotelId: string, roomTypeId: string) =>
+      `/api/v1/hotels/${hotelId}/room-types/${roomTypeId}/amenities`,
+    propertyDetails: (hotelId: string) => `/api/v1/hotels/${hotelId}/property-details`,
     submit: (hotelId: string) => `/api/v1/hotels/${hotelId}/submit`,
   },
   availability: {
     entity: (entityType: string, entityId: string) =>
       `/api/v1/availability/${entityType}/${entityId}`,
+    block: (entityType: string, entityId: string) =>
+      `/api/v1/availability/${entityType}/${entityId}/block`,
+    unblock: (entityType: string, entityId: string) =>
+      `/api/v1/availability/${entityType}/${entityId}/unblock`,
+    priceOverride: (entityType: string, entityId: string) =>
+      `/api/v1/availability/${entityType}/${entityId}/price-override`,
+    seasonal: (entityType: string, entityId: string) =>
+      `/api/v1/availability/${entityType}/${entityId}/seasonal`,
+    deleteSeasonal: (id: string) => `/api/v1/availability/seasonal/${id}`,
   },
   reviews: {
     listing: (listingId: string) => `/api/v1/reviews/listing/${listingId}`,
@@ -92,6 +107,7 @@ export const ENDPOINTS = {
     browse: '/api/v1/glamping',
     detail: (id: string) => `/api/v1/glamping/${id}`,
     create: '/api/v1/glamping',
+    update: (id: string) => `/api/v1/glamping/${id}`,
     mealPlans: (id: string) => `/api/v1/glamping/${id}/meal-plans`,
     images: (id: string) => `/api/v1/glamping/${id}/images`,
     submit: (id: string) => `/api/v1/glamping/${id}/submit`,
@@ -101,6 +117,8 @@ export const ENDPOINTS = {
     detail: (id: string) => `/api/v1/activities/${id}`,
     create: '/api/v1/activities',
     slots: (id: string) => `/api/v1/activities/${id}/slots`,
+    slot: (id: string, slotId: string) => `/api/v1/activities/${id}/slots/${slotId}`,
+    update: (id: string) => `/api/v1/activities/${id}`,
     images: (id: string) => `/api/v1/activities/${id}/images`,
     highlights: (id: string) => `/api/v1/activities/${id}/highlights`,
     submit: (id: string) => `/api/v1/activities/${id}/submit`,
@@ -108,6 +126,7 @@ export const ENDPOINTS = {
   packages: {
     browse: '/api/v1/packages',
     detail: (id: string) => `/api/v1/packages/${id}`,
+    update: (id: string) => `/api/v1/packages/${id}`,
     enquiries: (id: string) => `/api/v1/packages/${id}/enquiries`,
     myEnquiries: '/api/v1/packages/my/enquiries',
     create: '/api/v1/packages',

@@ -120,7 +120,12 @@ export function DesktopVendorListingCard({ listing, onPricing, onDelete }: Deskt
 
         <Pressable
           style={({ pressed }) => [styles.editBtn, pressed && styles.pressed]}
-          onPress={() => router.push('/vendor/edit-listing')}
+          onPress={() =>
+            router.push({
+              pathname: '/vendor/edit-listing',
+              params: { listingId: listing.id, categoryId: listing.categoryId, mode: 'edit' },
+            })
+          }
           accessibilityRole="button"
         >
           <Ionicons name="home-outline" size={18} color={colors.surface.white} />

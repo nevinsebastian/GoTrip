@@ -84,7 +84,12 @@ export function VendorListingCard({ listing, onPricing, onDelete }: VendorListin
         </Pressable>
         <Pressable
           style={[styles.editBtn, { backgroundColor: theme.accent }]}
-          onPress={() => router.push('/vendor/edit-listing')}
+          onPress={() =>
+            router.push({
+              pathname: '/vendor/edit-listing',
+              params: { listingId: listing.id, categoryId: listing.categoryId, mode: 'edit' },
+            })
+          }
         >
           <Ionicons name="create-outline" size={14} color={colors.surface.white} />
           <Text style={styles.editText}>{VENDOR_LISTINGS_COPY.edit}</Text>
