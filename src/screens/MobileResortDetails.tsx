@@ -278,6 +278,8 @@ export function MobileResortDetailsScreen({
                 onBookNow();
               }}
               bookCtaLabel={bookCtaLabel}
+              occupancyLabel={featuredRoom.occupancyLabel}
+              fitsGuests={featuredRoom.fitsSelectedGuests !== false}
               selected={selectedRoomTypeId === featuredRoom.id}
             />
           ) : null}
@@ -300,6 +302,8 @@ export function MobileResortDetailsScreen({
                 onBookNow();
               }}
               bookCtaLabel={bookCtaLabel}
+              occupancyLabel={room.occupancyLabel}
+              fitsGuests={room.fitsSelectedGuests !== false}
               selected={selectedRoomTypeId === room.id}
             />
           ))}

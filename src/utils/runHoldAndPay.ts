@@ -30,6 +30,8 @@ export type RunHoldAndPayInput = {
   mealPlanId?: string | null;
   activitySlotId?: string | null;
   pricePreview?: BookingPriceBreakdown | null;
+  /** Optional combo link for cross_room_type multi-hold */
+  comboRef?: string | null;
 };
 
 export type RunHoldAndPayResult = {
@@ -44,25 +46,41 @@ function buildHoldBody(
   mealPlanId?: string | null,
 ): BookingHoldRequest {
   const checkIn = toDateOnly(input.checkIn);
-  const checkOut = toDateOnly(input.checkOut);
   if (!checkIn) {
     throw Object.assign(new Error('Invalid check-in date.'), { statusCode: 400 });
   }
+
+  const isActivity = input.entityType === 'activity_slot';
+  // Overnight stays need checkOut; activities are priced for a single day (omit checkOut).
+  const checkOut = isActivity ? undefined : toDateOnly(input.checkOut);
+  if (!isActivity && !checkOut) {
+    throw Object.assign(new Error('Please select check-out date.'), { statusCode: 400 });
+  }
+
+  const adults = Math.max(1, input.guests.adults);
+  // Activity inventory is per participant — unitsBooked must match adults.
+  const unitsBooked = isActivity
+    ? adults
+    : Math.max(1, input.unitsBooked ?? 1);
 
   return {
     listingId: input.listingId,
     entityType: input.entityType,
     entityId: input.entityId,
     checkIn,
-    checkOut: checkOut || undefined,
-    adults: Math.max(1, input.guests.adults),
+    checkOut,
+    adults,
+    children: input.guests.children || undefined,
     infants: input.guests.infants || undefined,
-    unitsBooked: input.unitsBooked ?? 1,
+    unitsBooked,
     mealPlanId: mealPlanId && isUuid(mealPlanId) ? mealPlanId : undefined,
     activitySlotId:
-      input.activitySlotId && isUuid(input.activitySlotId)
-        ? input.activitySlotId
-        : undefined,
+      isActivity && input.entityId
+        ? input.entityId
+        : input.activitySlotId && isUuid(input.activitySlotId)
+          ? input.activitySlotId
+          : undefined,
+    comboRef: input.comboRef && isUuid(input.comboRef) ? input.comboRef : undefined,
     guests: [{ fullName: 'Guest', age: 30, isPrimary: true }],
   };
 }

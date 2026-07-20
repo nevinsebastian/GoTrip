@@ -16,7 +16,6 @@ import {
 import { useHotelListings } from '@/src/hooks/useHotelListings';
 import { useCategoryListings } from '@/src/hooks/useCategoryListing';
 import { formatStayDateLabel } from '@/src/utils/hotelSearchFilters';
-import { totalGuests } from '@/src/components/home/homeSearchConfig';
 import { DesktopSearchListingDetail } from '@/src/screens/DesktopSearchListingDetail';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useMemo, useState } from 'react';
@@ -212,7 +211,8 @@ export function DesktopSearchResultsScreen({
       checkIn,
       checkOut,
       rooms: guestCounts?.rooms,
-      guests: guestCounts ? totalGuests(guestCounts) : undefined,
+      adults: guestCounts?.adults,
+      children: guestCounts?.children,
       ...starFilter,
       enabled: tab === 'hotels',
     });

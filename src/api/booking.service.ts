@@ -53,6 +53,7 @@ export async function checkAvailability(
     adults: Math.max(1, payload.adults),
   };
   if (payload.checkOut) body.checkOut = toDateOnly(payload.checkOut) ?? payload.checkOut;
+  if (payload.children != null && payload.children > 0) body.children = payload.children;
   if (payload.infants != null && payload.infants > 0) body.infants = payload.infants;
   if (payload.unitsBooked != null && payload.unitsBooked > 0) {
     body.unitsBooked = payload.unitsBooked;

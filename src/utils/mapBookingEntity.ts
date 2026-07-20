@@ -36,17 +36,24 @@ export function mapHotelDetailToBookingEntity(
 export function mapActivityDetailToBookingEntity(
   activity: ActivityDetail,
   selectedSlotId?: string | null,
+  adults = 1,
 ): BookingEntitySelection | null {
+  const nestedSlots =
+    (activity as ActivityDetail & { activity?: { slots?: ActivityDetail['slots'] } }).activity
+      ?.slots;
+  const slots = activity.slots?.length ? activity.slots : nestedSlots;
   const slot = selectedSlotId
-    ? activity.slots?.find((s) => s.id === selectedSlotId)
-    : activity.slots?.[0];
+    ? slots?.find((s) => s.id === selectedSlotId)
+    : slots?.[0];
   if (!slot?.id) return null;
+  const participants = Math.max(1, adults);
   return {
     listingId: activity.id,
     entityType: 'activity_slot',
     entityId: slot.id,
     activitySlotId: slot.id,
-    unitsBooked: 1,
+    // Backend inventory checks unitsBooked; price uses adults — keep them equal.
+    unitsBooked: participants,
   };
 }
 
@@ -55,11 +62,11 @@ export function mapGlampingDetailToBookingEntity(
   selectedSiteId?: string | null,
   unitsBooked = 1,
 ): BookingEntitySelection | null {
+  const nestedSiteId = glamping.glampingSite?.id;
   const site = selectedSiteId
     ? glamping.sites?.find((s) => s.id === selectedSiteId)
     : glamping.sites?.[0];
-  // Some APIs nest site under glampingSite on listing; fall back to listing id only if sites exist
-  const siteId = site?.id;
+  const siteId = site?.id ?? (selectedSiteId && nestedSiteId === selectedSiteId ? nestedSiteId : undefined) ?? nestedSiteId;
   if (!siteId) return null;
   return {
     listingId: glamping.id,

@@ -18,6 +18,8 @@ export type UseHotelListingsParams = {
   checkOut?: string;
   rooms?: number;
   guests?: number;
+  adults?: number;
+  children?: number;
   locationQuery?: string;
   starRatingMin?: number;
   starRatingMax?: number;
@@ -40,6 +42,8 @@ export function useHotelListings(params: UseHotelListingsParams) {
     q,
     rooms,
     guests,
+    adults,
+    children,
     starRatingMin,
     starRatingMax,
     limit,
@@ -56,6 +60,8 @@ export function useHotelListings(params: UseHotelListingsParams) {
     checkOut,
     rooms,
     guests,
+    adults,
+    children,
     limit,
     offset,
     page,

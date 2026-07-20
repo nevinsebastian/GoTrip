@@ -335,11 +335,22 @@ export default function BookingConfirmRoute() {
           children: payload.children || undefined,
           infants: payload.infants || undefined,
           unitsBooked: 1,
-          mealPlanId: mealPlanId || undefined,
         },
         {
           onSuccess: (res) => {
             if (!res.available) {
+              if (res.capacityExceeded) {
+                const sameRoom = res.suggestions?.find((s) => s.combinationType === 'same_room_type');
+                const units = sameRoom?.rooms?.[0]?.units;
+                setErrorMessage(
+                  units && units > 1
+                    ? `${res.message ?? 'This room does not fit your guests.'} Book ${units} rooms of this type, or pick another room.`
+                    : res.message ??
+                        'Selected room does not accommodate this many guests. Try another room or adjust guests.',
+                );
+                setPriceBreakdown(null);
+                return;
+              }
               const dates = res.unavailableDates?.join(', ') ?? 'selected dates';
               setErrorMessage(`Not available for ${dates}. Please choose different dates.`);
               setPriceBreakdown(null);
@@ -348,7 +359,17 @@ export default function BookingConfirmRoute() {
             setPriceBreakdown(res.priceBreakdown ?? null);
             setStep('summary');
           },
-          onError: (err) => setErrorMessage(getErrorMessage(err)),
+          onError: (err) => {
+            const details = (err as { details?: { capacityExceeded?: boolean; message?: string; suggestions?: unknown[] } })
+              ?.details;
+            if (details?.capacityExceeded) {
+              setErrorMessage(
+                details.message ?? 'Selected room does not accommodate this many guests.',
+              );
+              return;
+            }
+            setErrorMessage(getErrorMessage(err));
+          },
         },
       );
     },

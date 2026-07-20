@@ -5,11 +5,12 @@ import { useDesktopBookingFocus } from '@/src/hooks/useDesktopBookingFocus';
 import { useIsAuthenticated } from '@/src/hooks/useIsAuthenticated';
 import { DesktopCategoryListingDetailScreen } from '@/src/screens/DesktopCategoryListingDetailScreen';
 import { MobileActivityDetailsScreen } from '@/src/screens/MobileActivityDetails';
+import { defaultHotelStayDates, toDateOnly } from '@/src/utils/bookingPayment';
 import { mapActivityDetailToBookingEntity } from '@/src/utils/mapBookingEntity';
 import type { ActivityDetail } from '@/src/api/types';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import React, { useCallback } from 'react';
-import { Platform, View } from 'react-native';
+import { Alert, Platform, View } from 'react-native';
 
 export default function ActivityDetailsRoute() {
   const { isDesktop } = useResponsive();
@@ -29,24 +30,37 @@ export default function ActivityDetailsRoute() {
   );
 
   const goToCheckout = useCallback(
-    (checkIn: string, checkOut: string) => {
+    (checkIn: string, _checkOut: string, adults = 2) => {
       if (!isLoggedIn) {
         router.push('/login');
         return;
       }
-      const entity = activity ? mapActivityDetailToBookingEntity(activity) : null;
+      const entity = activity
+        ? mapActivityDetailToBookingEntity(activity, undefined, adults)
+        : null;
+      if (!entity?.entityId) {
+        Alert.alert(
+          'Unavailable',
+          'This activity has no bookable time slot yet. Please try another activity.',
+        );
+        return;
+      }
+      const defaults = defaultHotelStayDates(1, 7);
+      const inDate = toDateOnly(checkIn) ?? defaults.checkIn;
       router.push({
         pathname: '/booking/review',
         params: {
-          listingId: listingId ?? '',
+          listingId: listingId ?? entity.listingId,
           listingType: 'activity',
           title: display?.title ?? params.title ?? '',
           price: display?.priceLabel ?? params.price ?? '',
-          checkIn,
-          checkOut: checkOut || checkIn,
-          entityType: entity?.entityType ?? 'activity_slot',
-          entityId: entity?.entityId ?? '',
-          activitySlotId: entity?.activitySlotId ?? entity?.entityId ?? '',
+          checkIn: inDate,
+          // Activities are single-day — do not send checkOut on hold (backend prices per adult/day).
+          entityType: entity.entityType,
+          entityId: entity.entityId,
+          activitySlotId: entity.activitySlotId ?? entity.entityId,
+          unitsBooked: String(entity.unitsBooked ?? adults),
+          adults: String(Math.max(1, adults)),
         },
       });
     },

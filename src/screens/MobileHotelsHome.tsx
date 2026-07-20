@@ -3,7 +3,6 @@ import type { Listing } from '@/src/api/types';
 import { useHotelListings } from '@/src/hooks/useHotelListings';
 import { useCategoryListings } from '@/src/hooks/useCategoryListing';
 import { cityQueryFromLocation, formatStayDateLabel } from '@/src/utils/hotelSearchFilters';
-import { totalGuests } from '@/src/components/home/homeSearchConfig';
 import { router } from 'expo-router';
 import React, { useEffect, useMemo, useRef } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
@@ -55,7 +54,8 @@ export function MobileHotelsHome() {
     checkIn: searchMode ? checkIn : undefined,
     checkOut: searchMode ? checkOut : undefined,
     rooms: guestCounts?.rooms,
-    guests: guestCounts ? totalGuests(guestCounts) : undefined,
+    adults: guestCounts?.adults,
+    children: guestCounts?.children,
     enabled: searchMode ? searchTab === 'hotels' : isHotels,
   });
 

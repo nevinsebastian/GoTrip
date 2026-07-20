@@ -43,7 +43,16 @@ export async function fetchSearch(params: SearchParams): Promise<SearchResponse>
   if (params.checkIn) query.checkIn = params.checkIn;
   if (params.checkOut) query.checkOut = params.checkOut;
   if (params.rooms != null) query.rooms = params.rooms;
-  if (params.guests != null) query.guests = params.guests;
+  // Hotel capacity filter — prefer adults/children over legacy guests total.
+  if (params.adults != null && params.adults > 0) query.adults = params.adults;
+  if (params.children != null && params.children > 0) query.children = params.children;
+  if (
+    params.guests != null &&
+    params.adults == null &&
+    params.children == null
+  ) {
+    query.guests = params.guests;
+  }
   if (params.category?.trim()) query.category = params.category.trim();
 
   const response = await apiClient.get<SearchResponse>(ENDPOINTS.search.browse, { params: query });

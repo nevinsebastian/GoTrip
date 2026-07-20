@@ -69,6 +69,8 @@ export default function HotelDetailScreen() {
     checkIn?: string;
     checkOut?: string;
     adults?: string;
+    children?: string;
+    infants?: string;
   }>();
   const hotelId = paramString(params.id);
   const { searchParams } = useHomeSearch();
@@ -90,7 +92,6 @@ export default function HotelDetailScreen() {
   );
 
   const hotel = data?.hotel;
-  const roomTypes = useMemo(() => mapHotelRoomsForDisplay(hotel ?? { id: '', title: '' }), [hotel]);
   const [selectedRoomTypeId, setSelectedRoomTypeId] = useState<string | undefined>();
   const [selectedMealPlanId, setSelectedMealPlanId] = useState<string | undefined>();
   const [dateModalVisible, setDateModalVisible] = useState(false);
@@ -110,13 +111,24 @@ export default function HotelDetailScreen() {
   } | null>(null);
   const [disabledDates, setDisabledDates] = useState<Set<string>>(new Set());
 
+  const roomTypes = useMemo(
+    () =>
+      mapHotelRoomsForDisplay(hotel ?? { id: '', title: '' }, {
+        adults: adultsCount,
+        children: childrenCount,
+      }),
+    [hotel, adultsCount, childrenCount],
+  );
+
   useEffect(() => {
     const checkIn = paramString(params.checkIn) ?? searchParams?.checkIn ?? null;
     const checkOut = paramString(params.checkOut) ?? searchParams?.checkOut ?? null;
     if (checkIn) setCheckInDate(checkIn);
     if (checkOut) setCheckOutDate(checkOut);
     setAdultsCount(paramNumber(params.adults, searchParams?.guests?.adults ?? 2));
-  }, [params.checkIn, params.checkOut, params.adults, searchParams]);
+    setChildrenCount(paramNumber(params.children, searchParams?.guests?.children ?? 0));
+    setInfantsCount(paramNumber(params.infants, searchParams?.guests?.infants ?? 0));
+  }, [params.checkIn, params.checkOut, params.adults, params.children, params.infants, searchParams]);
 
   useEffect(() => {
     if (!hotel || roomTypes.length === 0) return;
@@ -284,12 +296,32 @@ export default function HotelDetailScreen() {
         checkIn: checkInDate,
         checkOut: checkOutDate,
         adults: Math.max(1, adultsCount),
+        children: childrenCount || undefined,
         infants: infantsCount,
         unitsBooked: 1,
-        mealPlanId: selectedMealPlanId,
+        // mealPlanId omitted — backend meal pricing can null totals
       });
 
       if (!res.available) {
+        if (res.capacityExceeded) {
+          const sameRoom = res.suggestions?.find((s) => s.combinationType === 'same_room_type');
+          const units = sameRoom?.rooms?.[0]?.units;
+          if (units && units > 1) {
+            setBookingError(
+              `${res.message ?? 'This room does not fit your guests.'} Tip: book ${units} rooms of this type.`,
+            );
+          } else if (res.fallbackSearchUrl) {
+            setBookingError(
+              res.message ?? 'No rooms here fit your group. Try adjusting guests or search again.',
+            );
+          } else {
+            setBookingError(
+              res.message ?? 'Selected room does not accommodate this many guests.',
+            );
+          }
+          setPriceBreakdown(null);
+          return;
+        }
         const dates = res.unavailableDates?.join(', ') ?? 'selected dates';
         setBookingError(`Not available for ${dates}. Try different dates.`);
         setPriceBreakdown(null);

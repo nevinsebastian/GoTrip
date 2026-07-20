@@ -214,11 +214,13 @@ export function buildHoldPayload(input: BookingHoldRequest): Record<string, unkn
   };
 
   if (checkOut) body.checkOut = checkOut;
+  if (input.children != null && input.children > 0) body.children = input.children;
   if (input.infants != null && input.infants > 0) body.infants = input.infants;
   if (input.unitsBooked != null && input.unitsBooked > 0) body.unitsBooked = input.unitsBooked;
   if (input.mealPlanId && isUuid(input.mealPlanId)) body.mealPlanId = input.mealPlanId;
   if (input.couponCode?.trim()) body.couponCode = input.couponCode.trim();
   if (input.specialRequests?.trim()) body.specialRequests = input.specialRequests.trim();
+  if (input.comboRef && isUuid(input.comboRef)) body.comboRef = input.comboRef;
   if (input.activitySlotId && isUuid(input.activitySlotId)) {
     body.activitySlotId = input.activitySlotId;
   }

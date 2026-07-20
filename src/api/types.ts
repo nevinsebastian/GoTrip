@@ -658,10 +658,28 @@ export interface SearchParams {
   checkIn?: string;
   checkOut?: string;
   rooms?: number;
+  /** @deprecated prefer adults + children for hotel capacity filtering */
   guests?: number;
+  adults?: number;
+  children?: number;
   category?: string;
   limit?: number;
   offset?: number;
+}
+
+export interface CapacityFitSuggestionRoom {
+  roomTypeId: string;
+  roomTypeName?: string;
+  units: number;
+  maxAdultOccupancy?: number;
+  maxChildOccupancy?: number;
+  basePricePerNight?: number;
+}
+
+export interface CapacityFitSuggestion {
+  combinationType: 'same_room_type' | 'cross_room_type';
+  rooms: CapacityFitSuggestionRoom[];
+  estimatedTotalPerNight?: number;
 }
 
 export interface SearchListing {
@@ -686,6 +704,8 @@ export interface SearchListing {
   package?: Record<string, unknown>;
   activity?: Record<string, unknown>;
   glampingSite?: Record<string, unknown>;
+  /** Present when search was filtered by adults/children and a fit exists */
+  capacityFit?: CapacityFitSuggestion;
 }
 
 export interface SearchResponse {
@@ -699,6 +719,10 @@ export interface SearchResponse {
     checkOut?: string;
     rooms?: number | null;
     guests?: number | null;
+    adults?: number | null;
+    children?: number | null;
+    /** When adults/children were sent, total is an upper-bound estimate */
+    totalApproximate?: boolean;
   };
 }
 
@@ -806,6 +830,8 @@ export interface PublicGlamping extends PublicListingBase {
   thingsToCarry?: string[];
   howToReach?: string;
   sites?: GlampingSite[];
+  /** Nested site from GET /glamping/:id */
+  glampingSite?: GlampingSite & Record<string, unknown>;
   mealPlans?: HotelMealPlan[];
 }
 
@@ -936,6 +962,8 @@ export interface BookingHoldRequest {
   couponCode?: string;
   specialRequests?: string;
   guests?: BookingHoldGuest[];
+  /** Links two holds for a cross_room_type combo booking */
+  comboRef?: string;
 }
 
 export interface BookingHoldResponse {
@@ -1049,6 +1077,11 @@ export interface CheckAvailabilityResponse {
   available?: boolean;
   priceBreakdown?: BookingPriceBreakdown;
   unavailableDates?: string[];
+  /** Hotel capacity hard-reject (party does not fit selected room/units) */
+  capacityExceeded?: boolean;
+  message?: string;
+  suggestions?: CapacityFitSuggestion[];
+  fallbackSearchUrl?: string | null;
 }
 
 export type VendorListingApiCategory = 'hotel' | 'package' | 'glamping' | 'activity';
@@ -1145,8 +1178,11 @@ export interface Booking {
   checkOut?: string;
   guests?: number;
   adults?: number;
+  children?: number;
   infants?: number;
   rooms?: number;
+  /** Shared id when this booking is part of a multi-room-type combo */
+  comboRef?: string | null;
   total_amount?: string;
   status?: BookingStatus;
   cancellation_reason?: string | null;

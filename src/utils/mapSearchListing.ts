@@ -38,6 +38,10 @@ function categoryForType(type: SearchType) {
 function priceFromSearchListing(item: SearchListing): string | null {
   switch (item.category) {
     case 'hotel': {
+      // Prefer capacity-aware group price when search was filtered by guests.
+      if (item.capacityFit?.estimatedTotalPerNight != null) {
+        return String(item.capacityFit.estimatedTotalPerNight);
+      }
       const hp = item.hotelProperty as { pricePerNight?: number; basePrice?: number } | undefined;
       const val = hp?.pricePerNight ?? hp?.basePrice;
       return val != null ? String(val) : null;

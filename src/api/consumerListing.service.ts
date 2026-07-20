@@ -7,6 +7,7 @@ import {
   submitPackageEnquiry,
 } from './packageUser.service';
 import type {
+  ActivityDetail,
   ActivityDetailResponse,
   ActivityTypeEnum,
   AvailabilityEntityType,
@@ -14,7 +15,9 @@ import type {
   BrowseListingsParams,
   CancellationPoliciesResponse,
   CancellationPolicy,
+  GlampingDetail,
   GlampingDetailResponse,
+  GlampingSite,
   HotelDetailResponse,
   HotelRoomTypesResponse,
   HotelsBrowseResponse,
@@ -101,12 +104,97 @@ export const fetchHotelById = async (id: string): Promise<HotelDetailResponse> =
 
 export const fetchActivityById = async (id: string): Promise<ActivityDetailResponse> => {
   const response = await apiClient.get<ActivityDetailResponse>(ENDPOINTS.activities.detail(id));
-  return response.data;
+  const payload = response.data;
+  const listing = payload?.activity as
+    | (ActivityDetail & { activity?: Record<string, unknown> & { slots?: ActivityDetail['slots'] } })
+    | undefined;
+  if (!listing?.id) return payload;
+
+  // Backend shape: { activity: Listing & { activity: Activity & { slots } } }
+  // Flatten nested product fields onto the listing for booking + UI.
+  const nested = listing.activity;
+  if (!nested || typeof nested !== 'object') return payload;
+
+  const flattened: ActivityDetail = {
+    ...listing,
+    activityType: (nested.activityType as ActivityDetail['activityType']) ?? listing.activityType,
+    basePriceAdult:
+      (nested.basePriceAdult as number | undefined) ?? listing.basePriceAdult,
+    basePriceInfant:
+      (nested.basePriceInfant as number | undefined) ?? listing.basePriceInfant,
+    minAge: (nested.minAge as number | undefined) ?? listing.minAge,
+    totalSlotsPerDay:
+      (nested.totalSlotsPerDay as number | undefined) ?? listing.totalSlotsPerDay,
+    aboutExperience:
+      (nested.aboutExperience as string | undefined) ?? listing.aboutExperience,
+    inclusions: (nested.inclusions as string[] | undefined) ?? listing.inclusions,
+    exclusions: (nested.exclusions as string[] | undefined) ?? listing.exclusions,
+    whatsprovided: (nested.whatsprovided as string[] | undefined) ?? listing.whatsprovided,
+    thingsToCarry: (nested.thingsToCarry as string[] | undefined) ?? listing.thingsToCarry,
+    howToReach: (nested.howToReach as string | undefined) ?? listing.howToReach,
+    slots: nested.slots ?? listing.slots,
+  };
+
+  return { ...payload, activity: flattened };
 };
 
 export const fetchGlampingById = async (id: string): Promise<GlampingDetailResponse> => {
   const response = await apiClient.get<GlampingDetailResponse>(ENDPOINTS.glamping.detail(id));
-  return response.data;
+  const payload = response.data;
+  const listing = payload?.glamping as
+    | (GlampingDetail & {
+        glampingSite?: GlampingSite & {
+          mealPlans?: GlampingDetail['mealPlans'];
+          totalCamps?: number;
+          adultsPerCamp?: number;
+          infantsPerCamp?: number;
+          pricePerCampNight?: number;
+          extraAdultCharge?: number;
+          extraInfantCharge?: number;
+          aboutExperience?: string;
+          inclusions?: string[];
+          exclusions?: string[];
+          whatsprovided?: string[];
+          thingsToCarry?: string[];
+          howToReach?: string;
+        };
+      })
+    | undefined;
+  if (!listing?.id) return payload;
+
+  // Backend shape: { glamping: Listing & { glampingSite: GlampingSite & { mealPlans } } }
+  const site = listing.glampingSite;
+  if (!site?.id) return payload;
+
+  const siteAsDisplay: GlampingSite = {
+    id: site.id,
+    name: site.name,
+    totalUnits: site.totalCamps ?? site.totalUnits,
+    maxAdults: site.adultsPerCamp ?? site.maxAdults,
+    maxInfants: site.infantsPerCamp ?? site.maxInfants,
+    basePricePerNight: site.pricePerCampNight ?? site.basePricePerNight,
+  };
+
+  const flattened: GlampingDetail = {
+    ...listing,
+    totalCamps: site.totalCamps ?? listing.totalCamps,
+    adultsPerCamp: site.adultsPerCamp ?? listing.adultsPerCamp,
+    infantsPerCamp: site.infantsPerCamp ?? listing.infantsPerCamp,
+    pricePerCampNight: site.pricePerCampNight ?? listing.pricePerCampNight,
+    extraAdultCharge: site.extraAdultCharge ?? listing.extraAdultCharge,
+    extraInfantCharge: site.extraInfantCharge ?? listing.extraInfantCharge,
+    aboutExperience: site.aboutExperience ?? listing.aboutExperience,
+    inclusions: site.inclusions ?? listing.inclusions,
+    exclusions: site.exclusions ?? listing.exclusions,
+    whatsprovided: site.whatsprovided ?? listing.whatsprovided,
+    thingsToCarry: site.thingsToCarry ?? listing.thingsToCarry,
+    howToReach: site.howToReach ?? listing.howToReach,
+    mealPlans: site.mealPlans ?? listing.mealPlans,
+    sites: listing.sites?.length ? listing.sites : [siteAsDisplay],
+    glampingSite: site,
+  };
+
+  return { ...payload, glamping: flattened };
 };
 
 export const fetchHotelRoomTypes = async (hotelId: string): Promise<HotelRoomTypesResponse> => {

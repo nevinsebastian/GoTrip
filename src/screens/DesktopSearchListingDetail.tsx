@@ -7,6 +7,12 @@ import { DesktopCategoryListingDetailScreen } from '@/src/screens/DesktopCategor
 import { DesktopHotelDetailScreen } from '@/src/screens/DesktopHotelDetailScreen';
 import { getListingCarouselImages } from '@/src/utils/listingNavigation';
 import { getPackageFixedDates } from '@/src/utils/packageDates';
+import { defaultHotelStayDates, toDateOnly } from '@/src/utils/bookingPayment';
+import {
+  mapActivityDetailToBookingEntity,
+  mapGlampingDetailToBookingEntity,
+} from '@/src/utils/mapBookingEntity';
+import type { ActivityDetail, GlampingDetail } from '@/src/api/types';
 import { router } from 'expo-router';
 import React, { useCallback, useMemo } from 'react';
 
@@ -65,8 +71,17 @@ export function DesktopSearchListingDetail({
       checkOut: string | null;
     }) => {
       const packageDates = tab === 'packages' ? getPackageFixedDates(listing.id) : null;
-      const checkIn = details.checkIn ?? packageDates?.startDate ?? searchParams?.checkIn ?? '';
-      const checkOut = details.checkOut ?? packageDates?.endDate ?? searchParams?.checkOut ?? '';
+      const defaults = defaultHotelStayDates(tab === 'activities' ? 1 : 2, 7);
+      const checkIn =
+        toDateOnly(details.checkIn) ??
+        toDateOnly(packageDates?.startDate) ??
+        toDateOnly(searchParams?.checkIn) ??
+        defaults.checkIn;
+      const checkOut =
+        toDateOnly(details.checkOut) ??
+        toDateOnly(packageDates?.endDate) ??
+        toDateOnly(searchParams?.checkOut) ??
+        defaults.checkOut;
 
       // Desktop hotels use confirm-dates flow (not mobile review).
       if (tab === 'hotels') {
@@ -83,18 +98,53 @@ export function DesktopSearchListingDetail({
         return;
       }
 
+      if (tab === 'glamping') {
+        const glamping = glampingDetail?.detail as GlampingDetail | undefined;
+        const entity = glamping ? mapGlampingDetailToBookingEntity(glamping) : null;
+        router.push({
+          pathname: '/booking/review',
+          params: {
+            listingId: listing.id,
+            listingType: 'glamping',
+            title: listing.title,
+            price: priceFromMeta,
+            checkIn,
+            checkOut,
+            entityType: entity?.entityType ?? 'glamping_site',
+            entityId: entity?.entityId ?? '',
+            unitsBooked: String(entity?.unitsBooked ?? 1),
+            adults: '2',
+          },
+        });
+        return;
+      }
+
+      if (tab === 'activities') {
+        const activity = activityDetail?.detail as ActivityDetail | undefined;
+        const entity = activity ? mapActivityDetailToBookingEntity(activity, undefined, 2) : null;
+        router.push({
+          pathname: '/booking/review',
+          params: {
+            listingId: listing.id,
+            listingType: 'activity',
+            title: listing.title,
+            price: priceFromMeta,
+            checkIn,
+            entityType: entity?.entityType ?? 'activity_slot',
+            entityId: entity?.entityId ?? '',
+            activitySlotId: entity?.activitySlotId ?? entity?.entityId ?? '',
+            unitsBooked: String(entity?.unitsBooked ?? 2),
+            adults: '2',
+          },
+        });
+        return;
+      }
+
       router.push({
         pathname: '/booking/review',
         params: {
           listingId: listing.id,
-          listingType:
-            tab === 'packages'
-              ? 'package'
-              : tab === 'glamping'
-                ? 'glamping'
-                : tab === 'activities'
-                  ? 'activity'
-                  : 'hotel',
+          listingType: 'package',
           title: listing.title,
           price: priceFromMeta,
           checkIn,
@@ -102,7 +152,16 @@ export function DesktopSearchListingDetail({
         },
       });
     },
-    [listing.id, listing.title, priceFromMeta, searchParams?.checkIn, searchParams?.checkOut, tab],
+    [
+      activityDetail?.detail,
+      glampingDetail?.detail,
+      listing.id,
+      listing.title,
+      priceFromMeta,
+      searchParams?.checkIn,
+      searchParams?.checkOut,
+      tab,
+    ],
   );
 
   const { openDateModal, bookingFocus } = useDesktopBookingFocus({ onGuestSave });

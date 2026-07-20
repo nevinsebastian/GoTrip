@@ -8,7 +8,7 @@ import { usePackageDetailData } from '@/src/hooks/usePackageUser';
 import { useConfirmBookingPayment } from '@/src/hooks/useConfirmBookingPayment';
 import { MobileBookingReviewScreen } from '@/src/screens/MobileBookingReviewScreen';
 import { formatPriceBreakdownTotal } from '@/src/utils/availabilityCalendar';
-import { friendlyPaymentError, isUuid, toDateOnly } from '@/src/utils/bookingPayment';
+import { friendlyPaymentError, toDateOnly } from '@/src/utils/bookingPayment';
 import { runHoldAndPay } from '@/src/utils/runHoldAndPay';
 import {
   mapActivityDetailToBookingEntity,
@@ -158,7 +158,11 @@ function BookingReviewMobileContent({
       return mapHotelDetailToBookingEntity(hotel, entityIdParam, mealPlanIdParam);
     }
     if (isActivity && activity) {
-      return mapActivityDetailToBookingEntity(activity, activitySlotIdParam);
+      return mapActivityDetailToBookingEntity(
+        activity,
+        activitySlotIdParam,
+        Number(paramStr(params.adults)) || 1,
+      );
     }
     if (isGlamping && glamping) {
       return mapGlampingDetailToBookingEntity(glamping, entityIdParam, unitsBookedParam);
@@ -307,6 +311,7 @@ function BookingReviewMobileContent({
     guests: { adults: number; children: number; infants: number },
     guestsLabel: string,
     breakdown?: BookingPriceBreakdown | null,
+    unitsBookedOverride?: number,
   ) => {
     if (!listingId || !resolvedEntity) {
       setErrorMessage('Booking details missing. Please go back and try again.');
@@ -351,7 +356,9 @@ function BookingReviewMobileContent({
             children: guests.children,
             infants: guests.infants,
           },
-          unitsBooked: resolvedEntity.unitsBooked ?? 1,
+          unitsBooked: isActivity
+            ? Math.max(1, guests.adults)
+            : unitsBookedOverride ?? resolvedEntity.unitsBooked ?? 1,
           mealPlanId: resolvedEntity.mealPlanId,
           activitySlotId: resolvedEntity.activitySlotId,
           pricePreview: breakdown,
@@ -405,7 +412,13 @@ function BookingReviewMobileContent({
       return;
     }
     if (!resolvedEntity) {
-      setErrorMessage('Could not resolve booking entity. Please go back and try again.');
+      setErrorMessage(
+        isActivity
+          ? 'No bookable activity slot found for this listing. Please try another activity.'
+          : isGlamping
+            ? 'No glamping site found for this listing. Please try another stay.'
+            : 'Could not resolve booking entity. Please go back and try again.',
+      );
       return;
     }
 
@@ -431,16 +444,69 @@ function BookingReviewMobileContent({
         checkIn: toDateOnly(checkIn) ?? checkIn,
         checkOut: isActivity ? undefined : toDateOnly(checkOut) ?? checkOut,
         adults: Math.max(1, guests.adults),
+        children: guests.children || undefined,
         infants: guests.infants || undefined,
-        unitsBooked: resolvedEntity.unitsBooked ?? 1,
-        mealPlanId:
-          resolvedEntity.mealPlanId && isUuid(resolvedEntity.mealPlanId)
-            ? resolvedEntity.mealPlanId
-            : undefined,
+        unitsBooked: isActivity
+          ? Math.max(1, guests.adults)
+          : resolvedEntity.unitsBooked ?? 1,
       },
       {
         onSuccess: (res) => {
           if (!res.available) {
+            if (res.capacityExceeded) {
+              const sameRoom = res.suggestions?.find((s) => s.combinationType === 'same_room_type');
+              const units = sameRoom?.rooms?.[0]?.units;
+              if (
+                units &&
+                units > 1 &&
+                (resolvedEntity.entityType === 'room_type' ||
+                  resolvedEntity.entityType === 'full_property')
+              ) {
+                // Auto-accept same_room_type suggestion: re-check with more units.
+                checkAvailabilityMut(
+                  {
+                    entityType: resolvedEntity.entityType,
+                    entityId: resolvedEntity.entityId,
+                    checkIn: toDateOnly(checkIn) ?? checkIn,
+                    checkOut: toDateOnly(checkOut) ?? checkOut,
+                    adults: Math.max(1, guests.adults),
+                    children: guests.children || undefined,
+                    infants: guests.infants || undefined,
+                    unitsBooked: units,
+                  },
+                  {
+                    onSuccess: (retry) => {
+                      if (!retry.available) {
+                        setErrorMessage(
+                          retry.message ??
+                            res.message ??
+                            'Selected room does not accommodate this many guests.',
+                        );
+                        setPricePreview(null);
+                        return;
+                      }
+                      setPricePreview(retry.priceBreakdown ?? null);
+                      startHoldAndPay(
+                        checkIn,
+                        checkOut,
+                        guests,
+                        guestsLabel,
+                        retry.priceBreakdown,
+                        units,
+                      );
+                    },
+                    onError: (err) =>
+                      setErrorMessage(friendlyPaymentError(getErrorMessage(err))),
+                  },
+                );
+                return;
+              }
+              setErrorMessage(
+                res.message ?? 'Selected room does not accommodate this many guests.',
+              );
+              setPricePreview(null);
+              return;
+            }
             const dates = res.unavailableDates?.join(', ') ?? 'selected dates';
             setErrorMessage(`Not available for ${dates}. Please choose different dates.`);
             setPricePreview(null);
@@ -449,7 +515,21 @@ function BookingReviewMobileContent({
           setPricePreview(res.priceBreakdown ?? null);
           startHoldAndPay(checkIn, checkOut, guests, guestsLabel, res.priceBreakdown);
         },
-        onError: (err) => setErrorMessage(friendlyPaymentError(getErrorMessage(err))),
+        onError: (err) => {
+          const details = (
+            err as {
+              details?: { capacityExceeded?: boolean; message?: string };
+              statusCode?: number;
+            }
+          )?.details;
+          if (details?.capacityExceeded) {
+            setErrorMessage(
+              details.message ?? 'Selected room does not accommodate this many guests.',
+            );
+            return;
+          }
+          setErrorMessage(friendlyPaymentError(getErrorMessage(err)));
+        },
       },
     );
   };

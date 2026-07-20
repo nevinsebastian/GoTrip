@@ -26,6 +26,9 @@ type ResortRoomCardProps = {
   onBookNow: () => void;
   onWishlist?: () => void;
   bookCtaLabel?: string;
+  occupancyLabel?: string;
+  /** When false, room does not fit selected adults/children — grey out Book Now */
+  fitsGuests?: boolean;
 };
 
 export function ResortRoomCard({
@@ -41,11 +44,14 @@ export function ResortRoomCard({
   onBookNow,
   onWishlist,
   bookCtaLabel = 'Book Now',
+  occupancyLabel,
+  fitsGuests = true,
 }: ResortRoomCardProps) {
   const { s } = useHomeScale();
   const showAmenities = variant !== 'compact';
   const imgA = images[0];
   const imgB = images[1] ?? images[0];
+  const capacityText = occupancyLabel ?? `${guests} Guest - ${rooms} Room`;
 
   return (
     <View
@@ -58,6 +64,7 @@ export function ResortRoomCard({
           backgroundColor: colors.surface.white,
           borderWidth: selected ? 2 : 0,
           borderColor: selected ? colors.primary : 'transparent',
+          opacity: fitsGuests ? 1 : 0.55,
         },
       ]}
     >
@@ -77,10 +84,16 @@ export function ResortRoomCard({
 
       <View style={[styles.titleRow, { paddingVertical: s(8) }]}>
         <Text style={[styles.roomName, { fontSize: s(16), lineHeight: s(34) }]}>{name}</Text>
-        <Text style={[styles.capacity, { fontSize: s(16), lineHeight: s(34) }]}>
-          {guests} Guest - {rooms} Room
+        <Text style={[styles.capacity, { fontSize: s(13), lineHeight: s(20), flex: 1, textAlign: 'right' }]}>
+          {capacityText}
         </Text>
       </View>
+
+      {!fitsGuests ? (
+        <Text style={{ color: '#D53B3B', fontSize: s(12) }}>
+          Does not fit your guest count — choose another room or book more units.
+        </Text>
+      ) : null}
 
       {variant === 'special' ? (
         <View style={[styles.badgeRow, { gap: s(8) }]}>
@@ -183,9 +196,12 @@ export function ResortRoomCard({
         )}
         <Pressable
           style={[styles.bookBtn, { height: s(42), borderRadius: s(9999), flex: 1 }]}
-          onPress={onBookNow}
+          onPress={fitsGuests ? onBookNow : undefined}
+          disabled={!fitsGuests}
         >
-          <Text style={[styles.bookBtnText, { fontSize: s(14) }]}>{bookCtaLabel}</Text>
+          <Text style={[styles.bookBtnText, { fontSize: s(14) }]}>
+            {fitsGuests ? bookCtaLabel : 'Doesn’t fit'}
+          </Text>
         </Pressable>
       </View>
     </View>

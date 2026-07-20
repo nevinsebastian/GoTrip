@@ -11,6 +11,8 @@ export type HotelSearchFilters = {
   checkOut?: string;
   rooms?: number;
   guests?: number;
+  adults?: number;
+  children?: number;
   starRatingMin?: number;
   starRatingMax?: number;
 };
@@ -27,6 +29,8 @@ export function useHotelSearch(filters: HotelSearchFilters = {}, enabled = true)
     checkOut: filters.checkOut,
     rooms: filters.rooms,
     guests: filters.guests,
+    adults: filters.adults,
+    children: filters.children,
     limit: filters.limit,
     starRatingMin: filters.starRatingMin,
     starRatingMax: filters.starRatingMax,

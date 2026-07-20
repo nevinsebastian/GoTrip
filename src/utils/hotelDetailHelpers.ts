@@ -8,6 +8,7 @@ import type {
   ListingReview,
 } from '@/src/api/types';
 import type { ResortRoomVariant } from '@/src/components/resort/resortConstants';
+import { formatRoomOccupancyLabel, roomFitsGuests } from '@/src/utils/hotelCapacity';
 
 export type HotelRoomDisplay = {
   id: string;
@@ -16,6 +17,10 @@ export type HotelRoomDisplay = {
   rooms: number;
   priceLabel: string;
   basePricePerNight?: number;
+  occupancyLabel: string;
+  maxAdultOccupancy?: number;
+  maxChildOccupancy?: number;
+  fitsSelectedGuests?: boolean;
   variant: ResortRoomVariant;
   showImages: boolean;
   bedType?: string;
@@ -116,10 +121,14 @@ export function mapRoomTypeToDisplay(
   room: HotelRoomType,
   index: number,
   isFullProperty: boolean,
+  selectedGuests?: { adults: number; children: number },
 ): HotelRoomDisplay {
   const guests = (room.maxAdultOccupancy ?? 2) + (room.maxChildOccupancy ?? 0);
   const variants: ResortRoomVariant[] = ['featured', 'special', 'breakfast', 'compact'];
   const variant = isFullProperty ? 'featured' : variants[index % variants.length];
+  const adults = selectedGuests?.adults ?? 0;
+  const children = selectedGuests?.children ?? 0;
+  const hasGuestFilter = adults > 0 || children > 0;
 
   return {
     id: room.id,
@@ -128,6 +137,12 @@ export function mapRoomTypeToDisplay(
     rooms: 1,
     priceLabel: formatHotelPricePerNight(room.basePricePerNight),
     basePricePerNight: room.basePricePerNight,
+    occupancyLabel: formatRoomOccupancyLabel(room),
+    maxAdultOccupancy: room.maxAdultOccupancy,
+    maxChildOccupancy: room.maxChildOccupancy,
+    fitsSelectedGuests: hasGuestFilter
+      ? roomFitsGuests(room, Math.max(1, adults), children, 1)
+      : true,
     variant,
     showImages: index > 0 || !isFullProperty,
     bedType: room.bedType,
@@ -136,13 +151,18 @@ export function mapRoomTypeToDisplay(
   };
 }
 
-export function mapHotelRoomsForDisplay(hotel: HotelDetail): HotelRoomDisplay[] {
+export function mapHotelRoomsForDisplay(
+  hotel: HotelDetail,
+  selectedGuests?: { adults: number; children: number },
+): HotelRoomDisplay[] {
   const roomTypes = getRoomTypes(hotel);
   const fullProperty = isFullPropertyHotel(hotel);
   if (fullProperty && roomTypes.length) {
-    return [mapRoomTypeToDisplay(roomTypes[0], 0, true)];
+    return [mapRoomTypeToDisplay(roomTypes[0], 0, true, selectedGuests)];
   }
-  return roomTypes.map((room, index) => mapRoomTypeToDisplay(room, index, false));
+  return roomTypes.map((room, index) =>
+    mapRoomTypeToDisplay(room, index, false, selectedGuests),
+  );
 }
 
 export function normalizePropertyRules(rules: unknown): string[] {

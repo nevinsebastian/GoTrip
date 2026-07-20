@@ -5,11 +5,12 @@ import { useDesktopBookingFocus } from '@/src/hooks/useDesktopBookingFocus';
 import { useIsAuthenticated } from '@/src/hooks/useIsAuthenticated';
 import { DesktopCategoryListingDetailScreen } from '@/src/screens/DesktopCategoryListingDetailScreen';
 import { MobileGlampingDetailsScreen } from '@/src/screens/MobileGlampingDetails';
+import { defaultHotelStayDates, toDateOnly } from '@/src/utils/bookingPayment';
 import { mapGlampingDetailToBookingEntity } from '@/src/utils/mapBookingEntity';
 import type { GlampingDetail } from '@/src/api/types';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import React, { useCallback } from 'react';
-import { Platform, View } from 'react-native';
+import { Alert, Platform, View } from 'react-native';
 
 export default function GlampingDetailsRoute() {
   const { isDesktop } = useResponsive();
@@ -35,18 +36,29 @@ export default function GlampingDetailsRoute() {
         return;
       }
       const entity = glamping ? mapGlampingDetailToBookingEntity(glamping) : null;
+      if (!entity?.entityId) {
+        Alert.alert(
+          'Unavailable',
+          'This glamping listing has no bookable site yet. Please try another stay.',
+        );
+        return;
+      }
+      const defaults = defaultHotelStayDates(2, 7);
+      const inDate = toDateOnly(checkIn) ?? defaults.checkIn;
+      const outDate = toDateOnly(checkOut) ?? defaults.checkOut;
       router.push({
         pathname: '/booking/review',
         params: {
-          listingId: listingId ?? '',
+          listingId: listingId ?? entity.listingId,
           listingType: 'glamping',
           title: display?.title ?? params.title ?? '',
           price: display?.priceLabel ?? params.price ?? '',
-          checkIn,
-          checkOut,
-          entityType: entity?.entityType ?? 'glamping_site',
-          entityId: entity?.entityId ?? '',
-          unitsBooked: String(entity?.unitsBooked ?? 1),
+          checkIn: inDate,
+          checkOut: outDate,
+          entityType: entity.entityType,
+          entityId: entity.entityId,
+          unitsBooked: String(entity.unitsBooked ?? 1),
+          adults: '2',
         },
       });
     },
