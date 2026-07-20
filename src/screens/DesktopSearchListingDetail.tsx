@@ -206,6 +206,9 @@ export function DesktopSearchListingDetail({
     return loc.split(',')[0]?.trim() || loc;
   })();
 
+  const latitude = listingDetail?.latitude != null ? Number(listingDetail.latitude) : null;
+  const longitude = listingDetail?.longitude != null ? Number(listingDetail.longitude) : null;
+
   const carouselImages = getListingCarouselImages(listingDetail?.media);
 
   return (
@@ -214,6 +217,8 @@ export function DesktopSearchListingDetail({
       title={title}
       locationLabel={locationLabel}
       address={listingDetail?.location ?? listing.location ?? undefined}
+      latitude={Number.isFinite(latitude) ? latitude : null}
+      longitude={Number.isFinite(longitude) ? longitude : null}
       rating="4.5"
       carouselImages={carouselImages}
       displayPrice={displayPrice}

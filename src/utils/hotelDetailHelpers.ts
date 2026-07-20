@@ -70,11 +70,23 @@ export function getHotelAddress(hotel: Pick<HotelDetail, 'locationJson'>): strin
 
 export function getHotelCoordinates(hotel: Pick<HotelDetail, 'locationJson'>) {
   const loc = hotel.locationJson;
-  const lat = loc?.lat ?? loc?.latitude;
-  const lng = loc?.lng ?? loc?.longitude;
+  const latRaw = loc?.lat ?? loc?.latitude;
+  const lngRaw = loc?.lng ?? loc?.longitude;
+  const lat =
+    typeof latRaw === 'number'
+      ? latRaw
+      : typeof latRaw === 'string'
+        ? Number(latRaw)
+        : NaN;
+  const lng =
+    typeof lngRaw === 'number'
+      ? lngRaw
+      : typeof lngRaw === 'string'
+        ? Number(lngRaw)
+        : NaN;
   return {
-    lat: typeof lat === 'number' ? lat : null,
-    lng: typeof lng === 'number' ? lng : null,
+    lat: Number.isFinite(lat) ? lat : null,
+    lng: Number.isFinite(lng) ? lng : null,
   };
 }
 

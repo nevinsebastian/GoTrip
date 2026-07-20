@@ -27,6 +27,7 @@ import {
   suggestedPackageTravelDates,
 } from '@/src/utils/packageHelpers';
 import type { CancellationPolicy } from '@/src/api/types';
+import { parseLocationCoordinates } from '@/src/utils/openLocationInMaps';
 
 export type PackageItineraryDisplay = {
   id: string;
@@ -40,6 +41,8 @@ export type PackageItineraryDisplay = {
 export type CategoryDetailDisplay = {
   title: string;
   locationLabel: string;
+  latitude?: number | null;
+  longitude?: number | null;
   rating: string;
   reviewCountLabel?: string;
   customersLabel?: string;
@@ -72,6 +75,14 @@ function locationLabel(loc?: ActivityDetail['locationJson']): string {
   if (!loc) return '';
   if (loc.city && loc.state) return `${loc.city}, ${loc.state}`;
   return loc.city ?? loc.searchLabel ?? loc.address ?? loc.streetAddress ?? '';
+}
+
+function locationCoords(loc?: ActivityDetail['locationJson']) {
+  const coords = parseLocationCoordinates(loc);
+  return {
+    latitude: coords?.latitude ?? null,
+    longitude: coords?.longitude ?? null,
+  };
 }
 
 function imagesFromListing(images?: PublicListingImage[] | null, cover?: string | null): string[] {
@@ -110,6 +121,7 @@ export function buildActivityDetailDisplay(
   return {
     title: activity.title,
     locationLabel: locationLabel(activity.locationJson),
+    ...locationCoords(activity.locationJson),
     rating,
     customersLabel,
     description: activity.aboutExperience ?? activity.description ?? '',
@@ -140,6 +152,7 @@ export function buildGlampingDetailDisplay(
   return {
     title: glamping.title,
     locationLabel: locationLabel(glamping.locationJson),
+    ...locationCoords(glamping.locationJson),
     rating,
     customersLabel,
     description: glamping.aboutExperience ?? glamping.description ?? '',
@@ -173,6 +186,7 @@ export function buildPackageDetailDisplay(
   return {
     title: pkg.title,
     locationLabel: locationLabel(pkg.locationJson),
+    ...locationCoords(pkg.locationJson),
     rating,
     customersLabel,
     description: pkg.description ?? '',

@@ -1,9 +1,22 @@
 import type { HomeCategoryTab } from '@/src/components/home/homeSearchConfig';
 import type { Listing } from '@/src/api/types';
 
+type ListingNavFields = Pick<Listing, 'id' | 'title' | 'price_start'> & {
+  category?: { type?: string | null } | null;
+};
+
+function categoryTabFromListing(listing: ListingNavFields): HomeCategoryTab | null {
+  const type = listing.category?.type?.toLowerCase();
+  if (type === 'package') return 'packages';
+  if (type === 'camping' || type === 'glamping') return 'glamping';
+  if (type === 'activity') return 'activities';
+  if (type === 'hotel' || type === 'property') return 'hotels';
+  return null;
+}
+
 export function listingDetailHref(
   tab: HomeCategoryTab,
-  listing: Pick<Listing, 'id' | 'title' | 'price_start'>,
+  listing: ListingNavFields,
 ) {
   const price =
     listing.price_start != null
@@ -16,9 +29,12 @@ export function listingDetailHref(
     rating: '4.5',
   };
 
-  if (tab === 'packages') return { pathname: '/package/[id]' as const, params };
-  if (tab === 'glamping') return { pathname: '/glamping/[id]' as const, params };
-  if (tab === 'activities') return { pathname: '/activity/[id]' as const, params };
+  // Prefer listing category when present so mixed feeds still route correctly.
+  const resolved = categoryTabFromListing(listing) ?? tab;
+
+  if (resolved === 'packages') return { pathname: '/package/[id]' as const, params };
+  if (resolved === 'glamping') return { pathname: '/glamping/[id]' as const, params };
+  if (resolved === 'activities') return { pathname: '/activity/[id]' as const, params };
   return { pathname: '/hotels/[id]' as const, params };
 }
 

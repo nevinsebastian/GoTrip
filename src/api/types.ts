@@ -502,10 +502,10 @@ export interface ListingsResponse {
 }
 
 export interface HotelLocationJson {
-  lat?: number;
-  lng?: number;
-  latitude?: number;
-  longitude?: number;
+  lat?: number | string;
+  lng?: number | string;
+  latitude?: number | string;
+  longitude?: number | string;
   city?: string;
   state?: string;
   address?: string;

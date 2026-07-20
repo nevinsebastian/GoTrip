@@ -26,6 +26,7 @@ import { ResortReviewsSection } from '@/src/components/resort/ResortReviewsSecti
 import { ResortRoomCard } from '@/src/components/resort/ResortRoomCard';
 import { DEFAULT_ROOM_CONFIGS, FIGMA_PROPERTY } from '@/src/components/resort/resortConstants';
 import type { HotelReviewDisplay, HotelRoomDisplay } from '@/src/utils/hotelDetailHelpers';
+import { openLocationInMaps } from '@/src/utils/openLocationInMaps';
 
 import { RESORT_PLACEHOLDER_IMAGE } from '@/src/constants/placeholderImages';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -39,6 +40,8 @@ export type MobileResortDetailsProps = {
   starRating?: number;
   locationLabel: string;
   address?: string;
+  latitude?: number | null;
+  longitude?: number | null;
   description?: string;
   propertyRules?: string[];
   highlights?: string[];
@@ -58,6 +61,8 @@ export type MobileResortDetailsProps = {
 export function MobileResortDetailsScreen({
   title,
   address,
+  latitude,
+  longitude,
   rating,
   reviewCountLabel,
   starRating,
@@ -220,7 +225,20 @@ export function MobileResortDetailsScreen({
             <Text style={[styles.addressText, { fontSize: s(10), lineHeight: s(14) }]}>
               {displayAddress}
             </Text>
-            <Pressable style={[styles.viewLocationBtn, { paddingVertical: s(8), paddingHorizontal: s(16), borderRadius: s(9999) }]}>
+            <Pressable
+              style={[styles.viewLocationBtn, { paddingVertical: s(8), paddingHorizontal: s(16), borderRadius: s(9999) }]}
+              disabled={latitude == null || longitude == null}
+              onPress={() => {
+                if (latitude == null || longitude == null) return;
+                void openLocationInMaps({
+                  latitude,
+                  longitude,
+                  label: address || title,
+                });
+              }}
+              accessibilityRole="button"
+              accessibilityLabel={FIGMA_PROPERTY.viewLocationLabel}
+            >
               <Text style={[styles.viewLocationText, { fontSize: s(12) }]}>
                 {FIGMA_PROPERTY.viewLocationLabel}
               </Text>

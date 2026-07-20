@@ -1,9 +1,16 @@
 import {
   fetchCancellationPolicies,
   fetchHotelById,
+  fetchHotelRoomTypes,
   fetchListingReviews,
 } from '@/src/api/hotel.service';
-import type { APIError, CancellationPolicy, HotelDetail, ListingReview } from '@/src/api/types';
+import type {
+  APIError,
+  CancellationPolicy,
+  HotelDetail,
+  HotelRoomType,
+  ListingReview,
+} from '@/src/api/types';
 import { resolveCancellationText } from '@/src/utils/hotelDetailHelpers';
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 
@@ -17,8 +24,9 @@ export type HotelDetailData = {
 export const hotelDetailQueryKey = (id: string) => ['hotels', 'detail', id] as const;
 
 async function loadHotelDetail(listingId: string): Promise<HotelDetailData> {
-  const [hotelRes, reviewsRes, policies] = await Promise.all([
+  const [hotelRes, roomTypesRes, reviewsRes, policies] = await Promise.all([
     fetchHotelById(listingId),
+    fetchHotelRoomTypes(listingId).catch(() => ({ roomTypes: [] as HotelRoomType[] })),
     fetchListingReviews(listingId).catch(() => ({ reviews: [] as ListingReview[] })),
     fetchCancellationPolicies().catch(() => [] as CancellationPolicy[]),
   ]);
@@ -28,8 +36,25 @@ async function loadHotelDetail(listingId: string): Promise<HotelDetailData> {
     throw Object.assign(new Error('Hotel not found'), { status: 404 });
   }
 
+  const nestedRooms = hotel.hotelProperty?.roomTypes ?? [];
+  const fetchedRooms = roomTypesRes.roomTypes ?? [];
+  const roomTypes = nestedRooms.length > 0 ? nestedRooms : fetchedRooms;
+
+  const mergedHotel: HotelDetail = {
+    ...hotel,
+    hotelProperty: hotel.hotelProperty
+      ? { ...hotel.hotelProperty, roomTypes }
+      : roomTypes.length
+        ? {
+            id: '',
+            listingId: hotel.id,
+            roomTypes,
+          }
+        : hotel.hotelProperty,
+  };
+
   return {
-    hotel,
+    hotel: mergedHotel,
     reviews: reviewsRes.reviews ?? [],
     cancellationPolicies: policies,
     cancellationPolicyText: resolveCancellationText(hotel.cancellationPolicyId, policies),

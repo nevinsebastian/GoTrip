@@ -7,6 +7,8 @@ import type { Listing } from '@/src/api/types';
 import { DESKTOP_LAYOUT } from '@/src/constants/desktopLayoutConstants';
 import { DESKTOP_DESTINATIONS, DESKTOP_LISTING_FALLBACK_IMAGE, DESKTOP_MOODS } from '@/src/constants/desktopHomeConstants';
 import { getPrimaryImage } from '@/src/utils/getPrimaryImage';
+import { listingDetailHref } from '@/src/utils/listingNavigation';
+import { blurWebFocus } from '@/src/utils/blurWebFocus';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
@@ -107,7 +109,7 @@ export function DesktopSuggestedSection({
 
       <View style={styles.cardRow}>
         {items.map((listing) => (
-          <DesktopListingCard key={listing.id} listing={listing} />
+          <DesktopListingCard key={listing.id} listing={listing} activeTab={activeTab} />
         ))}
       </View>
 
@@ -153,7 +155,13 @@ export function DesktopDestinationsSection() {
   );
 }
 
-export function DesktopBudgetOptionsSection({ listings }: { listings: Listing[] }) {
+export function DesktopBudgetOptionsSection({
+  listings,
+  activeTab = 'hotels',
+}: {
+  listings: Listing[];
+  activeTab?: HomeCategoryTab;
+}) {
   const items = listings.slice(0, 8);
 
   const rows: Listing[][] = [];
@@ -169,7 +177,7 @@ export function DesktopBudgetOptionsSection({ listings }: { listings: Listing[] 
         {rows.map((row) => (
           <View key={row.map((l) => l.id).join('-')} style={styles.budgetRow}>
             {row.map((listing) => (
-              <DesktopBudgetCard key={listing.id} listing={listing} />
+              <DesktopBudgetCard key={listing.id} listing={listing} activeTab={activeTab} />
             ))}
           </View>
         ))}
@@ -184,7 +192,13 @@ export function DesktopBudgetOptionsSection({ listings }: { listings: Listing[] 
   );
 }
 
-function DesktopBudgetCard({ listing }: { listing: Listing }) {
+function DesktopBudgetCard({
+  listing,
+  activeTab = 'hotels',
+}: {
+  listing: Listing;
+  activeTab?: HomeCategoryTab;
+}) {
   const img = getPrimaryImage(listing.media);
   const priceValue =
     listing.price_start != null
@@ -193,7 +207,8 @@ function DesktopBudgetCard({ listing }: { listing: Listing }) {
 
   const handlePress = () => {
     if (listing.id.startsWith('desktop-mock-')) return;
-    router.push({ pathname: '/hotels/[id]', params: { id: listing.id } });
+    blurWebFocus();
+    router.push(listingDetailHref(activeTab, listing));
   };
 
   return (
@@ -233,7 +248,13 @@ function DesktopBudgetCard({ listing }: { listing: Listing }) {
   );
 }
 
-function DesktopListingCard({ listing }: { listing: Listing }) {
+function DesktopListingCard({
+  listing,
+  activeTab = 'hotels',
+}: {
+  listing: Listing;
+  activeTab?: HomeCategoryTab;
+}) {
   const img = getPrimaryImage(listing.media);
   const priceValue =
     listing.price_start != null
@@ -243,7 +264,8 @@ function DesktopListingCard({ listing }: { listing: Listing }) {
 
   const handlePress = () => {
     if (listing.id.startsWith('desktop-mock-')) return;
-    router.push({ pathname: '/hotels/[id]', params: { id: listing.id } });
+    blurWebFocus();
+    router.push(listingDetailHref(activeTab, listing));
   };
 
   return (

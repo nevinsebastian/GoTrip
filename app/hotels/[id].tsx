@@ -17,6 +17,7 @@ import {
   getBookingEntity,
   getHotelAddress,
   getHotelCarouselImages,
+  getHotelCoordinates,
   getHotelLocationLabel,
   getMinRoomPrice,
   getPriceFromLabel,
@@ -26,6 +27,7 @@ import {
   normalizePropertyRules,
 } from '@/src/utils/hotelDetailHelpers';
 import { getErrorMessage } from '@/src/utils/errorHandler';
+import { blurWebFocus } from '@/src/utils/blurWebFocus';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -194,6 +196,7 @@ export default function HotelDetailScreen() {
   };
 
   const openBookingFlow = () => {
+    blurWebFocus();
     if (!isLoggedIn) {
       router.push('/login');
       return;
@@ -202,6 +205,11 @@ export default function HotelDetailScreen() {
     const checkIn = checkInDate ?? searchParams?.checkIn ?? '';
     const checkOut = checkOutDate ?? searchParams?.checkOut ?? '';
     const room = roomTypes.find((r) => r.id === (selectedRoomTypeId ?? entity?.entityId));
+
+    if (!entity?.entityId) {
+      setBookingError('Please select a room type.');
+      return;
+    }
 
     if (!isDesktopWeb) {
       router.push({
@@ -213,8 +221,8 @@ export default function HotelDetailScreen() {
           title: hotel?.title ?? '',
           checkIn,
           checkOut,
-          entityType: entity?.entityType ?? 'room_type',
-          entityId: entity?.entityId ?? '',
+          entityType: entity.entityType ?? 'room_type',
+          entityId: entity.entityId,
           mealPlanId: selectedMealPlanId ?? '',
         },
       });
@@ -231,8 +239,8 @@ export default function HotelDetailScreen() {
         roomName: room?.name ?? '',
         checkIn,
         checkOut,
-        entityType: entity?.entityType ?? 'room_type',
-        entityId: entity?.entityId ?? '',
+        entityType: entity.entityType ?? 'room_type',
+        entityId: entity.entityId,
         mealPlanId: selectedMealPlanId ?? '',
         adults: String(adultsCount),
         children: String(childrenCount),
@@ -242,6 +250,7 @@ export default function HotelDetailScreen() {
   };
 
   const continueToCheckout = () => {
+    blurWebFocus();
     if (!hotel || !hotelId || !checkInDate || !checkOutDate) return;
     const { entityType, entityId } = getBookingEntity(hotel, selectedRoomTypeId);
     if (!entityId) {
@@ -382,10 +391,13 @@ export default function HotelDetailScreen() {
   const checkInTime = formatCheckTime(hotel.hotelProperty?.checkInTime);
   const checkOutTime = formatCheckTime(hotel.hotelProperty?.checkOutTime);
 
+  const coords = getHotelCoordinates(hotel);
   const sharedDetailProps = {
     title: hotel.title,
     locationLabel: getHotelLocationLabel(hotel),
     address: getHotelAddress(hotel),
+    latitude: coords.lat,
+    longitude: coords.lng,
     rating,
     reviewCountLabel,
     starRating: hotel.hotelProperty?.starRating ?? undefined,

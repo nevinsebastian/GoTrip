@@ -27,6 +27,7 @@ import {
   reviewsFromDisplay,
 } from '@/src/utils/mergeCategoryDetailContent';
 import { ACTIVITY_EXPANDED_IMAGE, ACTIVITY_GALLERY_IMAGE } from '@/src/constants/placeholderImages';
+import { openLocationInMaps } from '@/src/utils/openLocationInMaps';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -152,10 +153,23 @@ export function MobileActivityDetailsScreen({
           <Text style={[styles.title, { fontSize: s(20), lineHeight: s(24) }]}>{detailContent.title}</Text>
 
           <View style={[styles.metaRow, { height: s(29) }]}>
-            <View style={[styles.locationPill, { paddingHorizontal: s(8), paddingVertical: s(4), borderRadius: s(24), gap: s(4) }]}>
+            <Pressable
+              style={[styles.locationPill, { paddingHorizontal: s(8), paddingVertical: s(4), borderRadius: s(24), gap: s(4) }]}
+              disabled={display?.latitude == null || display?.longitude == null}
+              onPress={() => {
+                if (display?.latitude == null || display?.longitude == null) return;
+                void openLocationInMaps({
+                  latitude: display.latitude,
+                  longitude: display.longitude,
+                  label: detailContent.locationLabel || detailContent.title,
+                });
+              }}
+              accessibilityRole="button"
+              accessibilityLabel="Open location in maps"
+            >
               <Ionicons name="location-outline" size={s(10)} color={colors.accent.main} />
               <Text style={[styles.locationText, { fontSize: s(12) }]}>{detailContent.locationLabel}</Text>
-            </View>
+            </Pressable>
 
             <View style={styles.metaRight}>
               <View style={[styles.ratingRow, { gap: s(2), paddingRight: s(8) }]}>

@@ -20,6 +20,7 @@ import type { CategoryType, ListingMedia, User, WishlistListing } from '@/src/ap
 import { AuthWebModal } from '@/src/components/AuthWebModal';
 import { USER_PROFILE_QUERY_KEY } from '@/src/hooks/useUserProfile';
 import { getErrorMessage } from '@/src/utils/errorHandler';
+import { listingDetailHref } from '@/src/utils/listingNavigation';
 import type { QueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -224,7 +225,18 @@ export function WishlistDesktopShell({
       Number.isFinite(priceNum) && priceNum >= 0
         ? `₹${priceNum.toLocaleString('en-IN')}${priceSuffix(l)}`
         : '—';
-    const goToListing = () => router.push({ pathname: '/hotels/[id]', params: { id: l.id } });
+    const goToListing = () => {
+      const type = l.category?.type;
+      const tab =
+        type === 'package'
+          ? 'packages'
+          : type === 'camping' || type === 'glamping'
+            ? 'glamping'
+            : type === 'activity'
+              ? 'activities'
+              : 'hotels';
+      router.push(listingDetailHref(tab, l));
+    };
 
     return (
       <View key={l.wishlist_id} style={[dw.cardCell, { width: cardSlotWidth }]}>

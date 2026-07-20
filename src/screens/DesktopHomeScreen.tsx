@@ -211,7 +211,7 @@ function DesktopHomeContent() {
           <DesktopDestinationsSection />
 
           <View style={styles.main}>
-            <DesktopBudgetOptionsSection listings={budget} />
+            <DesktopBudgetOptionsSection listings={budget} activeTab={activeCategoryTab} />
           </View>
 
           <DesktopHomeVendorSection />

@@ -7,6 +7,7 @@ import type { DesktopBookingFocusState } from '@/src/hooks/useDesktopBookingFocu
 import type { HomeCategoryTab } from '@/src/components/home/homeSearchConfig';
 import { desktopContentShellStyle } from '@/src/constants/desktopLayoutConstants';
 import type { CategoryDetailDisplay } from '@/src/utils/categoryDetailDisplay';
+import { openLocationInMaps } from '@/src/utils/openLocationInMaps';
 import {
   mergeActivityDetailContent,
   mergeGlampingDetailContent,
@@ -166,7 +167,23 @@ export function DesktopCategoryListingDetailScreen({
           ) : null}
           <View style={styles.propertyHeader}>
             <Text style={styles.propertyTitle}>{copy.title}</Text>
-            <Pressable style={styles.viewLocationBtn}>
+            <Pressable
+              style={[
+                styles.viewLocationBtn,
+                (display?.latitude == null || display?.longitude == null) && styles.viewLocationBtnDisabled,
+              ]}
+              disabled={display?.latitude == null || display?.longitude == null}
+              onPress={() => {
+                if (display?.latitude == null || display?.longitude == null) return;
+                void openLocationInMaps({
+                  latitude: display.latitude,
+                  longitude: display.longitude,
+                  label: copy.locationLabel || copy.title,
+                });
+              }}
+              accessibilityRole="button"
+              accessibilityLabel={copy.locationLabel || 'View location'}
+            >
               <Text style={styles.viewLocationText}>{copy.locationLabel}</Text>
               <Ionicons name="location-outline" size={16} color={colors.accent.main} />
             </Pressable>
@@ -320,6 +337,9 @@ const styles = StyleSheet.create({
     borderRadius: 100,
     paddingHorizontal: 16,
     paddingVertical: 8,
+  },
+  viewLocationBtnDisabled: {
+    opacity: 0.45,
   },
   viewLocationText: {
     fontFamily: typography.fontFamily.text,

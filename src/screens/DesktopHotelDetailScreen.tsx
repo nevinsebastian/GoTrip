@@ -3,6 +3,7 @@ import { colors, typography } from '@/constants/DesignTokens';
 import type { Listing, ListingDetail } from '@/src/api/types';
 import type { HotelReviewDisplay, HotelRoomDisplay } from '@/src/utils/hotelDetailHelpers';
 import { getPrimaryImage } from '@/src/utils/getPrimaryImage';
+import { openLocationInMaps } from '@/src/utils/openLocationInMaps';
 import { DesktopSearchResultsHeader } from '@/src/components/desktop/DesktopSearchResultsHeader';
 import { DesktopBookingFocusOverlay } from '@/src/components/desktop/DesktopBookingFocusOverlay';
 import { DesktopSiteFooter } from '@/src/components/desktop/DesktopSiteFooter';
@@ -42,6 +43,8 @@ type DesktopHotelDetailScreenProps = {
   title: string;
   locationLabel: string;
   address?: string;
+  latitude?: number | null;
+  longitude?: number | null;
   rating: string;
   reviewCountLabel?: string;
   starRating?: number;
@@ -197,6 +200,8 @@ export function DesktopHotelDetailScreen({
   title,
   locationLabel,
   address,
+  latitude,
+  longitude,
   rating,
   reviewCountLabel,
   starRating,
@@ -310,7 +315,23 @@ export function DesktopHotelDetailScreen({
             <Text style={styles.propertyAddress} numberOfLines={1}>
               {addressText}
             </Text>
-            <Pressable style={styles.viewLocationBtn}>
+            <Pressable
+              style={[
+                styles.viewLocationBtn,
+                (latitude == null || longitude == null) && styles.viewLocationBtnDisabled,
+              ]}
+              disabled={latitude == null || longitude == null}
+              onPress={() => {
+                if (latitude == null || longitude == null) return;
+                void openLocationInMaps({
+                  latitude,
+                  longitude,
+                  label: address || locationLabel || title,
+                });
+              }}
+              accessibilityRole="button"
+              accessibilityLabel="View Location"
+            >
               <Text style={styles.viewLocationText}>View Location</Text>
               <Ionicons name="location-outline" size={16} color={colors.accent.main} />
             </Pressable>
@@ -647,6 +668,9 @@ const styles = StyleSheet.create({
     borderRadius: 100,
     paddingHorizontal: 16,
     paddingVertical: 8,
+  },
+  viewLocationBtnDisabled: {
+    opacity: 0.45,
   },
   viewLocationText: {
     fontFamily: typography.fontFamily.text,
