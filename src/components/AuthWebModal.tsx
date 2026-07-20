@@ -15,6 +15,7 @@ import { useRegister } from '@/src/hooks/useRegister';
 import { useVerifyOtp } from '@/src/hooks/useVerifyOtp';
 import { authSuccessMessage, hasAuthTokens } from '@/src/api/auth.service';
 import { OTP_LENGTH } from '@/src/constants/authConstants';
+import { useKeyboardBottomInset } from '@/src/hooks/useKeyboardBottomInset';
 import { getErrorMessage } from '@/src/utils/errorHandler';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useRef, useState } from 'react';
@@ -97,6 +98,8 @@ export function AuthWebModal({
   } | null>(null);
 
   const otpRefs = useRef<(TextInput | null)[]>([]);
+  const formScrollRef = useRef<ScrollView>(null);
+  const keyboardInset = useKeyboardBottomInset();
 
   const { mutate: sendOtp, isPending: isSendingOtp } = useSendOtp();
   const { mutate: registerUser, isPending: isRegistering } = useRegister();
@@ -105,6 +108,12 @@ export function AuthWebModal({
   const isLogin = mode === 'login';
   const isEmailLogin = isLogin && loginMode === 'email';
   const isEmailSignup = !isLogin && signupMode === 'email';
+
+  useEffect(() => {
+    if (step === 'otp' && keyboardInset > 0) {
+      setTimeout(() => formScrollRef.current?.scrollToEnd({ animated: true }), 50);
+    }
+  }, [step, keyboardInset]);
 
   useEffect(() => {
     if (visible) {
@@ -295,12 +304,16 @@ export function AuthWebModal({
           <Pressable
             style={[
               styles.cardWrap,
+              { marginBottom: keyboardInset > 0 ? Math.min(keyboardInset, 280) : 0 },
               compactWeb
                 ? {
                     maxWidth: Math.min(420, Math.max(0, windowWidth - spacing['4'] * 2)),
                     maxHeight:
                       windowHeight > 0
-                        ? Math.min(620, Math.round(windowHeight * 0.88))
+                        ? Math.min(
+                            620,
+                            Math.round((windowHeight - keyboardInset) * 0.88),
+                          )
                         : (('88%' as unknown) as number),
                   }
                 : null,
@@ -358,10 +371,12 @@ export function AuthWebModal({
                   </View>
                 ) : null}
                 <ScrollView
+                  ref={formScrollRef}
                   style={styles.formScroll}
                   contentContainerStyle={[
                     styles.formScrollContent,
                     compactWeb && styles.formScrollContentCompact,
+                    keyboardInset > 0 && { paddingBottom: spacing['6'] },
                   ]}
                   keyboardShouldPersistTaps="handled"
                   showsVerticalScrollIndicator={false}

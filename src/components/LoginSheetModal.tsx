@@ -7,6 +7,7 @@ import {
 import { getErrorMessage } from '@/src/utils/errorHandler';
 import { authSuccessMessage, hasAuthTokens } from '@/src/api/auth.service';
 import { OTP_LENGTH } from '@/src/constants/authConstants';
+import { useKeyboardBottomInset } from '@/src/hooks/useKeyboardBottomInset';
 import { useSendOtp } from '@/src/hooks/useSendOtp';
 import { useVerifyOtp } from '@/src/hooks/useVerifyOtp';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,10 +17,12 @@ import {
   Modal,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   TextInput,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 function emptyOtpDigits() {
   return Array.from({ length: OTP_LENGTH }, () => '');
@@ -48,6 +51,8 @@ export function LoginSheetModal({
   const [loginStep, setLoginStep] = useState<LoginStep>('login');
   const [otpDigits, setOtpDigits] = useState<string[]>(emptyOtpDigits);
   const otpRefs = useRef<(TextInput | null)[]>([]);
+  const keyboardInset = useKeyboardBottomInset();
+  const safeInsets = useSafeAreaInsets();
 
   const { mutate: sendOtp, isPending: isSendingOtp } = useSendOtp();
   const { mutate: verifyOtp, isPending: isVerifyingOtp } = useVerifyOtp();
@@ -157,27 +162,40 @@ export function LoginSheetModal({
       animationType="slide"
       onRequestClose={loginStep === 'otp' ? undefined : closeLoginModal}
     >
-      <Pressable
-        style={styles.sheetOverlay}
-        onPress={loginStep === 'otp' ? undefined : closeLoginModal}
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 24}
+        <Pressable
+          style={styles.sheetOverlay}
+          onPress={loginStep === 'otp' ? undefined : closeLoginModal}
         >
-          <Pressable style={styles.sheetCard} onPress={(e) => e.stopPropagation()}>
-            <View style={styles.sheetHeader}>
-              <Pressable onPress={closeLoginModal} hitSlop={12} accessibilityLabel="Close login">
-                <Ionicons name="chevron-back" size={22} color={colors.primary} />
-              </Pressable>
-              <Text variant="bodySemibold" style={styles.sheetTitle}>
-                {loginStep === 'otp' ? 'Enter OTP' : 'Log in or sign up'}
-              </Text>
-              <View style={{ width: 22 }} />
-            </View>
+          <View
+            style={{
+              width: '100%',
+              paddingBottom: Math.max(safeInsets.bottom, spacing['4']) + keyboardInset,
+            }}
+            pointerEvents="box-none"
+          >
+            <Pressable style={styles.sheetCard} onPress={(e) => e.stopPropagation()}>
+              <ScrollView
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
+                bounces={false}
+                contentContainerStyle={styles.sheetScrollContent}
+              >
+                <View style={styles.sheetHeader}>
+                  <Pressable onPress={closeLoginModal} hitSlop={12} accessibilityLabel="Close login">
+                    <Ionicons name="chevron-back" size={22} color={colors.primary} />
+                  </Pressable>
+                  <Text variant="bodySemibold" style={styles.sheetTitle}>
+                    {loginStep === 'otp' ? 'Enter OTP' : 'Log in or sign up'}
+                  </Text>
+                  <View style={{ width: 22 }} />
+                </View>
 
-            <View style={styles.sheetBody}>
-              {loginStep === 'login' ? (
+                <View style={styles.sheetBody}>
+                  {loginStep === 'login' ? (
                 <>
                   <TextInput
                     value={loginValue}
@@ -324,15 +342,18 @@ export function LoginSheetModal({
                   </Pressable>
                 </>
               )}
-            </View>
-          </Pressable>
-        </KeyboardAvoidingView>
-      </Pressable>
+                </View>
+              </ScrollView>
+            </Pressable>
+          </View>
+        </Pressable>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
+  flex: { flex: 1 },
   sheetOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 8, 48, 0.27)',
@@ -343,11 +364,14 @@ const styles = StyleSheet.create({
     backgroundColor: colors.gray['1'],
     borderTopLeftRadius: borderRadius['2xl'],
     borderTopRightRadius: borderRadius['2xl'],
+    borderWidth: 1,
+    borderColor: colors.border.light,
+    maxHeight: '90%',
+  },
+  sheetScrollContent: {
     paddingTop: spacing['5'],
     paddingHorizontal: spacing['4'],
     paddingBottom: spacing['6'],
-    borderWidth: 1,
-    borderColor: colors.border.light,
     gap: spacing['4'],
   },
   sheetHeader: {

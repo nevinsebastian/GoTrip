@@ -3,6 +3,7 @@ import { borderRadius, colors, spacing, typography } from '@/constants/DesignTok
 import type { OtpChannel } from '@/src/api/types';
 import { authSuccessMessage, hasAuthTokens } from '@/src/api/auth.service';
 import { OTP_LENGTH } from '@/src/constants/authConstants';
+import { useKeyboardBottomInset } from '@/src/hooks/useKeyboardBottomInset';
 import { useVerifyOtp, type VerifyOtpFlow } from '@/src/hooks/useVerifyOtp';
 import { getErrorMessage } from '@/src/utils/errorHandler';
 import { enterVendorWorkspace, VENDOR_HOME_PATH } from '@/src/utils/vendorNavigation';
@@ -15,10 +16,12 @@ import {
   Modal,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   TextInput,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const ACCENT = colors.accent.main;
 
@@ -71,6 +74,8 @@ export function OtpEntryModal({
   const [digits, setDigits] = useState<string[]>(emptyOtpDigits);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const inputRefs = useRef<(TextInput | null)[]>([]);
+  const keyboardInset = useKeyboardBottomInset();
+  const safeInsets = useSafeAreaInsets();
 
   const isEmailMode = channel === 'email';
   const sentToLabel = isEmailMode ? contact : maskContact(contact, false);
@@ -82,7 +87,7 @@ export function OtpEntryModal({
     if (visible) {
       setDigits(emptyOtpDigits());
       setSubmitError(null);
-      setTimeout(() => inputRefs.current[0]?.focus(), 200);
+      setTimeout(() => inputRefs.current[0]?.focus(), 250);
     }
   }, [visible]);
 
@@ -174,6 +179,7 @@ export function OtpEntryModal({
 
   const code = digits.join('');
   const canConfirm = code.length === OTP_LENGTH && !isVerifying;
+  const bottomPad = Math.max(safeInsets.bottom, spacing['4']) + keyboardInset;
 
   return (
     <Modal
@@ -182,91 +188,101 @@ export function OtpEntryModal({
       animationType="slide"
       onRequestClose={handleClose}
     >
-      <Pressable style={styles.overlay} onPress={handleClose}>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 12 : 0}
-          style={styles.keyboardWrap}
-        >
-          <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
-            <View style={styles.handle} />
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <Pressable style={styles.overlay} onPress={handleClose}>
+          <View style={[styles.keyboardLift, { paddingBottom: bottomPad }]} pointerEvents="box-none">
+            <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
+              <ScrollView
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
+                bounces={false}
+                contentContainerStyle={styles.sheetScrollContent}
+              >
+                <View style={styles.handle} />
 
-            <View style={styles.header}>
-              <Pressable onPress={handleClose} hitSlop={12} accessibilityLabel="Close OTP">
-                <Ionicons name="close" size={22} color={colors.text.primary} />
-              </Pressable>
-              <Text style={styles.title}>Enter OTP</Text>
-              <View style={{ width: 22 }} />
-            </View>
+                <View style={styles.header}>
+                  <Pressable onPress={handleClose} hitSlop={12} accessibilityLabel="Close OTP">
+                    <Ionicons name="close" size={22} color={colors.text.primary} />
+                  </Pressable>
+                  <Text style={styles.title}>Enter OTP</Text>
+                  <View style={{ width: 22 }} />
+                </View>
 
-            <Text style={styles.subtitle}>
-              OTP sent to {sentToLabel} {sentVia}
-            </Text>
+                <Text style={styles.subtitle}>
+                  OTP sent to {sentToLabel} {sentVia}
+                </Text>
 
-            <View style={styles.otpRow}>
-              {digits.map((d, i) => (
-                <TextInput
-                  key={i}
-                  ref={(el) => {
-                    inputRefs.current[i] = el;
-                  }}
-                  value={d}
-                  onChangeText={(v) => handleDigitChange(i, v)}
-                  onKeyPress={({ nativeEvent }) => handleKeyPress(i, nativeEvent.key)}
-                  keyboardType="number-pad"
-                  maxLength={2}
-                  style={styles.otpBox}
-                  placeholder="•"
-                  placeholderTextColor="rgba(0, 5, 29, 0.25)"
-                  selectTextOnFocus
-                />
-              ))}
-            </View>
+                <View style={styles.otpRow}>
+                  {digits.map((d, i) => (
+                    <TextInput
+                      key={i}
+                      ref={(el) => {
+                        inputRefs.current[i] = el;
+                      }}
+                      value={d}
+                      onChangeText={(v) => handleDigitChange(i, v)}
+                      onKeyPress={({ nativeEvent }) => handleKeyPress(i, nativeEvent.key)}
+                      keyboardType="number-pad"
+                      maxLength={2}
+                      style={styles.otpBox}
+                      placeholder="•"
+                      placeholderTextColor="rgba(0, 5, 29, 0.25)"
+                      selectTextOnFocus
+                    />
+                  ))}
+                </View>
 
-            {submitError ? (
-              <Text style={styles.errorText}>{submitError}</Text>
-            ) : null}
+                {submitError ? <Text style={styles.errorText}>{submitError}</Text> : null}
 
-            <Pressable
-              style={({ pressed }) => [
-                styles.confirmButton,
-                (!canConfirm || isVerifying) && styles.buttonDisabled,
-                pressed && canConfirm && styles.buttonPressed,
-              ]}
-              onPress={handleConfirm}
-              disabled={!canConfirm}
-              accessibilityRole="button"
-            >
-              {isVerifying ? (
-                <ActivityIndicator color={colors.surface.white} size="small" />
-              ) : (
-                <Text style={styles.confirmText}>Confirm</Text>
-              )}
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.confirmButton,
+                    (!canConfirm || isVerifying) && styles.buttonDisabled,
+                    pressed && canConfirm && styles.buttonPressed,
+                  ]}
+                  onPress={handleConfirm}
+                  disabled={!canConfirm}
+                  accessibilityRole="button"
+                >
+                  {isVerifying ? (
+                    <ActivityIndicator color={colors.surface.white} size="small" />
+                  ) : (
+                    <Text style={styles.confirmText}>Confirm</Text>
+                  )}
+                </Pressable>
+
+                <Pressable onPress={handleClose} style={styles.changeContactBtn}>
+                  <Text style={styles.changeContactText}>Change email/phone</Text>
+                </Pressable>
+              </ScrollView>
             </Pressable>
-
-            <Pressable onPress={handleClose} style={styles.changeContactBtn}>
-              <Text style={styles.changeContactText}>Change email/phone</Text>
-            </Pressable>
-          </Pressable>
-        </KeyboardAvoidingView>
-      </Pressable>
+          </View>
+        </Pressable>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
+  flex: { flex: 1 },
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 8, 48, 0.45)',
     justifyContent: 'flex-end',
   },
-  keyboardWrap: {
+  keyboardLift: {
     width: '100%',
   },
   sheet: {
     backgroundColor: colors.surface.white,
     borderTopLeftRadius: borderRadius['2xl'],
     borderTopRightRadius: borderRadius['2xl'],
+    maxHeight: '90%',
+  },
+  sheetScrollContent: {
     paddingHorizontal: spacing['4'],
     paddingTop: spacing['3'],
     paddingBottom: spacing['6'],
@@ -300,6 +316,7 @@ const styles = StyleSheet.create({
   otpRow: {
     flexDirection: 'row',
     justifyContent: 'center',
+    flexWrap: 'wrap',
     gap: 6,
     marginVertical: spacing['2'],
   },

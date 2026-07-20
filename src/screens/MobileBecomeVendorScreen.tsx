@@ -47,6 +47,7 @@ import {
     View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useKeyboardBottomInset } from '@/src/hooks/useKeyboardBottomInset';
 import { useIsAuthenticated } from '@/src/hooks/useIsAuthenticated';
 
 import ArrowTopRight from '@/assets/images/arrow-top-right.svg';
@@ -310,6 +311,8 @@ export function MobileBecomeVendorScreen({
   const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
   const [isResending, setIsResending] = useState(false);
   const [keyboardPadding, setKeyboardPadding] = useState(0);
+  const webKeyboardInset = useKeyboardBottomInset();
+  const effectiveKeyboardPad = isWeb ? webKeyboardInset : keyboardPadding;
   const [isCreatingProfile, setIsCreatingProfile] = useState(false);
   const [idType, setIdType] = useState(VENDOR_ONBOARDING.idTypes[0]);
   const [propertyDocType, setPropertyDocType] = useState(VENDOR_ONBOARDING.propertyDocTypes[0]);
@@ -349,8 +352,15 @@ export function MobileBecomeVendorScreen({
       setDigits(Array(OTP_LENGTH).fill(''));
       setSubmitError(null);
       setTimeout(() => otpInputRefs.current[0]?.focus(), 200);
+      setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 320);
     }
   }, [step]);
+
+  useEffect(() => {
+    if (step === 'otp' && effectiveKeyboardPad > 0) {
+      setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 80);
+    }
+  }, [step, effectiveKeyboardPad]);
 
   const scrollToForm = () => {
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 80);
@@ -818,7 +828,7 @@ export function MobileBecomeVendorScreen({
               styles.footer,
               {
                 paddingHorizontal: contentPadding,
-                paddingBottom: spacing['4'] + keyboardPadding,
+                paddingBottom: spacing['4'] + effectiveKeyboardPad,
               },
             ]}
           >
