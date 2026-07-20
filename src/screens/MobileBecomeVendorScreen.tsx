@@ -47,6 +47,7 @@ import {
     View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useIsAuthenticated } from '@/src/hooks/useIsAuthenticated';
 
 import ArrowTopRight from '@/assets/images/arrow-top-right.svg';
 import MailIcon from '@/assets/images/mail.svg';
@@ -293,6 +294,7 @@ export function MobileBecomeVendorScreen({
 }: {
   initialStep?: VendorStep;
 }) {
+  const { data: isAuthenticated = false, isLoading: isAuthLoading } = useIsAuthenticated();
   const contentPadding = spacing['4'];
   const scrollRef = useRef<ScrollView>(null);
   const otpInputRefs = useRef<(TextInput | null)[]>([]);
@@ -821,6 +823,20 @@ export function MobileBecomeVendorScreen({
                 </Text>
               ) : null}
               {primaryButton}
+              {step === 'landing' && !isAuthLoading && !isAuthenticated ? (
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.helpButton,
+                    pressed && styles.buttonPressed,
+                  ]}
+                  onPress={() => router.push('/login')}
+                  accessibilityRole="button"
+                  accessibilityLabel="Login"
+                >
+                  <Ionicons name="log-in-outline" size={16} color={colors.text.primary} />
+                  <Text style={styles.helpButtonText}>Login</Text>
+                </Pressable>
+              ) : null}
               {step === 'landing' ? (
                 <Pressable
                   style={({ pressed }) => [styles.helpButton, pressed && styles.buttonPressed]}
@@ -858,6 +874,17 @@ export function MobileBecomeVendorScreen({
                       <Text style={styles.socialButtonText}>Continue with Google</Text>
                     </Pressable>
                   </View>
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.vendorLoginLink,
+                      pressed && styles.buttonPressed,
+                    ]}
+                    onPress={() => router.push('/vendor-login')}
+                    accessibilityRole="button"
+                    accessibilityLabel="Login as vendor"
+                  >
+                    <Text style={styles.vendorLoginLinkText}>Login as vendor</Text>
+                  </Pressable>
                 </>
               ) : null}
             </View>
@@ -1406,5 +1433,18 @@ const styles = StyleSheet.create({
     lineHeight: typography.lineHeight['2'],
     letterSpacing: typography.letterSpacing['2'],
     color: colors.text.primary,
+  },
+  vendorLoginLink: {
+    marginTop: spacing['2'],
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing['2'],
+  },
+  vendorLoginLinkText: {
+    fontFamily: typography.fontFamily.text,
+    fontSize: 12,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.accent.main,
+    textDecorationLine: 'underline',
   },
 });

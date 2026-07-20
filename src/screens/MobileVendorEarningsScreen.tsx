@@ -2,19 +2,44 @@ import { Text } from '@/components/ui';
 import { borderRadius, colors, spacing, typography } from '@/constants/DesignTokens';
 import {
   VENDOR_WORKSPACE_COPY,
-  VENDOR_WORKSPACE_EARNINGS,
   VENDOR_WORKSPACE_PINK,
 } from '@/src/constants/vendorWorkspaceConstants';
+import { useVendorPayouts } from '@/src/hooks/useVendorPayouts';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import React from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import React, { useMemo } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const DESIGN_WIDTH = 402;
-const CHART_MAX = Math.max(...VENDOR_WORKSPACE_EARNINGS.chartValues);
+
+function formatCurrency(amount?: number): string {
+  if (amount == null) return '—';
+  return `₹${amount.toLocaleString('en-IN')}`;
+}
 
 export function MobileVendorEarningsScreen() {
+  const { payouts, isLoading } = useVendorPayouts(50);
+
+  const totalEarnings = useMemo(
+    () => payouts.reduce((sum, p) => sum + (p.amount ?? 0), 0),
+    [payouts],
+  );
+  const pendingPayouts = useMemo(
+    () =>
+      payouts
+        .filter((p) => p.status === 'pending')
+        .reduce((sum, p) => sum + (p.amount ?? 0), 0),
+    [payouts],
+  );
+  const completedPayouts = useMemo(
+    () =>
+      payouts
+        .filter((p) => p.status === 'completed' || p.status === 'settled')
+        .reduce((sum, p) => sum + (p.amount ?? 0), 0),
+    [payouts],
+  );
+
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.page}>
@@ -27,52 +52,47 @@ export function MobileVendorEarningsScreen() {
         </View>
 
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          <View style={styles.summaryGrid}>
-            <View style={styles.summaryCard}>
-              <Text style={styles.summaryLabel}>{VENDOR_WORKSPACE_COPY.totalEarnings}</Text>
-              <Text style={styles.summaryValue}>{VENDOR_WORKSPACE_EARNINGS.total}</Text>
-            </View>
-            <View style={styles.summaryCard}>
-              <Text style={styles.summaryLabel}>{VENDOR_WORKSPACE_COPY.pendingPayouts}</Text>
-              <Text style={styles.summaryValue}>{VENDOR_WORKSPACE_EARNINGS.pending}</Text>
-            </View>
-            <View style={[styles.summaryCard, styles.summaryCardWide]}>
-              <Text style={styles.summaryLabel}>{VENDOR_WORKSPACE_COPY.completedPayouts}</Text>
-              <Text style={styles.summaryValue}>{VENDOR_WORKSPACE_EARNINGS.completed}</Text>
-            </View>
-          </View>
-
-          <View style={styles.chartCard}>
-            <Text style={styles.sectionTitle}>Revenue trend</Text>
-            <View style={styles.chart}>
-              {VENDOR_WORKSPACE_EARNINGS.chartValues.map((value, index) => (
-                <View key={VENDOR_WORKSPACE_EARNINGS.chartWeeks[index]} style={styles.barCol}>
-                  <View
-                    style={[
-                      styles.bar,
-                      { height: Math.max(24, (value / CHART_MAX) * 120), backgroundColor: VENDOR_WORKSPACE_PINK },
-                    ]}
-                  />
-                  <Text style={styles.barLabel}>{VENDOR_WORKSPACE_EARNINGS.chartWeeks[index]}</Text>
+          {isLoading ? (
+            <ActivityIndicator color={VENDOR_WORKSPACE_PINK} style={{ marginTop: 40 }} />
+          ) : (
+            <>
+              <View style={styles.summaryGrid}>
+                <View style={styles.summaryCard}>
+                  <Text style={styles.summaryLabel}>{VENDOR_WORKSPACE_COPY.totalEarnings}</Text>
+                  <Text style={styles.summaryValue}>{formatCurrency(totalEarnings)}</Text>
                 </View>
-              ))}
-            </View>
-          </View>
-
-          <Text style={styles.sectionTitle}>Recent transactions</Text>
-          <View style={styles.txList}>
-            {VENDOR_WORKSPACE_EARNINGS.transactions.map((tx) => (
-              <View key={tx.id} style={styles.txRow}>
-                <View style={styles.txInfo}>
-                  <Text style={styles.txLabel} numberOfLines={1}>
-                    {tx.label}
-                  </Text>
-                  <Text style={styles.txDate}>{tx.date}</Text>
+                <View style={styles.summaryCard}>
+                  <Text style={styles.summaryLabel}>{VENDOR_WORKSPACE_COPY.pendingPayouts}</Text>
+                  <Text style={styles.summaryValue}>{formatCurrency(pendingPayouts)}</Text>
                 </View>
-                <Text style={styles.txAmount}>{tx.amount}</Text>
+                <View style={[styles.summaryCard, styles.summaryCardWide]}>
+                  <Text style={styles.summaryLabel}>{VENDOR_WORKSPACE_COPY.completedPayouts}</Text>
+                  <Text style={styles.summaryValue}>{formatCurrency(completedPayouts)}</Text>
+                </View>
               </View>
-            ))}
-          </View>
+
+              <Text style={styles.sectionTitle}>Recent transactions</Text>
+              <View style={styles.txList}>
+                {payouts.length === 0 ? (
+                  <Text style={styles.emptyText}>No transactions yet.</Text>
+                ) : (
+                  payouts.map((p) => (
+                    <View key={p.id} style={styles.txRow}>
+                      <View style={styles.txInfo}>
+                        <Text style={styles.txLabel} numberOfLines={1}>
+                          {p.listingTitle ?? p.bookingRef ?? p.id}
+                        </Text>
+                        <Text style={styles.txDate}>
+                          {p.settledAt ?? p.createdAt ?? ''}
+                        </Text>
+                      </View>
+                      <Text style={styles.txAmount}>{formatCurrency(p.amount)}</Text>
+                    </View>
+                  ))
+                )}
+              </View>
+            </>
+          )}
         </ScrollView>
       </View>
     </SafeAreaView>
@@ -189,5 +209,12 @@ const styles = StyleSheet.create({
     fontSize: typography.fontSize['1'],
     fontWeight: typography.fontWeight.semibold,
     color: colors.text.primary,
+  },
+  emptyText: {
+    fontFamily: typography.fontFamily.text,
+    fontSize: typography.fontSize['1'],
+    color: 'rgba(28, 32, 36, 0.5)',
+    textAlign: 'center',
+    padding: 16,
   },
 });

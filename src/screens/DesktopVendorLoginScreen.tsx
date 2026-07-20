@@ -28,6 +28,10 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { OTP_LENGTH } from '@/src/constants/authConstants';
+import { useSendOtp } from '@/src/hooks/useSendOtp';
+import { useVerifyOtp } from '@/src/hooks/useVerifyOtp';
+import { getErrorMessage } from '@/src/utils/errorHandler';
 
 const HeaderLogo = require('@/assets/images/login-figma/logo-header.png');
 const HeroLogoWhite = require('@/assets/images/login-figma/logo-hero-white.png');
@@ -42,11 +46,7 @@ const FIGMA_BLUE = '#2C6F9C';
 const FIGMA_PINK = '#AA1155';
 const FIGMA_VENDOR_SUFFIX = '#E54D2E';
 const FIGMA_TITLE = '#0F1A20';
-
-const OTP_LENGTH = 4;
 const SOCIAL_ICON_SIZE = 20;
-/** Figma / demo vendor login — no API calls. */
-const DEMO_VENDOR_EMAIL = 'vendor@gotrip.com';
 
 type LoginMode = 'phone' | 'email';
 
@@ -63,13 +63,15 @@ export function DesktopVendorLoginScreen() {
   const [pendingVerify, setPendingVerify] = useState<PendingVerify | null>(null);
   const [step, setStep] = useState<'credentials' | 'otp'>('credentials');
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
   const [otpDigits, setOtpDigits] = useState<string[]>(() =>
     Array.from({ length: OTP_LENGTH }, () => ''),
   );
   const otpRefs = useRef<(TextInput | null)[]>([]);
 
   const isEmailMode = loginMode === 'email';
+
+  const { mutate: sendOtp, isPending: isSendingOtp } = useSendOtp();
+  const { mutate: verifyOtp, isPending: isVerifyingOtp } = useVerifyOtp('login');
 
   const compact = useMemo(() => width > 0 && width < 980, [width]);
 
@@ -114,9 +116,20 @@ export function DesktopVendorLoginScreen() {
     }
 
     const channel: OtpChannel = isEmailMode ? 'email' : 'phone';
-    setPendingVerify({ contact: trimmed, channel });
-    setOtpDigits(Array.from({ length: OTP_LENGTH }, () => ''));
-    setStep('otp');
+    const payload = isEmailMode ? { email: trimmed } : { phone: trimmed };
+
+    sendOtp(payload, {
+      onSuccess: (res) => {
+        if (res?.success) {
+          setPendingVerify({ contact: trimmed, channel });
+          setOtpDigits(Array.from({ length: OTP_LENGTH }, () => ''));
+          setStep('otp');
+          return;
+        }
+        setSubmitError(res?.message ?? 'Failed to send OTP. Please try again.');
+      },
+      onError: (err) => setSubmitError(getErrorMessage(err)),
+    });
   };
 
   const handleOtpDigitChange = (index: number, value: string) => {
@@ -150,14 +163,26 @@ export function DesktopVendorLoginScreen() {
     const code = otpDigits.join('');
     if (code.length !== OTP_LENGTH) return;
 
-    setIsVerifyingOtp(true);
-    try {
-      // Demo mode — any 4-digit OTP succeeds (matches mobile vendor login).
-      await loginExistingVendor();
-      await enterVendorWorkspace();
-    } finally {
-      setIsVerifyingOtp(false);
-    }
+    verifyOtp(
+      {
+        flow: 'login',
+        otp: code,
+        ...(pendingVerify.channel === 'email'
+          ? { email: pendingVerify.contact }
+          : { phone: pendingVerify.contact }),
+      },
+      {
+        onSuccess: async (res) => {
+          if (res?.success) {
+            await loginExistingVendor();
+            await enterVendorWorkspace();
+            return;
+          }
+          setSubmitError(res?.message ?? 'Invalid or expired OTP.');
+        },
+        onError: (err) => setSubmitError(getErrorMessage(err)),
+      },
+    );
   };
 
   return (
@@ -277,7 +302,7 @@ export function DesktopVendorLoginScreen() {
                           if (submitError) setSubmitError(null);
                         }}
                         placeholder={
-                          isEmailMode ? DEMO_VENDOR_EMAIL : VENDOR_ONBOARDING.defaultPhone
+                          isEmailMode ? 'vendor@email.com' : VENDOR_ONBOARDING.defaultPhone
                         }
                         keyboardType={isEmailMode ? 'email-address' : 'phone-pad'}
                         autoCapitalize="none"
@@ -291,7 +316,7 @@ export function DesktopVendorLoginScreen() {
                           : "You'll get OTP to this number."}
                       </Text>
                       <Text variant="caption" style={styles.demoHelper}>
-                        Demo mode — enter any contact, then use any 4-digit OTP.
+                        Enter the OTP we send to your vendor email/phone to sign in.
                       </Text>
 
                       {submitError ? (
@@ -305,8 +330,16 @@ export function DesktopVendorLoginScreen() {
                         size="default"
                         style={styles.primaryCta}
                         onPress={handleGetOtpPress}
+                        disabled={isSendingOtp}
                       >
-                        Get OTP
+                        {isSendingOtp ? (
+                          <View style={styles.spinnerRow}>
+                            <ActivityIndicator color={colors.surface.white} size="small" />
+                            <Text style={styles.spinnerText}>Sending…</Text>
+                          </View>
+                        ) : (
+                          'Get OTP'
+                        )}
                       </Button>
 
                       <Divider style={styles.divider} />

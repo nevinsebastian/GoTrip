@@ -9,13 +9,13 @@ import {
 } from '@/src/components/vendor/workspace/VendorWorkspaceTabBar';
 import {
   VENDOR_BOOKINGS_COPY,
-  VENDOR_DASHBOARD_BOOKINGS,
   VENDOR_DASHBOARD_CARD_BORDER,
   VENDOR_DASHBOARD_CARD_RADIUS,
   VENDOR_DASHBOARD_COPY,
-  VENDOR_DASHBOARD_PROPERTIES,
   VENDOR_DASHBOARD_SORT_OPTIONS,
+  type VendorBookingStatus,
 } from '@/src/constants/vendorDashboardConstants';
+import { useVendorBookings } from '@/src/hooks/useVendorBookings';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
@@ -33,13 +33,24 @@ export function MobileVendorBookingsScreen() {
   const [sortId, setSortId] = useState('date');
   const [filterOpen, setFilterOpen] = useState(false);
 
-  const listingOptions = [
-    { id: 'all', label: VENDOR_BOOKINGS_COPY.allListings },
-    ...VENDOR_DASHBOARD_PROPERTIES.map((p) => ({ id: p.id, label: p.label })),
-  ];
+  const { bookings, isLoading } = useVendorBookings();
 
-  const activeListing =
-    listingOptions.find((o) => o.id === listingFilterId) ?? listingOptions[0];
+  const listingOptions = [{ id: 'all', label: VENDOR_BOOKINGS_COPY.allListings }];
+  const activeListing = listingOptions[0];
+
+  const displayBookings = bookings
+    .filter((b) => listingFilterId === 'all' || b.listingId === listingFilterId)
+    .map((b) => ({
+      id: b.id,
+      guestName: b.guestName ?? 'Guest',
+      guests: b.adults ?? b.guests ?? 1,
+      dateRange: b.checkIn && b.checkOut ? `${b.checkIn} – ${b.checkOut}` : '',
+      status: (['pending', 'confirmed', 'cancelled'].includes(b.status)
+        ? b.status
+        : 'simple') as VendorBookingStatus,
+      listingLabel: b.listingTitle ?? '',
+      listingTheme: 'green' as const,
+    }));
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -74,9 +85,19 @@ export function MobileVendorBookingsScreen() {
           </View>
 
           <View style={styles.list}>
-            {VENDOR_DASHBOARD_BOOKINGS.map((booking) => (
-              <VendorBookingCard key={booking.id} booking={booking} />
-            ))}
+            {isLoading ? (
+              <Text style={{ textAlign: 'center', color: colors.text.secondary, marginTop: 24 }}>
+                Loading bookings…
+              </Text>
+            ) : displayBookings.length === 0 ? (
+              <Text style={{ textAlign: 'center', color: colors.text.secondary, marginTop: 24 }}>
+                No bookings found.
+              </Text>
+            ) : (
+              displayBookings.map((booking) => (
+                <VendorBookingCard key={booking.id} booking={booking} />
+              ))
+            )}
           </View>
         </ScrollView>
 

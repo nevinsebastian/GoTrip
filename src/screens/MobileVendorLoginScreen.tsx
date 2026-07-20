@@ -10,6 +10,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
@@ -20,6 +21,8 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSendOtp } from '@/src/hooks/useSendOtp';
+import { getErrorMessage } from '@/src/utils/errorHandler';
 
 const isWeb = Platform.OS === 'web';
 const isIOS = Platform.OS === 'ios';
@@ -54,6 +57,7 @@ export function MobileVendorLoginScreen() {
   const [otpSession, setOtpSession] = useState<OtpSession | null>(null);
 
   const isEmailMode = loginMode === 'email';
+  const { mutate: sendOtp, isPending: isSendingOtp } = useSendOtp();
 
   useEffect(() => {
     if (isWeb) return;
@@ -92,7 +96,19 @@ export function MobileVendorLoginScreen() {
     }
     Keyboard.dismiss();
     const channel: OtpChannel = isEmailMode ? 'email' : 'phone';
-    setOtpSession({ contact: trimmed, channel });
+    const payload = isEmailMode ? { email: trimmed } : { phone: trimmed };
+    sendOtp(payload, {
+      onSuccess: (res) => {
+        if (res?.success) {
+          setOtpSession({ contact: trimmed, channel });
+          return;
+        }
+        setSubmitError(res?.message ?? 'Failed to send OTP. Please try again.');
+      },
+      onError: (err) => {
+        setSubmitError(getErrorMessage(err));
+      },
+    });
   };
 
   const dismissKeyboard = () => {
@@ -152,7 +168,7 @@ export function MobileVendorLoginScreen() {
                   />
 
                   <Text style={styles.helper}>
-                    Demo mode — enter any contact, then use any 4-digit OTP.
+                    We'll send OTP to your vendor contact.
                   </Text>
                 </View>
 
@@ -165,9 +181,14 @@ export function MobileVendorLoginScreen() {
                 <Pressable
                   style={({ pressed }) => [styles.getOtpButton, pressed && styles.buttonPressed]}
                   onPress={handleGetOtp}
+                  disabled={isSendingOtp}
                   accessibilityRole="button"
                 >
-                  <Text style={styles.getOtpText}>Get OTP</Text>
+                  {isSendingOtp ? (
+                    <ActivityIndicator color={colors.surface.white} size="small" />
+                  ) : (
+                    <Text style={styles.getOtpText}>Get OTP</Text>
+                  )}
                 </Pressable>
               </View>
 
@@ -203,7 +224,6 @@ export function MobileVendorLoginScreen() {
         onClose={() => setOtpSession(null)}
         contact={otpSession?.contact ?? ''}
         channel={otpSession?.channel ?? 'phone'}
-        mockMode
         redirectTo="/vendor/home"
         onAuthenticated={loginExistingVendor}
       />

@@ -17,6 +17,7 @@ import {
 } from '@/src/constants/vendorDashboardConstants';
 import type { VendorListingCategoryId } from '@/src/constants/vendorOnboardingConstants';
 import { useVendorListingCategory } from '@/src/hooks/useVendorListingCategory';
+import { useVendorDashboard } from '@/src/hooks/useVendorDashboard';
 import { logout } from '@/src/api/auth.service';
 import { getStoredVendorListingCategory } from '@/src/utils/vendorSession';
 import { Ionicons } from '@expo/vector-icons';
@@ -41,6 +42,7 @@ export function MobileVendorDashboardScreen() {
   const storedCategory = useVendorListingCategory();
   const tabInset = useVendorTabBarInset();
   const [categoryId, setCategoryId] = useState<VendorListingCategoryId>(storedCategory);
+  const { data: dashData } = useVendorDashboard();
   const [propertyId, setPropertyId] = useState(VENDOR_DASHBOARD_PROPERTIES[0].id);
   const [sortId, setSortId] = useState('date');
   const [menuOpen, setMenuOpen] = useState(false);
@@ -118,7 +120,9 @@ export function MobileVendorDashboardScreen() {
             <View style={styles.menuCard}>
               <View style={styles.menuProfile}>
                 <Image source={HOST_AVATAR} style={styles.menuAvatar} resizeMode="cover" />
-                <Text style={styles.menuName}>{VENDOR_DASHBOARD_COPY.profileName}</Text>
+                <Text style={styles.menuName}>
+                  {dashData?.profile?.businessName ?? VENDOR_DASHBOARD_COPY.profileName}
+                </Text>
               </View>
               <Pressable style={styles.menuItem} onPress={() => router.push('/vendor/profile')}>
                 <Ionicons name="person-outline" size={16} color={colors.text.primary} />
@@ -166,7 +170,21 @@ export function MobileVendorDashboardScreen() {
             </Pressable>
           </View>
 
-          <VendorDashboardBookingList />
+          <VendorDashboardBookingList
+            bookings={
+              dashData?.recentBookings?.map((b) => ({
+                id: b.id,
+                guestName: b.guestName ?? 'Guest',
+                guests: b.adults ?? b.guests ?? 1,
+                dateRange: b.checkIn && b.checkOut ? `${b.checkIn} – ${b.checkOut}` : '',
+                status: (['pending', 'confirmed', 'cancelled'].includes(b.status)
+                  ? b.status
+                  : 'simple') as import('@/src/constants/vendorDashboardConstants').VendorBookingStatus,
+                listingLabel: b.listingTitle ?? '',
+                listingTheme: 'green' as const,
+              })) ?? undefined
+            }
+          />
         </ScrollView>
       </View>
 

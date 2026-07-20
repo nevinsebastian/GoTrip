@@ -33,6 +33,7 @@ import { getErrorMessage } from '@/src/utils/errorHandler';
 import { pickVendorDocument } from '@/src/utils/vendorDocumentPicker';
 import type { VendorLocalDocument } from '@/src/utils/vendorDocumentPicker';
 import { Ionicons } from '@expo/vector-icons';
+import { useIsAuthenticated } from '@/src/hooks/useIsAuthenticated';
 import { router } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
@@ -75,6 +76,7 @@ export function DesktopBecomeVendorScreen({
 }: {
   initialStep?: VendorStep;
 }) {
+  const { data: isAuthenticated = false, isLoading: isAuthLoading } = useIsAuthenticated();
   const otpInputRefs = useRef<(TextInput | null)[]>([]);
 
   const [step, setStep] = useState<VendorStep>(initialStep);
@@ -363,6 +365,12 @@ export function DesktopBecomeVendorScreen({
             <Pressable style={styles.primaryCta} onPress={() => setStep('register')}>
               <Text style={styles.primaryCtaText}>Become a Vendor</Text>
             </Pressable>
+            {step === 'landing' && !isAuthLoading && !isAuthenticated ? (
+              <Pressable style={styles.helpBtn} onPress={() => router.push('/login')}>
+                <Ionicons name="log-in-outline" size={18} color={colors.text.primary} />
+                <Text style={styles.helpText}>Login</Text>
+              </Pressable>
+            ) : null}
             <Pressable style={styles.helpBtn}>
               <Ionicons name="help-circle-outline" size={18} color={colors.text.primary} />
               <Text style={styles.helpText}>Help</Text>
@@ -564,6 +572,9 @@ export function DesktopBecomeVendorScreen({
             <Pressable style={styles.socialButton}>
               <Image source={GoogleIcon} style={{ width: 16, height: 16 }} resizeMode="contain" />
               <Text style={styles.socialButtonText}>Continue with Google</Text>
+            </Pressable>
+            <Pressable style={styles.vendorLoginLink} onPress={() => router.push('/vendor-login')}>
+              <Text style={styles.vendorLoginLinkText}>Login as vendor</Text>
             </Pressable>
             <Pressable style={styles.socialButton}>
               <Ionicons name="logo-apple" size={18} color={colors.text.primary} />
@@ -802,6 +813,18 @@ const styles = StyleSheet.create({
     fontFamily: typography.fontFamily.text,
     fontSize: 14,
     color: colors.text.primary,
+  },
+  vendorLoginLink: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 4,
+  },
+  vendorLoginLinkText: {
+    fontFamily: typography.fontFamily.text,
+    fontSize: 13,
+    fontWeight: typography.fontWeight.semibold,
+    color: ACCENT,
+    textDecorationLine: 'underline',
   },
   footerCta: {
     width: '100%',

@@ -1273,3 +1273,122 @@ export interface WishlistsResponse {
   meta: ListingsMeta;
 }
 
+// ─── Vendor profile ────────────────────────────────────────────────────────
+
+export type VendorKycStatus = 'pending' | 'under_review' | 'approved' | 'rejected';
+
+export interface VendorProfileFull {
+  id: string;
+  userId?: string;
+  businessName: string;
+  panNumber?: string | null;
+  gstNumber?: string | null;
+  kycStatus?: VendorKycStatus;
+  commissionPct?: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface VendorProfileResponse {
+  success: boolean;
+  message?: string;
+  data?: VendorProfileFull;
+}
+
+export interface UpdateVendorProfileRequest {
+  businessName?: string;
+  gstNumber?: string;
+}
+
+export interface UpdateVendorBankRequest {
+  accountNo: string;
+  ifsc: string;
+  bankName: string;
+  holderName: string;
+}
+
+// ─── Vendor bookings ───────────────────────────────────────────────────────
+
+export type VendorBookingApiStatus =
+  | 'pending'
+  | 'confirmed'
+  | 'checked_in'
+  | 'completed'
+  | 'cancelled'
+  | 'no_show';
+
+export interface VendorBooking {
+  id: string;
+  bookingRef?: string;
+  status: VendorBookingApiStatus;
+  listingTitle?: string;
+  listingId?: string;
+  listingCategory?: string;
+  guestName?: string;
+  guestId?: string;
+  checkIn?: string;
+  checkOut?: string;
+  guests?: number;
+  adults?: number;
+  children?: number;
+  totalAmount?: number;
+  currency?: string;
+  createdAt?: string;
+}
+
+export interface VendorBookingsResponse {
+  success: boolean;
+  data: VendorBooking[];
+  total?: number;
+  meta?: { total: number; limit: number; offset: number };
+}
+
+export interface VendorBookingActionResponse {
+  success: boolean;
+  message?: string;
+}
+
+// ─── Vendor payouts ────────────────────────────────────────────────────────
+
+export interface VendorPayout {
+  id: string;
+  bookingRef?: string;
+  bookingId?: string;
+  listingTitle?: string;
+  amount?: number;
+  currency?: string;
+  status?: string;
+  createdAt?: string;
+  settledAt?: string;
+}
+
+export interface VendorPayoutsResponse {
+  success: boolean;
+  data: VendorPayout[];
+  total?: number;
+  meta?: { total: number; limit: number; offset: number };
+}
+
+// ─── Notifications ─────────────────────────────────────────────────────────
+
+export type NotificationCategory = 'booking' | 'payment' | 'review' | 'system' | string;
+
+export interface AppNotification {
+  id: string;
+  title?: string;
+  message?: string;
+  body?: string;
+  category?: NotificationCategory;
+  isRead?: boolean;
+  read?: boolean;
+  createdAt?: string;
+  data?: Record<string, unknown>;
+}
+
+export interface NotificationsResponse {
+  success: boolean;
+  data: AppNotification[];
+  total?: number;
+  unreadCount?: number;
+}
+

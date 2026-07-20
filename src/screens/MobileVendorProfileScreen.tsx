@@ -11,6 +11,8 @@ import {
   VENDOR_PROFILE_MENU,
   VENDOR_WORKSPACE_PROFILE,
 } from '@/src/constants/vendorWorkspaceConstants';
+import { useVendorProfile } from '@/src/hooks/useVendorProfile';
+import { useUserProfile } from '@/src/hooks/useUserProfile';
 import { logout } from '@/src/api/auth.service';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -63,6 +65,8 @@ function LogoutBackdrop({ onPress }: { onPress: () => void }) {
 export function MobileVendorProfileScreen() {
   const tabInset = useVendorTabBarInset();
   const [logoutModalVisible, setLogoutModalVisible] = useState(false);
+  const { profile: vendorProfile } = useVendorProfile();
+  const { data: userProfile } = useUserProfile();
 
   const handleMenuItem = (id: string) => {
     if (id === 'logout') {
@@ -113,9 +117,18 @@ export function MobileVendorProfileScreen() {
           <View style={styles.profileCard}>
             <Image source={VENDOR_WORKSPACE_PROFILE.avatar} style={styles.avatar} resizeMode="cover" />
             <View style={styles.profileDetails}>
-              <Text style={styles.profileName}>{VENDOR_WORKSPACE_PROFILE.name}</Text>
-              <Text style={styles.profileMeta}>{VENDOR_WORKSPACE_PROFILE.phone}</Text>
-              <Text style={styles.profileMeta}>{VENDOR_WORKSPACE_PROFILE.email}</Text>
+              <Text style={styles.profileName}>
+                {vendorProfile?.businessName ??
+                  userProfile?.full_name ??
+                  userProfile?.name ??
+                  VENDOR_WORKSPACE_PROFILE.name}
+              </Text>
+              <Text style={styles.profileMeta}>
+                {userProfile?.phone ?? userProfile?.phoneNumber ?? VENDOR_WORKSPACE_PROFILE.phone}
+              </Text>
+              <Text style={styles.profileMeta}>
+                {userProfile?.email ?? VENDOR_WORKSPACE_PROFILE.email}
+              </Text>
             </View>
           </View>
 

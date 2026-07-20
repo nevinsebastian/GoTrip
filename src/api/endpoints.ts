@@ -54,8 +54,24 @@ export const ENDPOINTS = {
   },
   vendors: {
     profile: '/api/v1/vendors/profile',
+    profileMe: '/api/v1/vendors/profile/me',
     kyc: '/api/v1/vendors/profile/me/kyc',
+    bank: '/api/v1/vendors/profile/me/bank',
     myListings: '/api/v1/vendors/profile/me/listings',
+  },
+  vendorBookings: {
+    list: '/api/v1/bookings/vendor',
+    checkIn: (id: string) => `/api/v1/bookings/${id}/checkin`,
+    checkOut: (id: string) => `/api/v1/bookings/${id}/checkout`,
+    noShow: (id: string) => `/api/v1/bookings/${id}/no-show`,
+  },
+  payouts: {
+    list: '/api/v1/payments/payouts',
+  },
+  notifications: {
+    list: '/api/v1/notifications',
+    markRead: (id: string) => `/api/v1/notifications/${id}/read`,
+    markAllRead: '/api/v1/notifications/read-all',
   },
   hotels: {
     browse: '/api/v1/hotels',
